@@ -5,6 +5,7 @@ import rolesRouter from "./roles.js";
 import tenantsRouter from "./tenants.js";
 import areasRouter from "./areas.js";
 import clinicsRouter from "./clinics.js";
+import programsRouter from "./programs.js";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use("/roles", rolesRouter);
 router.use("/tenants", tenantsRouter);
 router.use("/areas", areasRouter);
 router.use("/clinics", clinicsRouter);
+router.use("/programs", programsRouter);
 
 export default router;

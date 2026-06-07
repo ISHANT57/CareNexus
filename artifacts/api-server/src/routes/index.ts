@@ -12,6 +12,7 @@ import communicationsRouter from "./communications.js";
 import reportsRouter from "./reports.js";
 import auditLogsRouter from "./auditLogs.js";
 import notificationsRouter from "./notifications.js";
+import usersRouter from "./users.js";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use("/communications", communicationsRouter);
 router.use("/reports", reportsRouter);
 router.use("/audit-logs", auditLogsRouter);
 router.use("/notifications", notificationsRouter);
+router.use("/users", usersRouter);
 
 export default router;

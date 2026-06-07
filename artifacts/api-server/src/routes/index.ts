@@ -9,6 +9,9 @@ import programsRouter from "./programs.js";
 import patientsRouter from "./patients.js";
 import assignmentsRouter from "./assignments.js";
 import communicationsRouter from "./communications.js";
+import reportsRouter from "./reports.js";
+import auditLogsRouter from "./auditLogs.js";
+import notificationsRouter from "./notifications.js";
 
 const router: IRouter = Router();
 
@@ -22,5 +25,8 @@ router.use("/programs", programsRouter);
 router.use("/patients", patientsRouter);
 router.use("/assignments", assignmentsRouter);
 router.use("/communications", communicationsRouter);
+router.use("/reports", reportsRouter);
+router.use("/audit-logs", auditLogsRouter);
+router.use("/notifications", notificationsRouter);
 
 export default router;

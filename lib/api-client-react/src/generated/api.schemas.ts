@@ -492,6 +492,18 @@ export interface ProgramCount {
   count: number;
 }
 
+export type ConsultationStatsConsultationsByDoctorItem = {
+  doctorId?: string;
+  doctorName?: string;
+  count?: number;
+};
+
+export interface ConsultationStats {
+  totalConsultations?: number;
+  consultationsThisMonth?: number;
+  consultationsByDoctor?: ConsultationStatsConsultationsByDoctorItem[];
+}
+
 export interface FileUpload {
   id: string;
   tenantId: string;
@@ -644,6 +656,59 @@ export interface AppointmentStats {
   appointmentsByDoctor: AppointmentStatsAppointmentsByDoctorItem[];
 }
 
+export interface ConsultationInput {
+  patientId: string;
+  appointmentId: string;
+  doctorId: string;
+  clinicId: string;
+  chiefComplaint: string;
+  symptoms: string;
+  observations: string;
+  diagnosis: string;
+  treatmentPlan: string;
+  medications: string;
+  followUpInstructions: string;
+  consultationDate?: string;
+}
+
+export interface ConsultationUpdate {
+  chiefComplaint?: string;
+  symptoms?: string;
+  observations?: string;
+  diagnosis?: string;
+  treatmentPlan?: string;
+  medications?: string;
+  followUpInstructions?: string;
+}
+
+export interface Consultation {
+  id?: string;
+  tenantId?: string;
+  patientId?: string;
+  appointmentId?: string;
+  doctorId?: string;
+  clinicId?: string;
+  chiefComplaint?: string;
+  symptoms?: string;
+  observations?: string;
+  diagnosis?: string;
+  treatmentPlan?: string;
+  medications?: string;
+  followUpInstructions?: string;
+  consultationDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  patient?: Patient;
+  doctor?: User;
+  clinic?: Clinic;
+  appointment?: Appointment;
+}
+
+export interface ConsultationList {
+  data?: Consultation[];
+  meta?: Meta;
+}
+
 export type VerifyEmailParams = {
 token: string;
 };
@@ -727,6 +792,14 @@ limit?: number;
 };
 
 export type ListAppointmentsParams = {
+patientId?: string;
+doctorId?: string;
+clinicId?: string;
+page?: number;
+limit?: number;
+};
+
+export type ListConsultationsParams = {
 patientId?: string;
 doctorId?: string;
 clinicId?: string;

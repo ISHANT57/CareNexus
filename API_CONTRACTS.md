@@ -465,6 +465,38 @@ _CLINICAL_ROLES._ Marks enrollment as CANCELLED.
 
 ---
 
+## Module 15 — Appointments (`/api/appointments`)
+_Auth + tenant required._
+
+### GET /api/appointments
+_CLINICAL_ROLES._
+Query params: `patientId`, `doctorId`, `clinicId`, `status`, `page`, `limit`
+**Response 200:** `{ data: Appointment[], meta: { total, page, limit, totalPages } }`
+
+### GET /api/appointments/:id
+_CLINICAL_ROLES._
+**Response 200:** Appointment object.
+
+### POST /api/appointments
+_CLINICAL_ROLES._
+**Body:** `{ "patientId": "uuid", "doctorId": "uuid", "clinicId": "uuid", "appointmentDate": "ISO8601", "durationMinutes?": number, "notes?": "string" }`
+**Response 201:** Appointment object.
+
+### PATCH /api/appointments/:id
+_CLINICAL_ROLES._
+**Body:** `{ "appointmentDate?": "ISO8601", "durationMinutes?": number, "notes?": "string" }`
+**Response 200:** Updated Appointment object.
+
+### POST /api/appointments/:id/complete
+_CLINICAL_ROLES._ Marks appointment as COMPLETED.
+**Response 200:** Updated Appointment object.
+
+### POST /api/appointments/:id/cancel
+_CLINICAL_ROLES._ Marks appointment as CANCELLED.
+**Response 200:** Updated Appointment object.
+
+---
+
 ## Health Check
 
 ### GET /api/healthz

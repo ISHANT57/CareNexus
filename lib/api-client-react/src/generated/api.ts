@@ -5087,6 +5087,77 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getCreateAppointmentMutationOptions(options));
     }
 
+export const getGetAppointmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/appointments/${id}`
+}
+
+export const getAppointment = async (id: string, options?: RequestInit): Promise<Appointment> => {
+
+  return customFetch<Appointment>(getGetAppointmentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAppointmentQueryKey = (id: string,) => {
+    return [
+    `/api/appointments/${id}`
+    ] as const;
+    }
+
+
+export const getGetAppointmentQueryOptions = <TData = Awaited<ReturnType<typeof getAppointment>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAppointment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAppointmentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAppointment>>> = ({ signal }) => getAppointment(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAppointment>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAppointmentQueryResult = NonNullable<Awaited<ReturnType<typeof getAppointment>>>
+export type GetAppointmentQueryError = ErrorType<unknown>
+
+
+
+export function useGetAppointment<TData = Awaited<ReturnType<typeof getAppointment>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAppointment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAppointmentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getUpdateAppointmentUrl = (id: string,) => {
 
 

@@ -2,7 +2,9 @@ import { execSync } from 'child_process';
 
 // Use the exact path to git since it was missing from the standard PATH earlier
 const GIT_CMD = 'E:\\Git\\cmd\\git.exe';
-const INTERVAL_MINUTES = 10;
+// Read interval from command line argument or default to 10 minutes
+const args = process.argv.slice(2);
+const INTERVAL_MINUTES = args.length > 0 ? parseFloat(args[0]) : 10;
 const INTERVAL_MS = INTERVAL_MINUTES * 60 * 1000;
 
 function runGit(args: string) {

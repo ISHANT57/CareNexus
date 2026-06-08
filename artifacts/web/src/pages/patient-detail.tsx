@@ -9,7 +9,7 @@ import {
   useUploadFile, useListFiles, useDeleteFile, getListFilesQueryKey,
   useListProgramEnrollments, useCreateProgramEnrollment, useCompleteProgramEnrollment, useCancelProgramEnrollment, getListProgramEnrollmentsQueryKey,
   useListPrograms,
-  useListAppointments, useCreateAppointment, useCancelAppointment, useCompleteAppointment, getListAppointmentsQueryKey,
+  useListAppointments, useCreateAppointment, useCancelAppointment, useCompleteAppointment, useUpdateAppointment, getListAppointmentsQueryKey,
   useListClinics
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, MapPin, Phone, Mail, Calendar, Building2, Activity, ArrowLeft, ChevronDown, Plus, Trash2, UserPlus, MessageSquare, Send, Upload, FileText, Download, CheckCircle, XCircle } from "lucide-react";
+import { User, MapPin, Phone, Mail, Calendar, Building2, Activity, ArrowLeft, ChevronDown, Plus, Trash2, UserPlus, MessageSquare, Send, Upload, FileText, Download, CheckCircle, XCircle, Pencil } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -76,6 +76,13 @@ export default function PatientDetailPage() {
   const [appointmentDate, setAppointmentDate] = useState("");
   const [appointmentTime, setAppointmentTime] = useState("");
   
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editApptId, setEditApptId] = useState("");
+  const [editApptDate, setEditApptDate] = useState("");
+  const [editApptTime, setEditApptTime] = useState("");
+  const [editApptDuration, setEditApptDuration] = useState(30);
+  const [editApptNotes, setEditApptNotes] = useState("");
+  
   const appointmentsKey = getListAppointmentsQueryKey({ patientId: id });
   const { data: appointmentsData, isLoading: isAppointmentsLoading } = useListAppointments(
     { patientId: id },
@@ -85,6 +92,7 @@ export default function PatientDetailPage() {
   const createAppointment = useCreateAppointment();
   const cancelAppointmentMutation = useCancelAppointment();
   const completeAppointmentMutation = useCompleteAppointment();
+  const updateAppointmentMutation = useUpdateAppointment();
 
   const { data: clinicsData } = useListClinics({ limit: 100 }, { query: { enabled: isAppointmentDialogOpen, queryKey: ["clinics", "list"] } });
 
@@ -111,6 +119,36 @@ export default function PatientDetailPage() {
       toast({ title: "Appointment scheduled successfully" });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Failed to schedule", description: err.message });
+    }
+  };
+
+  const openEditAppointment = (appt: any) => {
+    setEditApptId(appt.id);
+    const d = new Date(appt.appointmentDate);
+    setEditApptDate(format(d, "yyyy-MM-dd"));
+    setEditApptTime(format(d, "HH:mm"));
+    setEditApptDuration(appt.durationMinutes || 30);
+    setEditApptNotes(appt.notes || "");
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateAppointment = async () => {
+    if (!editApptId || !editApptDate || !editApptTime) return;
+    try {
+      const datetimeStr = `${editApptDate}T${editApptTime}:00Z`;
+      await updateAppointmentMutation.mutateAsync({
+        id: editApptId,
+        data: {
+          appointmentDate: datetimeStr,
+          durationMinutes: editApptDuration,
+          notes: editApptNotes
+        }
+      });
+      queryClient.invalidateQueries({ queryKey: appointmentsKey });
+      setIsEditDialogOpen(false);
+      toast({ title: "Appointment updated successfully" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Failed to update", description: err.message });
     }
   };
 
@@ -607,6 +645,40 @@ export default function PatientDetailPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+
+              <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Edit Appointment</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Date</label>
+                        <input type="date" value={editApptDate} onChange={e => setEditApptDate(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Time</label>
+                        <input type="time" value={editApptTime} onChange={e => setEditApptTime(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Duration (minutes)</label>
+                      <input type="number" min="1" value={editApptDuration} onChange={e => setEditApptDuration(parseInt(e.target.value))} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Notes</label>
+                      <textarea value={editApptNotes} onChange={e => setEditApptNotes(e.target.value)} className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Optional notes" />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleUpdateAppointment} disabled={!editApptDate || !editApptTime || updateAppointmentMutation.isPending}>
+                      Save Changes
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               {isAppointmentsLoading ? (
@@ -626,6 +698,9 @@ export default function PatientDetailPage() {
                         </div>
                         {appt.status === "SCHEDULED" && (
                           <div className="flex justify-end gap-2">
+                            <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-primary" onClick={() => openEditAppointment(appt)}>
+                              <Pencil className="w-4 h-4 mr-1" /> Edit
+                            </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-destructive">

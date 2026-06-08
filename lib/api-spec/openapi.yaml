@@ -1558,6 +1558,24 @@ paths:
                 $ref: "#/components/schemas/Appointment"
 
   /appointments/{id}:
+    get:
+      operationId: getAppointment
+      tags: [appointments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
     patch:
       operationId: updateAppointment
       tags: [appointments]

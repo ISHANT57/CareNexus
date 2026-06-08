@@ -87,6 +87,21 @@ router.post("/", CLINICAL_ROLES, validateBody(AppointmentSchema), async (req, re
   } catch (err) { next(err); }
 });
 
+router.get("/:id", CLINICAL_ROLES, async (req, res, next) => {
+  try {
+    const appointment = await prisma.appointment.findFirst({
+      where: { id: req.params["id"] as string, deletedAt: null },
+      include: { patient: true, doctor: true, clinic: true },
+    });
+    if (!appointment) throw Errors.notFound("Appointment");
+    assertTenantMatch(req, appointment.tenantId);
+
+    res.json(appointment);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.patch("/:id", CLINICAL_ROLES, validateBody(UpdateAppointmentSchema), async (req, res, next) => {
   try {
     const appointment = await prisma.appointment.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });

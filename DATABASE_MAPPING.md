@@ -390,6 +390,26 @@ Indexes: `tenantId`, `patientId`, `programId`.
 
 ---
 
+### `appointments`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | |
+| `tenantId` | UUID FK → tenants | |
+| `patientId` | UUID FK → patients | Cascade delete |
+| `doctorId` | UUID FK → users | Cascade delete |
+| `clinicId` | UUID FK → clinics | Cascade delete |
+| `appointmentDate` | DateTime | |
+| `durationMinutes` | Int | Default 30 |
+| `status` | Enum AppointmentStatus | SCHEDULED / COMPLETED / CANCELLED / NO_SHOW |
+| `notes` | String? | |
+| `createdAt` | DateTime | |
+| `updatedAt` | DateTime | |
+| `deletedAt` | DateTime? | Soft delete |
+
+Indexes: `tenantId`, `patientId`, `doctorId`, `clinicId`.
+
+---
+
 ### `audit_logs`
 **APPEND-ONLY. Never delete rows from this table.**
 
@@ -453,3 +473,4 @@ Indexes: `userId`, `token`.
 | `AuditAction` | `CREATE`, `UPDATE`, `DELETE`, `LOGIN`, `LOGOUT` |
 | `NotificationType` | `INFO`, `WARNING`, `ERROR`, `SUCCESS` |
 | `EnrollmentStatus` | `ACTIVE`, `COMPLETED`, `CANCELLED` |
+| `AppointmentStatus` | `SCHEDULED`, `COMPLETED`, `CANCELLED`, `NO_SHOW` |

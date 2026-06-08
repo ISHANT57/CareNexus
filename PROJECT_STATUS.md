@@ -80,6 +80,7 @@ TenantID:  e727eb86-cd40-487a-b651-1db925c58376
 - [x] Mobile responsive sidebar (hamburger menu + slide-in drawer on small screens)
 - [x] Program Enrollment Module (ProgramEnrollment models, routes, codegen, patient detail UI, and dashboard stats)
 - [x] Appointment Management Module (Appointment models, full CRUD, status workflows, dedicated UI, patient detail integration, and dashboard stats)
+- [x] Master Data Migration (Imported MUMBAI.xlsx real data for Areas/Clinics, seeded 25 Programs, soft-deleted dummy data)
 
 ---
 

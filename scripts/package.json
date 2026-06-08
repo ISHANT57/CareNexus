@@ -10,5 +10,9 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "tsx": "catalog:"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "xlsx": "^0.18.5"
   }
 }

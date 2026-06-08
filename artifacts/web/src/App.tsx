@@ -9,6 +9,7 @@ import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
+import DashboardPage from "@/pages/dashboard";
 import UsersPage from "@/pages/users";
 import NewUserPage from "@/pages/user-new";
 import UserDetailPage from "@/pages/user-detail";
@@ -32,7 +33,10 @@ function Router() {
       
       {/* Protected Routes */}
       <Route path="/">
-        <Redirect to="/login" />
+        <Redirect to="/dashboard" />
+      </Route>
+      <Route path="/dashboard">
+        <AppLayout><DashboardPage /></AppLayout>
       </Route>
       
       <Route path="/patients/new">

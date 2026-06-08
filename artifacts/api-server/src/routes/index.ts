@@ -18,6 +18,10 @@ import importRouter from "./import.js";
 import programEnrollmentsRouter from "./programEnrollments.js";
 import { appointmentsRouter } from "./appointments.js";
 import { consultationsRouter } from "./consultations.js";
+import outcomesRouter from "./outcomes.js";
+import outcomeMetricsRouter from "./outcome-metrics.js";
+import tasksRouter from "./tasks.js";
+import { riskScoresRouter } from "./riskScores.js";
 
 const router: IRouter = Router();
 
@@ -40,5 +44,10 @@ router.use("/import", importRouter);
 router.use("/program-enrollments", programEnrollmentsRouter);
 router.use("/appointments", appointmentsRouter);
 router.use("/consultations", consultationsRouter);
+router.use("/outcomes", outcomesRouter);
+router.use("/outcome-metrics", outcomeMetricsRouter);
+router.use("/tasks", tasksRouter);
+router.use("/risk-scores", riskScoresRouter);
 
 export default router;
+

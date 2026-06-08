@@ -22,6 +22,7 @@ router.get("/dashboard", async (req, res, next) => {
       totalPrograms,
       newPatientsThisMonth,
       pendingCommunications,
+      outcomesRecorded,
     ] = await Promise.all([
       prisma.patient.count({ where: base }),
       prisma.patient.count({ where: { ...base, status: "ACTIVE" } }),
@@ -30,7 +31,18 @@ router.get("/dashboard", async (req, res, next) => {
       prisma.program.count({ where: base }),
       prisma.patient.count({ where: { ...base, createdAt: { gte: firstOfMonth } } }),
       prisma.smsCommunication.count({ where: { tenantId, status: { in: ["QUEUED", "SENT"] } } }),
+      prisma.patientOutcome.count({ where: base }),
     ]);
+
+    // Improvement rate: outcomes where currentValue moved toward targetValue
+    const allOutcomes = await prisma.patientOutcome.findMany({ where: base, select: { baselineValue: true, currentValue: true, targetValue: true } });
+    const improving = allOutcomes.filter(o => {
+      const totalRange = Math.abs(o.targetValue - o.baselineValue);
+      if (totalRange === 0) return false;
+      const progress = Math.abs(o.currentValue - o.baselineValue);
+      return progress > 0 && Math.sign(o.targetValue - o.baselineValue) === Math.sign(o.currentValue - o.baselineValue);
+    });
+    const successRate = allOutcomes.length > 0 ? Math.round((improving.length / allOutcomes.length) * 1000) / 10 : 0;
 
     res.json({
       totalPatients,
@@ -40,9 +52,13 @@ router.get("/dashboard", async (req, res, next) => {
       totalPrograms,
       newPatientsThisMonth,
       pendingCommunications,
+      outcomesRecorded,
+      improvingPatients: improving.length,
+      successRate,
     });
   } catch (err) { next(err); }
 });
+
 
 // GET /api/reports/enrollment-stats
 router.get("/enrollment-stats", async (req, res, next) => {
@@ -335,3 +351,80 @@ router.get("/follow-ups", async (req, res, next) => {
 });
 
 export default router;
+
+// ── Outcome Reports ────────────────────────────────────────────────────────────
+
+// GET /api/reports/outcomes-by-program
+router.get("/outcomes-by-program", async (req, res, next) => {
+  try {
+    const tenantId = req.tenantId!;
+    const base = { tenantId, deletedAt: null };
+    const outcomes = await prisma.patientOutcome.findMany({
+      where: base,
+      include: { program: { select: { id: true, name: true } } },
+    });
+    const map: Record<string, { programName: string; total: number; improving: number }> = {};
+    for (const o of outcomes) {
+      const key = o.programId;
+      if (!map[key]) map[key] = { programName: o.program?.name ?? "Unknown", total: 0, improving: 0 };
+      map[key].total++;
+      const isImproving = Math.abs(o.targetValue - o.baselineValue) > 0 &&
+        Math.sign(o.targetValue - o.baselineValue) === Math.sign(o.currentValue - o.baselineValue);
+      if (isImproving) map[key].improving++;
+    }
+    res.json(Object.entries(map).map(([programId, v]) => ({
+      programId, programName: v.programName, total: v.total, improving: v.improving,
+      successRate: v.total > 0 ? Math.round((v.improving / v.total) * 1000) / 10 : 0,
+    })));
+  } catch (err) { next(err); }
+});
+
+// GET /api/reports/outcomes-by-clinic
+router.get("/outcomes-by-clinic", async (req, res, next) => {
+  try {
+    const tenantId = req.tenantId!;
+    const outcomes = await prisma.patientOutcome.findMany({
+      where: { tenantId, deletedAt: null },
+      include: { patient: { select: { clinicId: true, clinic: { select: { id: true, name: true } } } } },
+    });
+    const map: Record<string, { clinicName: string; total: number; improving: number }> = {};
+    for (const o of outcomes) {
+      const clinicId = o.patient?.clinicId ?? "unknown";
+      const clinicName = o.patient?.clinic?.name ?? "Unknown";
+      if (!map[clinicId]) map[clinicId] = { clinicName, total: 0, improving: 0 };
+      map[clinicId].total++;
+      const isImproving = Math.abs(o.targetValue - o.baselineValue) > 0 &&
+        Math.sign(o.targetValue - o.baselineValue) === Math.sign(o.currentValue - o.baselineValue);
+      if (isImproving) map[clinicId].improving++;
+    }
+    res.json(Object.entries(map).map(([clinicId, v]) => ({
+      clinicId, clinicName: v.clinicName, total: v.total, improving: v.improving,
+      successRate: v.total > 0 ? Math.round((v.improving / v.total) * 1000) / 10 : 0,
+    })));
+  } catch (err) { next(err); }
+});
+
+// GET /api/reports/outcomes-by-doctor
+router.get("/outcomes-by-doctor", async (req, res, next) => {
+  try {
+    const tenantId = req.tenantId!;
+    const outcomes = await prisma.patientOutcome.findMany({
+      where: { tenantId, deletedAt: null, doctorId: { not: null } },
+      include: { doctor: { select: { id: true, firstName: true, lastName: true } } },
+    });
+    const map: Record<string, { doctorName: string; total: number; improving: number }> = {};
+    for (const o of outcomes) {
+      const doctorId = o.doctorId ?? "none";
+      const doctorName = o.doctor ? `${o.doctor.firstName} ${o.doctor.lastName}` : "Unassigned";
+      if (!map[doctorId]) map[doctorId] = { doctorName, total: 0, improving: 0 };
+      map[doctorId].total++;
+      const isImproving = Math.abs(o.targetValue - o.baselineValue) > 0 &&
+        Math.sign(o.targetValue - o.baselineValue) === Math.sign(o.currentValue - o.baselineValue);
+      if (isImproving) map[doctorId].improving++;
+    }
+    res.json(Object.entries(map).map(([doctorId, v]) => ({
+      doctorId, doctorName: v.doctorName, total: v.total, improving: v.improving,
+      successRate: v.total > 0 ? Math.round((v.improving / v.total) * 1000) / 10 : 0,
+    })));
+  } catch (err) { next(err); }
+});

@@ -4,6 +4,7 @@ import { logger } from "./lib/logger.js";
 import { connectDB, disconnectDB } from "./lib/prisma.js";
 import { connectMySQL, disconnectMySQL } from "./lib/mysql.js";
 import { SyncWorker } from "./services/SyncWorker.js";
+import { startRiskScoringScheduler } from "./lib/scheduler.js";
 
 const rawPort = process.env["PORT"];
 
@@ -23,6 +24,7 @@ async function main() {
   await connectDB();
   await connectMySQL();
   syncWorker.start();
+  startRiskScoringScheduler();
 
   const server = app.listen(port, () => {
     logger.info({ port }, "Caremesh API server listening");

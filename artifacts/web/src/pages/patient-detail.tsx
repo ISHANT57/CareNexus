@@ -562,6 +562,7 @@ export default function PatientDetailPage() {
           <TabsTrigger value="journey" className="gap-2"><Activity className="w-4 h-4" />Journey</TabsTrigger>
           <TabsTrigger value="appointments" className="gap-2"><Calendar className="w-4 h-4" />Appointments</TabsTrigger>
           <TabsTrigger value="consultations" className="gap-2"><ClipboardList className="w-4 h-4" />Consultations</TabsTrigger>
+          <TabsTrigger value="outcomes" className="gap-2"><Activity className="w-4 h-4" />Outcomes</TabsTrigger>
           <TabsTrigger value="files" className="gap-2"><FileText className="w-4 h-4" />Files</TabsTrigger>
           <TabsTrigger value="communications" className="gap-2"><MessageSquare className="w-4 h-4" />Communications</TabsTrigger>
         </TabsList>

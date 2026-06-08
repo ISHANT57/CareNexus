@@ -14,15 +14,15 @@ _Last updated: 2026-06-08 (full repository audit)_
 
 | Layer | Status | Notes |
 |---|---|---|
-| Database schema | ✅ Complete | 22 Prisma models (incl. Consultation), pushed to PostgreSQL |
+| Database schema | ✅ Complete | 27 Prisma models (incl. Outcomes, Tasks, Risk Scoring), pushed to PostgreSQL |
 | Seed data | ✅ Present | Real Mumbai data: 195 Areas, 707 Clinics, 25 Programs, 8 patients |
-| API server | ✅ Builds + 0 TS errors | Express 5, 20 route groups |
-| OpenAPI spec | ✅ Complete | `lib/api-spec/openapi.yaml` — 16 modules including Consultations |
-| Codegen | ✅ Generated | React Query hooks + Zod schemas in `lib/` |
+| API server | ✅ Builds + 0 TS errors | Express 5, 23 route groups |
+| OpenAPI spec | ⚠️ Out of Sync | Missing definitions for Outcomes, Tasks, Risk Scores |
+| Codegen | ⚠️ Out of Sync | Frontend hooks lack Phase 1-5 definitions |
 | Frontend | ✅ Builds + 0 TS errors | 20 pages, sidebar layout, AuthGuard |
 | Auth flow | ✅ Tested | Login / register / refresh / me / logout all working |
 
-**Overall Completion: ~82%**
+**Overall Completion: ~78%**
 
 **Run commands:**
 ```bash
@@ -70,14 +70,16 @@ TenantID:  e727eb86-cd40-487a-b651-1db925c58376
 - [x] Soft delete on all core entities (`deletedAt` timestamp)
 - [x] Request-scoped pino logging on all routes
 - [x] OpenAPI → React Query hooks + Zod schemas (Orval codegen)
-- [x] Frontend pages: login, register, forgot-password, reset-password, dashboard, patients list, patient detail, patient new, users list, user new, user detail, clinics, programs, areas, roles, appointments, audit logs, notifications, settings
+- [x] Frontend pages: core auth, dashboard, entity lists and details
 - [x] AuthGuard protecting all app routes with token-aware redirect
 - [x] Mobile responsive sidebar (hamburger menu + slide-in drawer)
-- [x] Program Enrollment Module (ACTIVE / COMPLETED / CANCELLED + patient UI + dashboard stats)
-- [x] Appointment Management Module (SCHEDULED / COMPLETED / CANCELLED / NO_SHOW + patient UI + global list + dashboard stats + charts)
-- [x] Consultation Notes Module (backend: schema, CRUD API, reports; frontend: record dialog, history view; dashboard stats widgets)
-- [x] Master Data Migration (195 Areas, 707 Clinics, 25 Programs from MUMBAI.xlsx)
-- [x] IMPLEMENTATION_PROGRESS.md, TECHNICAL_DEBT.md, KNOWN_ISSUES.md, CHANGELOG.md created
+- [x] Program Enrollment Module (ACTIVE / COMPLETED / CANCELLED + UI + Dashboard)
+- [x] Appointment Management Module (SCHEDULED / COMPLETED / CANCELLED / NO_SHOW + UI + Dashboard)
+- [x] Consultation Notes Module (Backend CRUD, Frontend history + record dialog)
+- [x] Phase 1: Outcomes Tracking (Backend schema + API)
+- [x] Phase 2: Care Task Management (Backend schema + API)
+- [x] Phase 3: Notification Automation Engine (Backend triggers)
+- [x] Phase 5: Risk Scoring Engine (Backend schema, logic, Cron scheduler)
 
 ---
 
@@ -85,30 +87,17 @@ TenantID:  e727eb86-cd40-487a-b651-1db925c58376
 
 | Feature | Priority | Status | Notes |
 |---|---|---|---|
+| OpenAPI Sync for Phases 1-5 | P1 | 🔴 Not started | Update `openapi.yaml` with Outcomes, Tasks, Risk Scores |
+| Phase 1: Outcomes UI | P2 | 🔴 Not started | Patient detail tab, charts, record dialog |
+| Phase 2: Care Tasks UI | P2 | 🔴 Not started | Task list, assignment dialog, completion flows |
+| Phase 5: Risk Scoring UI | P2 | 🔴 Not started | Dashboard widgets, patient risk badges |
 | DELETE /api/consultations/:id | P1 | 🔴 Not started | Soft-delete + audit log |
 | Edit Consultation UI | P1 | 🔴 Not started | PATCH endpoint exists; UI missing |
-| Patient Detail Tab Restructure | P2 | 🔴 Not started | Move to Tabs component |
-| Record Consultation from Appointment row | P2 | 🔴 Not started | Button on completed appointments |
-| Dashboard Consultations-by-Doctor chart | P2 | 🔴 Not started | Data available in API |
-| Reports: consultations-by-clinic | P2 | 🔴 Not started | New report endpoint + UI |
-| Reports: consultations-by-program | P2 | 🔴 Not started | New report endpoint + UI |
-| Reports: follow-ups required | P2 | 🔴 Not started | New report endpoint + UI |
-| Granular permission enforcement (role_permissions) | P1 | 🔴 Not started | UI exists; no runtime effect |
-| CSRF Protection | P2 | 🔴 Not started | Double-submit cookie or csurf |
+| Patient Detail Tab Restructure | P2 | 🔴 Not started | Move scrolling cards to `<Tabs>` component |
+| Granular permission enforcement | P0 | 🔴 Not started | UI exists; no runtime effect |
+| CSRF Protection | P0 | 🔴 Not started | Double-submit cookie or csurf |
 | Automated test suite | P1 | 🔴 Not started | Vitest + Playwright |
-| Cloud object storage for files | P2 | 🔴 Not started | Local disk is ephemeral |
-
----
-
-## Known Bugs / Issues
-
-See `KNOWN_ISSUES.md` for the full list. Key items:
-
-1. **KI-001** — DELETE /api/consultations/:id missing
-2. **KI-002** — Edit Consultation UI not implemented
-3. **KI-007** — Role permissions UI has no runtime effect on access control
-4. **KI-008** — File uploads stored on local disk (ephemeral on cloud deployments)
-5. **KI-010** — Appointment complete creates `PSI` journey event (should be `APPOINTMENT_COMPLETED`)
+| Cloud object storage for files | P1 | 🔴 Not started | Local disk is ephemeral |
 
 ---
 
@@ -124,22 +113,3 @@ See `KNOWN_ISSUES.md` for the full list. Key items:
 | `TWILIO_ACCOUNT_SID` | Replit secret | Twilio SMS sending |
 | `TWILIO_AUTH_TOKEN` | Replit secret | Twilio SMS sending |
 | `TWILIO_FROM_NUMBER` | Replit secret | Twilio source phone number |
-
----
-
-## Module Completion Summary
-
-| Module | % Complete |
-|---|---|
-| Authentication & Security | 90% |
-| User & Role Management | 85% |
-| Patient Management | 95% |
-| Appointments | 90% |
-| Consultation Notes | 70% |
-| Program Enrollments | 95% |
-| Dashboard & Reports | 75% |
-| Communications (SMS) | 90% |
-| File Uploads | 70% |
-| Audit Logging | 100% |
-| Data Migration | 100% |
-| **Overall** | **82%** |

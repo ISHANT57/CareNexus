@@ -1,120 +1,59 @@
-# IMPLEMENTATION_PROGRESS.md — Caremesh PMS
+# CAREMESH PMS — EXECUTIVE DASHBOARD & IMPLEMENTATION PROGRESS
 
-_Last updated: 2026-06-08 (full repository audit)_
+_Last Updated: 2026-06-08 (Comprehensive Repository Audit)_
 
----
+## 1. Overall Completion Metrics
 
-## Overall Completion: 82%
+| Metric | Status |
+|--------|--------|
+| **Overall Platform Completion** | **78%** |
+| **Backend API Coverage** | 90% |
+| **Database Schema Accuracy** | 100% |
+| **OpenAPI Specification** | 65% (Out of sync with backend) |
+| **Frontend UI Coverage** | 60% (Missing Phase 1-5 features) |
+| **Production Readiness** | **NOT READY** (Staging/Dev Ready) |
 
----
+## 2. Module Completion Dashboard
 
-## Module-wise Completion
+| Module | Backend | OpenAPI | Frontend | Overall % | Notes |
+|--------|---------|---------|----------|-----------|-------|
+| Authentication & Security | ✅ | ✅ | ✅ | 90% | Needs CSRF protection. Granular RBAC not enforced. |
+| User & Role Management | ✅ | ✅ | ✅ | 85% | Role permissions UI exists but has no runtime effect. |
+| Patient Management | ✅ | ✅ | ✅ | 95% | Tabs UI restructure pending. |
+| Appointments | ✅ | ✅ | ✅ | 90% | Fully functional. |
+| Consultation Notes | 🟡 | ✅ | 🟡 | 70% | Missing DELETE API, missing Edit UI. |
+| Program Enrollments | ✅ | ✅ | ✅ | 95% | Fully functional. |
+| Dashboard & Reports | 🟡 | 🟡 | 🟡 | 75% | Missing reports for new phases. |
+| Communications (SMS) | ✅ | ✅ | ✅ | 90% | Functional. |
+| File Uploads | ✅ | ✅ | ✅ | 70% | Needs migration to cloud storage. |
+| **Phase 1: Outcomes** | ✅ | 🔴 | 🔴 | **33%** | Backend complete. Missing OpenAPI & UI. |
+| **Phase 2: Care Tasks** | ✅ | 🔴 | 🔴 | **33%** | Backend complete. Missing OpenAPI & UI. |
+| **Phase 3: Notifications** | ✅ | ✅ | ✅ | **100%**| Helper service and triggers implemented. |
+| **Phase 5: Risk Scoring** | ✅ | 🔴 | 🔴 | **33%** | Backend + Cron complete. Missing OpenAPI & UI. |
 
-| Module | API | Frontend | DB Schema | Tests | Docs | Overall |
-|---|---|---|---|---|---|---|
-| Authentication | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 90% | **78%** |
-| Tenant Management | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 100% | **80%** |
-| Role & Permissions | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 80% | **76%** |
-| User Management | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 100% | **80%** |
-| Area Management | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 100% | **80%** |
-| Clinic Management | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 100% | **80%** |
-| Program Management | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 100% | **80%** |
-| Patient Management | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 100% | **80%** |
-| Doctor Assignment | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 100% | **80%** |
-| Patient Journey | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 100% | **80%** |
-| SMS Communications | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 80% | **76%** |
-| File Uploads | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 70% | **74%** |
-| Notifications | ✅ 80% | ✅ 80% | ✅ 100% | ❌ 0% | ✅ 70% | **66%** |
-| Audit Logs | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 100% | **80%** |
-| Program Enrollments | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 100% | **80%** |
-| Appointments | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 100% | **80%** |
-| Consultation Notes | ✅ 80% | ✅ 75% | ✅ 100% | ❌ 0% | ✅ 90% | **69%** |
-| Dashboard / Reports | ✅ 85% | ✅ 85% | N/A | ❌ 0% | ✅ 80% | **70%** |
-| CSV Import | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 70% | **74%** |
-| Security (JWT/RBAC) | ✅ 100% | ✅ 100% | ✅ 100% | ❌ 0% | ✅ 90% | **78%** |
-| Data Migration | ✅ 100% | N/A | ✅ 100% | N/A | ✅ 100% | **100%** |
+## 3. Timeline & Remaining Work
 
----
+**Immediate Focus (Sprint 1): OpenAPI Sync & Blockers**
+1. Sync `openapi.yaml` with backend routes (`outcomes`, `tasks`, `risk-scores`).
+2. Run Orval codegen to generate frontend hooks.
+3. Fix RBAC granular permissions (`role_permissions`).
+4. Implement Consultation `DELETE` endpoint and Edit UI.
 
-## Detailed Status by Module
+**Next Focus (Sprint 2): Phase 1-5 Frontend Execution**
+1. Build Outcomes UI (Tab, charts, forms).
+2. Build Care Tasks UI (Assignment, status tracking).
+3. Build Risk Scoring UI (Dashboard widgets, reports).
+4. Restructure Patient Detail page into standard Tabs.
 
-### ✅ Authentication
-- Login, register, refresh, logout, /me — all implemented
-- Email verification endpoint — implemented
-- Forgot-password and reset-password — implemented
-- HttpOnly cookie token storage — implemented
-- Rate limiting on auth endpoints — implemented
-- **Missing:** End-to-end test coverage
+## 4. Production Blockers (P0)
 
-### ✅ RBAC
-- 6 roles: SUPER_ADMIN, AREA_ADMIN, CLINIC_ADMIN, DOCTOR, OPERATOR, STAFF
-- Middleware groups: SUPER_ADMIN_ONLY, ADMIN_ROLES, CLINICAL_ROLES, ALL_STAFF
-- Role permission matrix UI — implemented
-- **Missing:** Dynamic permission enforcement (permissions table is populated but auth middleware uses role name only)
+1. **RBAC Enforcement Bypass:** The `role_permissions` schema and UI exist, but the middleware `authorize()` does not actually enforce fine-grained action checks.
+2. **Missing CSRF Protection:** State-changing API routes are vulnerable.
+3. **Local Disk Uploads:** `multer` saves to local disk, which will break in ephemeral container deployments.
 
-### ✅ Patient Management
-- Full CRUD (create, list, get, update, soft-delete)
-- NHS number uniqueness per tenant
-- Status workflow (ACTIVE / INACTIVE)
-- GP Details upsert
-- Referrals list
-- Bulk CSV import
-- **Missing:** No patient merge/de-duplicate workflow
+## 5. Technical Debt
 
-### ✅ Appointments
-- Full CRUD + complete / cancel / no-show status transitions
-- Audit log on every mutation
-- Journey event auto-created on completion
-- Patient-detail card with schedule / edit / complete / cancel UI
-- Global appointments list page (doctor-scoped for DOCTOR role)
-- **Missing:** Appointment reminder / notification trigger
-
-### ⚠️ Consultation Notes (69%)
-- DB schema: fully defined (all 15 required fields present)
-- API: GET list, GET by ID, POST create, PATCH update — implemented
-- API: DELETE (soft-delete) — **NOT YET IMPLEMENTED**
-- Frontend: Record Consultation dialog in patient-detail — implemented
-- Frontend: View consultation history in patient-detail — implemented
-- Frontend: Edit Consultation dialog — **NOT YET IMPLEMENTED**
-- Frontend: Dedicated tab structure (vs. card section) — **NOT YET IMPLEMENTED**
-- Frontend: "Record Consultation" button on appointment rows — **NOT YET IMPLEMENTED**
-- Dashboard: Total Consultations + This Month widgets — implemented
-- Dashboard: Consultations by Doctor chart — **NOT YET IMPLEMENTED**
-- Reports: consultation-stats (total + by doctor) — implemented
-- Reports: consultations-by-clinic — **NOT YET IMPLEMENTED**
-- Reports: consultations-by-program — **NOT YET IMPLEMENTED**
-- Reports: follow-ups-required — **NOT YET IMPLEMENTED**
-
-### ⚠️ Dashboard / Reports (70%)
-- Dashboard stats: total patients, active, new this month, pending comms, clinics — ✅
-- Program enrollment stats (total, active, completed) — ✅
-- Appointment stats (total, scheduled, completed, cancelled) — ✅
-- Appointment charts: by clinic, by doctor — ✅
-- Consultation stats: total, this month — ✅
-- Patient charts: by status (pie), by program (bar) — ✅
-- Recent activity feed — ✅
-- Reports: patients-by-status, patients-by-program — ✅
-- Reports: enrollment-stats, appointment-stats, consultation-stats — ✅
-- **Missing:** consultations-by-clinic, consultations-by-program, follow-ups reports, dashboard widget for consultations-by-doctor
-
-### ✅ Master Data Migration
-- 195 Areas imported from MUMBAI.xlsx
-- 707 Clinics imported from MUMBAI.xlsx
-- 25 Programs seeded
-- Dummy data soft-deleted
-- Status: COMPLETE
-
----
-
-## Not Started / Future Phase
-
-| Feature | Notes |
-|---|---|
-| Automated tests (unit / integration / e2e) | No test suite exists |
-| EMIS / SystmOne integration | Future phase |
-| Patient-facing portal | Future phase (Expo mobile) |
-| FHIR R4 API layer | Future phase |
-| Multi-region deployment | Future phase |
-| Advanced BI dashboards | Future phase |
-| Cloud object storage for files | Local disk only currently |
-| CSRF protection | Tokens stored in HttpOnly cookies — some risk remains |
+- **OpenAPI Desync:** The single biggest drag on velocity. Backend features were merged without updating the API contract, blocking the frontend.
+- **Consultation Lifecycle:** No ability to edit or delete existing consultations.
+- **Reporting Gaps:** Several requested reports (`consultations-by-clinic`, `follow-ups`) lack both backend routes and frontend UI.
+- **Automated Tests:** Zero automated test coverage (Unit/Integration/E2E).

@@ -14,6 +14,11 @@ import NewUserPage from "@/pages/user-new";
 import UserDetailPage from "@/pages/user-detail";
 import RolesPage from "@/pages/roles";
 import SettingsPage from "@/pages/settings";
+import PatientsPage from "@/pages/patients";
+import PatientDetailPage from "@/pages/patient-detail";
+import NewPatientPage from "@/pages/patient-new";
+import AuditLogsPage from "@/pages/audit-logs";
+import NotificationsPage from "@/pages/notifications";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +35,16 @@ function Router() {
         <Redirect to="/login" />
       </Route>
       
+      <Route path="/patients/new">
+        <AppLayout><NewPatientPage /></AppLayout>
+      </Route>
+      <Route path="/patients/:id">
+        <AppLayout><PatientDetailPage /></AppLayout>
+      </Route>
+      <Route path="/patients">
+        <AppLayout><PatientsPage /></AppLayout>
+      </Route>
+
       <Route path="/users/new">
         <AppLayout><NewUserPage /></AppLayout>
       </Route>
@@ -44,6 +59,12 @@ function Router() {
       </Route>
       <Route path="/settings">
         <AppLayout><SettingsPage /></AppLayout>
+      </Route>
+      <Route path="/audit-logs">
+        <AppLayout><AuditLogsPage /></AppLayout>
+      </Route>
+      <Route path="/notifications">
+        <AppLayout><NotificationsPage /></AppLayout>
       </Route>
 
       <Route component={NotFound} />

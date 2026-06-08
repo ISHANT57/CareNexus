@@ -153,4 +153,20 @@ router.patch("/:id", CLINICAL_ROLES, validateBody(UpdateConsultationSchema), asy
   } catch (err) { next(err); }
 });
 
+router.delete("/:id", CLINICAL_ROLES, async (req, res, next) => {
+  try {
+    const consultation = await prisma.consultation.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    if (!consultation) throw Errors.notFound("Consultation");
+    assertTenantMatch(req, consultation.tenantId);
+
+    const deleted = await prisma.consultation.update({
+      where: { id: consultation.id },
+      data: { deletedAt: new Date() },
+    });
+
+    await createAuditLog({ req, entityType: "Consultation", entityId: consultation.id, action: "DELETE", before: consultation });
+    res.status(204).send();
+  } catch (err) { next(err); }
+});
+
 export const consultationsRouter = router;

@@ -398,6 +398,7 @@ enum JourneyStatus {
   DISCHARGE
   MEDICATION_REQUIRED
   CONSULTATION_COMPLETED
+  APPOINTMENT_COMPLETED
 }
 
 // ─────────────────────────────────────────

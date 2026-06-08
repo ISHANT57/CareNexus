@@ -238,4 +238,100 @@ router.get("/appointment-stats", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/reports/consultations-by-clinic
+router.get("/consultations-by-clinic", async (req, res, next) => {
+  try {
+    const tenantId = req.tenantId!;
+    const base = { tenantId, deletedAt: null };
+
+    const rows = await prisma.consultation.groupBy({
+      by: ["clinicId"],
+      where: base,
+      _count: { id: true },
+    });
+    const clinicIds = rows.map((r) => r.clinicId).filter(Boolean) as string[];
+    const clinics = await prisma.clinic.findMany({
+      where: { id: { in: clinicIds } },
+      select: { id: true, name: true },
+    });
+    const nameMap = Object.fromEntries(clinics.map((c) => [c.id, c.name]));
+
+    res.json(rows.map((r) => ({
+      clinicId: r.clinicId ?? "",
+      clinicName: nameMap[r.clinicId ?? ""] ?? "Unknown",
+      count: r._count.id,
+    })));
+  } catch (err) { next(err); }
+});
+
+// GET /api/reports/consultations-by-program
+router.get("/consultations-by-program", async (req, res, next) => {
+  try {
+    const tenantId = req.tenantId!;
+    const base = { tenantId, deletedAt: null };
+
+    // Join through patients to get program
+    const consultations = await prisma.consultation.findMany({
+      where: base,
+      include: { patient: { select: { programId: true } } },
+    });
+
+    const programCountMap: Record<string, number> = {};
+    for (const c of consultations) {
+      const programId = c.patient?.programId ?? "none";
+      programCountMap[programId] = (programCountMap[programId] ?? 0) + 1;
+    }
+
+    const programIds = Object.keys(programCountMap).filter((id) => id !== "none");
+    const programs = await prisma.program.findMany({
+      where: { id: { in: programIds } },
+      select: { id: true, name: true },
+    });
+    const nameMap = Object.fromEntries(programs.map((p) => [p.id, p.name]));
+
+    res.json(Object.entries(programCountMap).map(([programId, count]) => ({
+      programId,
+      programName: nameMap[programId] ?? (programId === "none" ? "No Program" : "Unknown"),
+      count,
+    })));
+  } catch (err) { next(err); }
+});
+
+// GET /api/reports/follow-ups
+router.get("/follow-ups", async (req, res, next) => {
+  try {
+    const tenantId = req.tenantId!;
+    const base = { tenantId, deletedAt: null };
+
+    // Get all consultations that have follow-up instructions
+    const consultations = await prisma.consultation.findMany({
+      where: { ...base, followUpInstructions: { not: "" } },
+      orderBy: { consultationDate: "desc" },
+      include: {
+        patient: { select: { id: true, firstName: true, lastName: true, nhsNumber: true } },
+        doctor: { select: { id: true, firstName: true, lastName: true } },
+        clinic: { select: { id: true, name: true } },
+      },
+    });
+
+    // Deduplicate — keep only the most recent consultation per patient
+    const seen = new Set<string>();
+    const followUps = consultations.filter((c) => {
+      if (seen.has(c.patientId)) return false;
+      seen.add(c.patientId);
+      return true;
+    });
+
+    res.json(followUps.map((c) => ({
+      patientId: c.patientId,
+      patientName: `${c.patient?.firstName ?? ""} ${c.patient?.lastName ?? ""}`.trim(),
+      nhsNumber: c.patient?.nhsNumber ?? "",
+      followUpInstructions: c.followUpInstructions,
+      consultationDate: c.consultationDate,
+      doctorName: `${c.doctor?.firstName ?? ""} ${c.doctor?.lastName ?? ""}`.trim(),
+      clinicName: c.clinic?.name ?? "",
+    })));
+  } catch (err) { next(err); }
+});
+
 export default router;

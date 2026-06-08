@@ -18,6 +18,7 @@ export const Errors = {
   notFound: (resource = "Resource") =>
     new AppError(`${resource} not found`, 404, "NOT_FOUND"),
   conflict: (msg: string) => new AppError(msg, 409, "CONFLICT"),
+  badRequest: (msg: string) => new AppError(msg, 400, "BAD_REQUEST"),
   validation: (msg: string) => new AppError(msg, 422, "VALIDATION_ERROR"),
   tenantMismatch: () =>
     new AppError("Cross-tenant access denied", 403, "TENANT_MISMATCH"),

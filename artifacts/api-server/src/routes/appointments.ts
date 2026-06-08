@@ -138,12 +138,12 @@ router.post("/:id/complete", CLINICAL_ROLES, async (req, res, next) => {
     
     await createAuditLog({ req, entityType: "Appointment", entityId: appointment.id, action: "UPDATE", before: appointment, after: updated });
 
-    // Business Flow: Add Journey Event for Consultation
+    // Business Flow: Add Journey Event for Appointment Completion
     await prisma.patientJourneyEvent.create({
       data: {
         patientId: appointment.patientId,
-        status: "PSI", // using PSI as per Plan
-        notes: `Consultation completed with ${updated.doctor?.firstName} ${updated.doctor?.lastName} at ${updated.clinic?.name}`,
+        status: "APPOINTMENT_COMPLETED",
+        notes: `Appointment completed with ${updated.doctor?.firstName} ${updated.doctor?.lastName} at ${updated.clinic?.name}`,
         actedBy: req.user!.userId
       }
     });

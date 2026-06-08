@@ -210,6 +210,27 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
+      {/* Consultations by Doctor chart */}
+      {consultationStats && consultationStats.consultationsByDoctor && consultationStats.consultationsByDoctor.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Consultations by Doctor</CardTitle>
+            <CardDescription>Volume of consultations per doctor this period</CardDescription>
+          </CardHeader>
+          <CardContent className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={consultationStats.consultationsByDoctor} margin={{ top: 10, right: 30, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="doctorName" axisLine={false} tickLine={false} />
+                <YAxis axisLine={false} tickLine={false} />
+                <Tooltip cursor={{ fill: 'transparent' }} />
+                <Bar dataKey="count" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="col-span-1">
           <CardHeader>

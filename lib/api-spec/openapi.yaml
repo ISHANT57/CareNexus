@@ -1383,6 +1383,20 @@ paths:
                 items:
                   $ref: "#/components/schemas/AuditLog"
 
+  /reports/consultation-stats:
+    get:
+      operationId: getConsultationStats
+      tags: [reports]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Consultation stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsultationStats"
+
   # ── Program Enrollments ───────────────────────────────────────────────────
   /program-enrollments:
     get:
@@ -1660,6 +1674,105 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Appointment"
+
+  # ── Consultations ────────────────────────────────────────────────────────
+  /consultations:
+    get:
+      operationId: listConsultations
+      tags: [consultations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patientId
+          in: query
+          schema:
+            type: string
+        - name: doctorId
+          in: query
+          schema:
+            type: string
+        - name: clinicId
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of consultations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsultationList"
+    post:
+      operationId: createConsultation
+      tags: [consultations]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConsultationInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Consultation"
+
+  /consultations/{id}:
+    get:
+      operationId: getConsultation
+      tags: [consultations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Consultation"
+    patch:
+      operationId: updateConsultation
+      tags: [consultations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConsultationUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Consultation"
+
   /api/files:
     post:
       summary: Upload a file
@@ -2631,6 +2744,20 @@ components:
           type: string
         count:
           type: integer
+
+    ConsultationStats:
+      type: object
+      properties:
+        totalConsultations: { type: number }
+        consultationsThisMonth: { type: number }
+        consultationsByDoctor:
+          type: array
+          items:
+            type: object
+            properties:
+              doctorId: { type: string }
+              doctorName: { type: string }
+              count: { type: number }
     FileUpload:
       type: object
       required: [id, tenantId, patientId, uploaderId, fileKey, fileUrl, createdAt]
@@ -2902,3 +3029,65 @@ components:
                 type: string
               count:
                 type: integer
+
+    ConsultationInput:
+      type: object
+      required: [patientId, appointmentId, doctorId, clinicId, chiefComplaint, symptoms, observations, diagnosis, treatmentPlan, medications, followUpInstructions]
+      properties:
+        patientId: { type: string }
+        appointmentId: { type: string }
+        doctorId: { type: string }
+        clinicId: { type: string }
+        chiefComplaint: { type: string }
+        symptoms: { type: string }
+        observations: { type: string }
+        diagnosis: { type: string }
+        treatmentPlan: { type: string }
+        medications: { type: string }
+        followUpInstructions: { type: string }
+        consultationDate: { type: string, format: date-time }
+
+    ConsultationUpdate:
+      type: object
+      properties:
+        chiefComplaint: { type: string }
+        symptoms: { type: string }
+        observations: { type: string }
+        diagnosis: { type: string }
+        treatmentPlan: { type: string }
+        medications: { type: string }
+        followUpInstructions: { type: string }
+
+    Consultation:
+      type: object
+      properties:
+        id: { type: string }
+        tenantId: { type: string }
+        patientId: { type: string }
+        appointmentId: { type: string }
+        doctorId: { type: string }
+        clinicId: { type: string }
+        chiefComplaint: { type: string }
+        symptoms: { type: string }
+        observations: { type: string }
+        diagnosis: { type: string }
+        treatmentPlan: { type: string }
+        medications: { type: string }
+        followUpInstructions: { type: string }
+        consultationDate: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        patient: { $ref: "#/components/schemas/Patient" }
+        doctor: { $ref: "#/components/schemas/User" }
+        clinic: { $ref: "#/components/schemas/Clinic" }
+        appointment: { $ref: "#/components/schemas/Appointment" }
+
+    ConsultationList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Consultation"
+        meta:
+          $ref: "#/components/schemas/Meta"

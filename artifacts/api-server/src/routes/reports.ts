@@ -88,6 +88,49 @@ router.get("/enrollment-stats", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/reports/consultation-stats
+router.get("/consultation-stats", async (req, res, next) => {
+  try {
+    const tenantId = req.tenantId!;
+    const base = { tenantId, deletedAt: null };
+    const now = new Date();
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [
+      totalConsultations,
+      consultationsThisMonth,
+    ] = await Promise.all([
+      prisma.consultation.count({ where: base }),
+      prisma.consultation.count({ where: { ...base, createdAt: { gte: firstOfMonth } } })
+    ]);
+
+    const rows = await prisma.consultation.groupBy({
+      by: ["doctorId"],
+      where: base,
+      _count: { id: true },
+    });
+    
+    const userIds = rows.map((r) => r.doctorId).filter(Boolean) as string[];
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, firstName: true, lastName: true },
+    });
+    const nameMap = Object.fromEntries(users.map((u) => [u.id, `${u.firstName} ${u.lastName}`]));
+    
+    const consultationsByDoctor = rows.map((r) => ({
+      doctorId: r.doctorId ?? "",
+      doctorName: nameMap[r.doctorId ?? ""] ?? "Unknown",
+      count: r._count.id,
+    }));
+
+    res.json({
+      totalConsultations,
+      consultationsThisMonth,
+      consultationsByDoctor,
+    });
+  } catch (err) { next(err); }
+});
+
 // GET /api/reports/patients-by-status
 router.get("/patients-by-status", async (req, res, next) => {
   try {

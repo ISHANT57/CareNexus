@@ -31,6 +31,7 @@ model Tenant {
   notifications      Notification[]
   programEnrollments ProgramEnrollment[]
   appointments       Appointment[]
+  consultations      Consultation[]
 
   @@map("tenants")
 }
@@ -76,6 +77,7 @@ model Clinic {
   userClinicAssignments    UserClinicAssignment[]
   doctorPatientAssignments DoctorPatientAssignment[]
   appointments             Appointment[]
+  consultations            Consultation[]
 
   @@unique([areaId, name])
   @@index([tenantId])
@@ -167,6 +169,7 @@ model User {
   uploadedFiles        FileUpload[]
   refreshTokens        RefreshToken[]
   appointments         Appointment[]
+  consultations        Consultation[]
 
   @@index([tenantId])
   @@index([email])
@@ -296,6 +299,7 @@ model Patient {
   onboardingLogs        AccountOnboardingLog[]
   programEnrollments    ProgramEnrollment[]
   appointments          Appointment[]
+  consultations         Consultation[]
 
   @@unique([tenantId, nhsNumber])
   @@index([tenantId])
@@ -393,6 +397,7 @@ enum JourneyStatus {
   PSI
   DISCHARGE
   MEDICATION_REQUIRED
+  CONSULTATION_COMPLETED
 }
 
 // ─────────────────────────────────────────
@@ -703,6 +708,8 @@ model Appointment {
   updatedAt       DateTime          @updatedAt
   deletedAt       DateTime?
 
+  consultation    Consultation?
+
   tenant  Tenant  @relation(fields: [tenantId], references: [id])
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
   doctor  User    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
@@ -720,5 +727,40 @@ enum AppointmentStatus {
   COMPLETED
   CANCELLED
   NO_SHOW
+}
+
+// ─────────────────────────────────────────
+
+model Consultation {
+  id                   String    @id @default(uuid())
+  tenantId             String
+  patientId            String
+  appointmentId        String    @unique
+  doctorId             String
+  clinicId             String
+  chiefComplaint       String
+  symptoms             String
+  observations         String
+  diagnosis            String
+  treatmentPlan        String
+  medications          String
+  followUpInstructions String
+  consultationDate     DateTime  @default(now())
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  deletedAt            DateTime?
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  patient     Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  doctor      User        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  clinic      Clinic      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([clinicId])
+  @@index([appointmentId])
+  @@map("consultations")
 }
 

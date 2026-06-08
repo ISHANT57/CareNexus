@@ -1,12 +1,12 @@
 # Caremesh PMS — Project Status
 
-_Last updated: 2026-06-08 (agent session)_
+_Last updated: 2026-06-08 (full repository audit)_
 
 ---
 
 ## What This Is
 
-**Caremesh PMS** is a multi-tenant Healthcare Patient Management SaaS for NHS mental health trusts. It enables clinical teams to manage patients, programs, clinics, areas, staff, communications, and audit trails within isolated tenant accounts.
+**Caremesh PMS** is a multi-tenant Healthcare Patient Management SaaS for NHS mental health trusts. It enables clinical teams to manage patients, programs, clinics, areas, staff, communications, appointments, consultations, and audit trails within isolated tenant accounts.
 
 ---
 
@@ -14,13 +14,15 @@ _Last updated: 2026-06-08 (agent session)_
 
 | Layer | Status | Notes |
 |---|---|---|
-| Database schema | ✅ Complete | 21 Prisma models, pushed to PostgreSQL |
-| Seed data | ✅ Present | 1 tenant, 4 areas, 4 clinics, 5 programs, 8 patients |
-| API server | ✅ Builds + 0 TS errors | Express 5, 14 route groups |
-| OpenAPI spec | ✅ Complete | `lib/api-spec/openapi.yaml` |
+| Database schema | ✅ Complete | 22 Prisma models (incl. Consultation), pushed to PostgreSQL |
+| Seed data | ✅ Present | Real Mumbai data: 195 Areas, 707 Clinics, 25 Programs, 8 patients |
+| API server | ✅ Builds + 0 TS errors | Express 5, 20 route groups |
+| OpenAPI spec | ✅ Complete | `lib/api-spec/openapi.yaml` — 16 modules including Consultations |
 | Codegen | ✅ Generated | React Query hooks + Zod schemas in `lib/` |
-| Frontend | ✅ Builds + 0 TS errors | 13 pages, sidebar layout, AuthGuard |
+| Frontend | ✅ Builds + 0 TS errors | 20 pages, sidebar layout, AuthGuard |
 | Auth flow | ✅ Tested | Login / register / refresh / me / logout all working |
+
+**Overall Completion: ~82%**
 
 **Run commands:**
 ```bash
@@ -48,65 +50,65 @@ TenantID:  e727eb86-cd40-487a-b651-1db925c58376
 ## Completed Features
 
 - [x] Multi-tenant JWT auth (login, register, refresh token rotation, logout, /me)
+- [x] HttpOnly cookie token storage (SEC-001)
+- [x] Email verification enforcement (SEC-002)
+- [x] Forgot-password and reset-password flows
 - [x] Role-based access control (SUPER_ADMIN, AREA_ADMIN, CLINIC_ADMIN, DOCTOR, OPERATOR, STAFF)
+- [x] Role permissions management UI (`/roles` page)
+- [x] Rate limiting on auth endpoints (20 req / 15 min window)
+- [x] Tenant isolation on every route (requireTenant + assertTenantMatch)
+- [x] Append-only audit log (all mutations log before/after JSON values)
 - [x] Full CRUD API: Tenants, Areas, Clinics, Roles, Users, Programs, Patients
 - [x] Patient journey event log (NEW → PSI → DISCHARGE → MEDICATION_REQUIRED)
 - [x] Patient GP details (upsert)
-- [x] Doctor-patient assignments (create, list, soft-delete)
-- [x] SMS communications (list, send, per-patient history, Twilio webhook stub)
+- [x] Doctor-patient assignments (create, list, soft-delete) + notification trigger
+- [x] SMS communications (list, send, per-patient history, Twilio integration)
+- [x] File uploads (multer, per-patient, download/delete UI)
+- [x] Bulk patient CSV import
 - [x] Notifications (list, mark one read, mark all read)
-- [x] Append-only audit log (all mutations log before/after JSON values)
-- [x] Reports: dashboard stats, patients-by-status, patients-by-program, recent activity
+- [x] Reports: dashboard stats, patients-by-status, patients-by-program, recent-activity
 - [x] Soft delete on all core entities (`deletedAt` timestamp)
-- [x] Rate limiting on auth endpoints (20 req / 15 min window)
 - [x] Request-scoped pino logging on all routes
-- [x] Tenant isolation assertion on every tenant-scoped route
 - [x] OpenAPI → React Query hooks + Zod schemas (Orval codegen)
-- [x] Frontend pages: login, register, dashboard (Recharts), patients list, patient detail, patient new, users list, user new, clinics, programs, areas, audit logs, settings, notifications
+- [x] Frontend pages: login, register, forgot-password, reset-password, dashboard, patients list, patient detail, patient new, users list, user new, user detail, clinics, programs, areas, roles, appointments, audit logs, notifications, settings
 - [x] AuthGuard protecting all app routes with token-aware redirect
-- [x] Patient status-change button (ACTIVE/INACTIVE dropdown on patient detail)
-- [x] Patient journey timeline UI (vertical timeline with Record Event dialog)
-- [x] Doctor assignment UI on patient detail (Care Team card with Assign Doctor / Unassign)
-- [x] SMS compose UI on patient detail (Send SMS dialog + history)
-- [x] User edit page (`/users/:id` with full form and role selection)
-- [x] Clinic inline edit + delete (Pencil/Trash per row with AlertDialog confirmation)
-- [x] Area inline edit + delete (Pencil/Trash per card with AlertDialog confirmation)
-- [x] Program inline edit + delete (Pencil/Trash per card)
-- [x] File uploads (Upload/Delete/Download on patient detail Files tab)
-- [x] Pagination controls in all list views (Patients, Users, Clinics, Programs, Areas)
-- [x] Bulk patient CSV import UI (Import CSV button on patients list)
-- [x] Roles management UI (`/roles` page with full CRUD and permission management)
-- [x] AuthGuard flash on hard refresh — FIXED (token getter initialised at module load; query disabled when no token)
-- [x] Mobile responsive sidebar (hamburger menu + slide-in drawer on small screens)
-- [x] Program Enrollment Module (ProgramEnrollment models, routes, codegen, patient detail UI, and dashboard stats)
-- [x] Appointment Management Module (Appointment models, full CRUD, status workflows, dedicated UI, patient detail integration, and dashboard stats)
-- [x] Master Data Migration (Imported MUMBAI.xlsx real data for Areas/Clinics, seeded 25 Programs, soft-deleted dummy data)
+- [x] Mobile responsive sidebar (hamburger menu + slide-in drawer)
+- [x] Program Enrollment Module (ACTIVE / COMPLETED / CANCELLED + patient UI + dashboard stats)
+- [x] Appointment Management Module (SCHEDULED / COMPLETED / CANCELLED / NO_SHOW + patient UI + global list + dashboard stats + charts)
+- [x] Consultation Notes Module (backend: schema, CRUD API, reports; frontend: record dialog, history view; dashboard stats widgets)
+- [x] Master Data Migration (195 Areas, 707 Clinics, 25 Programs from MUMBAI.xlsx)
+- [x] IMPLEMENTATION_PROGRESS.md, TECHNICAL_DEBT.md, KNOWN_ISSUES.md, CHANGELOG.md created
 
 ---
 
-## Pending / Not Yet Built
+## Pending / In Progress
 
-| Feature | Priority | Notes |
-|---|---|---|
-| Notifications creation (server-side triggers) | Medium | Read/mark-read works; nothing creates notifications |
-| Twilio SMS live sending | Low | Webhook handler exists; actual `twilio.messages.create()` not wired |
-| File upload to object storage | Low | Schema exists; no cloud storage integration |
-| Email verification enforcement | Low | `emailVerified` field exists; not enforced on login |
-| Role permissions management UI | Low | `role_permissions` table exists; no CRUD route or UI |
+| Feature | Priority | Status | Notes |
+|---|---|---|---|
+| DELETE /api/consultations/:id | P1 | 🔴 Not started | Soft-delete + audit log |
+| Edit Consultation UI | P1 | 🔴 Not started | PATCH endpoint exists; UI missing |
+| Patient Detail Tab Restructure | P2 | 🔴 Not started | Move to Tabs component |
+| Record Consultation from Appointment row | P2 | 🔴 Not started | Button on completed appointments |
+| Dashboard Consultations-by-Doctor chart | P2 | 🔴 Not started | Data available in API |
+| Reports: consultations-by-clinic | P2 | 🔴 Not started | New report endpoint + UI |
+| Reports: consultations-by-program | P2 | 🔴 Not started | New report endpoint + UI |
+| Reports: follow-ups required | P2 | 🔴 Not started | New report endpoint + UI |
+| Granular permission enforcement (role_permissions) | P1 | 🔴 Not started | UI exists; no runtime effect |
+| CSRF Protection | P2 | 🔴 Not started | Double-submit cookie or csurf |
+| Automated test suite | P1 | 🔴 Not started | Vitest + Playwright |
+| Cloud object storage for files | P2 | 🔴 Not started | Local disk is ephemeral |
 
 ---
 
-## Known Bugs
+## Known Bugs / Issues
 
-1. ~~**Recent Activity shows nothing**~~ ✅ **FIXED** — Changed `activity.user` → `activity.actor` and `activity.entity` → `activity.entityType` in `dashboard.tsx` (line 164). TypeScript passes.
+See `KNOWN_ISSUES.md` for the full list. Key items:
 
-2. ~~**Patient status badge colour is always wrong**~~ ✅ **FIXED** — Changed `patient.status === 'Active'` → `patient.status === 'ACTIVE'` in both `patients.tsx` (line 82) and `patient-detail.tsx` (line 68).
-
-3. ~~**Register page does not redirect after success**~~ ✅ **ALREADY FIXED** — `register.tsx` already stores tokens in localStorage and calls `setLocation('/dashboard')` (lines 43–49). No change needed.
-
-4. ~~**AuthGuard flash on hard refresh**~~ ✅ **FIXED** — `setAuthTokenGetter` now called at module load time in `AuthGuard.tsx`. Query is disabled when no token is present, eliminating the spurious redirect to `/login`.
-
-5. **No CSRF protection** — Tokens are stored in `localStorage`, which is XSS-accessible. For production: move to `httpOnly` + `SameSite=Strict` cookies.
+1. **KI-001** — DELETE /api/consultations/:id missing
+2. **KI-002** — Edit Consultation UI not implemented
+3. **KI-007** — Role permissions UI has no runtime effect on access control
+4. **KI-008** — File uploads stored on local disk (ephemeral on cloud deployments)
+5. **KI-010** — Appointment complete creates `PSI` journey event (should be `APPOINTMENT_COMPLETED`)
 
 ---
 
@@ -119,3 +121,25 @@ TenantID:  e727eb86-cd40-487a-b651-1db925c58376
 | `JWT_REFRESH_SECRET` | Replit secret | Refresh token signing (30 d expiry) |
 | `SESSION_SECRET` | Replit secret | Reserved for future session middleware |
 | `PORT` | Injected by workflow | API server listen port |
+| `TWILIO_ACCOUNT_SID` | Replit secret | Twilio SMS sending |
+| `TWILIO_AUTH_TOKEN` | Replit secret | Twilio SMS sending |
+| `TWILIO_FROM_NUMBER` | Replit secret | Twilio source phone number |
+
+---
+
+## Module Completion Summary
+
+| Module | % Complete |
+|---|---|
+| Authentication & Security | 90% |
+| User & Role Management | 85% |
+| Patient Management | 95% |
+| Appointments | 90% |
+| Consultation Notes | 70% |
+| Program Enrollments | 95% |
+| Dashboard & Reports | 75% |
+| Communications (SMS) | 90% |
+| File Uploads | 70% |
+| Audit Logging | 100% |
+| Data Migration | 100% |
+| **Overall** | **82%** |

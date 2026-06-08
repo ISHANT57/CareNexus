@@ -400,8 +400,33 @@ Indexes: `tenantId`, `patientId`, `programId`.
 | `clinicId` | UUID FK → clinics | Cascade delete |
 | `appointmentDate` | DateTime | |
 | `durationMinutes` | Int | Default 30 |
-| `status` | Enum AppointmentStatus | SCHEDULED / COMPLETED / CANCELLED / NO_SHOW |
-| `notes` | String? | |
+| `status` | String | SCHEDULED, COMPLETED, CANCELLED, NO_SHOW |
+| `notes` | String? | Additional scheduling notes |
+| `createdAt` | DateTime | |
+| `updatedAt` | DateTime | |
+| `deletedAt` | DateTime? | Soft delete |
+
+Indexes: `tenantId`, `patientId`, `doctorId`, `clinicId`.
+
+---
+
+### `consultations`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | Auto-generated |
+| `tenantId` | UUID FK | Ref: `tenants` |
+| `patientId` | UUID FK | Ref: `patients` (cascade) |
+| `appointmentId` | UUID FK | Ref: `appointments` (cascade) UNIQUE |
+| `doctorId` | UUID FK | Ref: `users` (cascade) |
+| `clinicId` | UUID FK | Ref: `clinics` (cascade) |
+| `chiefComplaint` | String | |
+| `symptoms` | String | |
+| `observations` | String | |
+| `diagnosis` | String | |
+| `treatmentPlan` | String | |
+| `medications` | String | |
+| `followUpInstructions` | String | |
+| `consultationDate` | DateTime | default: now() |
 | `createdAt` | DateTime | |
 | `updatedAt` | DateTime | |
 | `deletedAt` | DateTime? | Soft delete |

@@ -497,6 +497,30 @@ _CLINICAL_ROLES._ Marks appointment as CANCELLED.
 
 ---
 
+## Module 16 — Consultations (`/api/consultations`)
+_Auth + tenant required._
+
+### GET /api/consultations
+_CLINICAL_ROLES._
+Query params: `patientId`, `doctorId`, `clinicId`, `page`, `limit`
+**Response 200:** `{ data: Consultation[], meta: { total, page, limit, totalPages } }`
+
+### GET /api/consultations/:id
+_CLINICAL_ROLES._
+**Response 200:** Consultation object.
+
+### POST /api/consultations
+_CLINICAL_ROLES._
+**Body:** `{ "patientId": "uuid", "appointmentId": "uuid", "doctorId": "uuid", "clinicId": "uuid", "chiefComplaint": "string", "symptoms": "string", "observations": "string", "diagnosis": "string", "treatmentPlan": "string", "medications": "string", "followUpInstructions": "string", "consultationDate?": "ISO8601" }`
+**Response 201:** Consultation object.
+
+### PATCH /api/consultations/:id
+_CLINICAL_ROLES._
+**Body:** `{ "chiefComplaint?": "string", "symptoms?": "string", "observations?": "string", "diagnosis?": "string", "treatmentPlan?": "string", "medications?": "string", "followUpInstructions?": "string" }`
+**Response 200:** Updated Consultation object.
+
+---
+
 ## Health Check
 
 ### GET /api/healthz

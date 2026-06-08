@@ -10,7 +10,8 @@ import {
   useListProgramEnrollments, useCreateProgramEnrollment, useCompleteProgramEnrollment, useCancelProgramEnrollment, getListProgramEnrollmentsQueryKey,
   useListPrograms,
   useListAppointments, useCreateAppointment, useCancelAppointment, useCompleteAppointment, useUpdateAppointment, getListAppointmentsQueryKey,
-  useListClinics
+  useListClinics,
+  useListConsultations, useCreateConsultation, getListConsultationsQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -60,6 +61,21 @@ export default function PatientDetailPage() {
     { patientId: id },
     { query: { enabled: !isNew && !!id, queryKey: enrollmentsKey } }
   );
+
+  const consultationsKey = getListConsultationsQueryKey({ patientId: id });
+  const { data: consultationsData, isLoading: isConsultationsLoading } = useListConsultations(
+    { patientId: id },
+    { query: { enabled: !isNew && !!id, queryKey: consultationsKey } }
+  );
+  const createConsultation = useCreateConsultation();
+
+  const [isConsultationDialogOpen, setIsConsultationDialogOpen] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState("");
+  const [consultationForm, setConsultationForm] = useState({
+    chiefComplaint: "", symptoms: "", observations: "", diagnosis: "",
+    treatmentPlan: "", medications: "", followUpInstructions: ""
+  });
+
 
   const [isEnrollDialogOpen, setIsEnrollDialogOpen] = useState(false);
   const [enrollProgramId, setEnrollProgramId] = useState("");
@@ -188,6 +204,40 @@ export default function PatientDetailPage() {
       toast({ title: "Enrollment completed" });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Action failed", description: err.message });
+    }
+  };
+
+  const handleCompleteAppointment = async (apptId: string) => {
+    try {
+      await completeAppointmentMutation.mutateAsync({ id: apptId });
+      toast({ title: "Appointment completed", description: "Appointment has been marked as completed." });
+      queryClient.invalidateQueries({ queryKey: appointmentsKey });
+      queryClient.invalidateQueries({ queryKey: getGetPatientJourneyQueryKey(id) });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.response?.data?.message || err.message, variant: "destructive" });
+    }
+  };
+
+  const handleRecordConsultation = async () => {
+    try {
+      const appt = appointmentsData?.data?.find(a => a.id === selectedAppointmentId);
+      if (!appt) throw new Error("Appointment not found");
+      await createConsultation.mutateAsync({
+        data: {
+          patientId: id,
+          appointmentId: appt.id,
+          doctorId: appt.doctorId,
+          clinicId: appt.clinicId,
+          ...consultationForm
+        }
+      });
+      toast({ title: "Success", description: "Consultation notes recorded successfully." });
+      setIsConsultationDialogOpen(false);
+      setConsultationForm({ chiefComplaint: "", symptoms: "", observations: "", diagnosis: "", treatmentPlan: "", medications: "", followUpInstructions: "" });
+      queryClient.invalidateQueries({ queryKey: consultationsKey });
+      queryClient.invalidateQueries({ queryKey: getGetPatientJourneyQueryKey(id) });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.response?.data?.message || err.message, variant: "destructive" });
     }
   };
 
@@ -751,7 +801,124 @@ export default function PatientDetailPage() {
               )}
             </CardContent>
           </Card>
-        </div>        <div className="space-y-6">
+        </div>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Consultations
+              </CardTitle>
+              <Dialog open={isConsultationDialogOpen} onOpenChange={setIsConsultationDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="h-8">
+                    <Plus className="w-4 h-4 mr-1" /> Record
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Record Consultation</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label>Appointment</Label>
+                      <Select value={selectedAppointmentId} onValueChange={setSelectedAppointmentId}>
+                        <SelectTrigger><SelectValue placeholder="Select completed appointment..." /></SelectTrigger>
+                        <SelectContent>
+                          {appointmentsData?.data?.filter(a => a.status === "COMPLETED").map(a => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {format(new Date(a.appointmentDate), "MMM d, yyyy")} - Dr. {a.doctor?.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label>Chief Complaint</Label>
+                        <Textarea value={consultationForm.chiefComplaint} onChange={e => setConsultationForm({...consultationForm, chiefComplaint: e.target.value})} placeholder="Main reason for visit..." />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Symptoms</Label>
+                        <Textarea value={consultationForm.symptoms} onChange={e => setConsultationForm({...consultationForm, symptoms: e.target.value})} placeholder="Patient reported symptoms..." />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label>Observations</Label>
+                        <Textarea value={consultationForm.observations} onChange={e => setConsultationForm({...consultationForm, observations: e.target.value})} placeholder="Clinical observations..." />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Diagnosis</Label>
+                        <Textarea value={consultationForm.diagnosis} onChange={e => setConsultationForm({...consultationForm, diagnosis: e.target.value})} placeholder="Primary and secondary diagnosis..." />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label>Treatment Plan</Label>
+                        <Textarea value={consultationForm.treatmentPlan} onChange={e => setConsultationForm({...consultationForm, treatmentPlan: e.target.value})} placeholder="Recommended treatments..." />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Medications</Label>
+                        <Textarea value={consultationForm.medications} onChange={e => setConsultationForm({...consultationForm, medications: e.target.value})} placeholder="Prescribed medications..." />
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Follow-up Instructions</Label>
+                      <Textarea value={consultationForm.followUpInstructions} onChange={e => setConsultationForm({...consultationForm, followUpInstructions: e.target.value})} placeholder="Instructions for patient..." />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsConsultationDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleRecordConsultation} disabled={!selectedAppointmentId || !consultationForm.chiefComplaint || !consultationForm.diagnosis || createConsultation.isPending}>
+                      Save Notes
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {isConsultationsLoading ? (
+                <Skeleton className="h-10 w-full" />
+              ) : consultationsData?.data?.length ? (
+                <div className="space-y-4">
+                  {consultationsData.data.map(cons => (
+                    <div key={cons.id} className="p-4 border rounded-lg bg-card/50 text-sm space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-semibold text-base">{cons.consultationDate ? format(new Date(cons.consultationDate), "MMMM d, yyyy") : ""}</div>
+                          <div className="text-muted-foreground flex gap-3 mt-1">
+                            <span>Dr. {cons.doctor?.lastName}</span>
+                            <span>•</span>
+                            <span>{cons.clinic?.name}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-3 pt-2">
+                        <div>
+                          <span className="font-medium text-xs uppercase text-muted-foreground">Complaint:</span>
+                          <p className="mt-0.5">{cons.chiefComplaint}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-xs uppercase text-muted-foreground">Diagnosis:</span>
+                          <p className="mt-0.5">{cons.diagnosis}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="font-medium text-xs uppercase text-muted-foreground">Treatment & Medications:</span>
+                          <p className="mt-0.5">{cons.treatmentPlan}</p>
+                          {cons.medications && <p className="mt-1 text-muted-foreground italic">Rx: {cons.medications}</p>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground py-2 text-center">No consultations recorded.</div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg">Care Team</CardTitle>

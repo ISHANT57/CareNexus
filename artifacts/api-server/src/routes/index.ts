@@ -17,6 +17,7 @@ import filesRouter from "./files.js";
 import importRouter from "./import.js";
 import programEnrollmentsRouter from "./programEnrollments.js";
 import { appointmentsRouter } from "./appointments.js";
+import { consultationsRouter } from "./consultations.js";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use("/files", filesRouter);
 router.use("/import", importRouter);
 router.use("/program-enrollments", programEnrollmentsRouter);
 router.use("/appointments", appointmentsRouter);
+router.use("/consultations", consultationsRouter);
 
 export default router;

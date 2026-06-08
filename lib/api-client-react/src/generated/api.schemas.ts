@@ -531,6 +531,51 @@ export interface ImportPatientsRequest {
   file: Blob;
 }
 
+export type ProgramEnrollmentStatus = typeof ProgramEnrollmentStatus[keyof typeof ProgramEnrollmentStatus];
+
+
+export const ProgramEnrollmentStatus = {
+  ACTIVE: 'ACTIVE',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+} as const;
+
+export interface ProgramEnrollment {
+  id: string;
+  tenantId: string;
+  patientId: string;
+  programId: string;
+  enrolledAt: string;
+  completedAt?: string | null;
+  status: ProgramEnrollmentStatus;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  program?: Program;
+}
+
+export interface ProgramEnrollmentList {
+  data: ProgramEnrollment[];
+  meta: Meta;
+}
+
+export interface ProgramEnrollmentInput {
+  patientId: string;
+  programId: string;
+  notes?: string;
+}
+
+export interface ProgramEnrollmentUpdate {
+  notes?: string;
+}
+
+export interface EnrollmentStats {
+  totalEnrollments: number;
+  activeEnrollments: number;
+  completedEnrollments: number;
+  enrollmentsByProgram: ProgramCount[];
+}
+
 export type VerifyEmailParams = {
 token: string;
 };
@@ -602,6 +647,14 @@ action?: string;
 };
 
 export type GetRecentActivityParams = {
+limit?: number;
+};
+
+export type ListProgramEnrollmentsParams = {
+patientId?: string;
+programId?: string;
+status?: string;
+page?: number;
 limit?: number;
 };
 

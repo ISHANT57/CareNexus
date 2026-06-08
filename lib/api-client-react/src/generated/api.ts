@@ -40,6 +40,7 @@ import type {
   CommunicationInput,
   CommunicationList,
   DashboardStats,
+  EnrollmentStats,
   FileUpload,
   GetRecentActivityParams,
   HealthStatus,
@@ -53,6 +54,7 @@ import type {
   ListFilesParams,
   ListNotificationsParams,
   ListPatientsParams,
+  ListProgramEnrollmentsParams,
   ListProgramsParams,
   ListTenantsParams,
   ListUsersParams,
@@ -70,6 +72,10 @@ import type {
   PatientUpdate,
   Program,
   ProgramCount,
+  ProgramEnrollment,
+  ProgramEnrollmentInput,
+  ProgramEnrollmentList,
+  ProgramEnrollmentUpdate,
   ProgramInput,
   ProgramList,
   ProgramUpdate,
@@ -4233,6 +4239,77 @@ export function useGetDashboardStats<TData = Awaited<ReturnType<typeof getDashbo
 
 
 
+export const getGetEnrollmentStatsUrl = () => {
+
+
+
+
+  return `/api/reports/enrollment-stats`
+}
+
+export const getEnrollmentStats = async ( options?: RequestInit): Promise<EnrollmentStats> => {
+
+  return customFetch<EnrollmentStats>(getGetEnrollmentStatsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEnrollmentStatsQueryKey = () => {
+    return [
+    `/api/reports/enrollment-stats`
+    ] as const;
+    }
+
+
+export const getGetEnrollmentStatsQueryOptions = <TData = Awaited<ReturnType<typeof getEnrollmentStats>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEnrollmentStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEnrollmentStatsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEnrollmentStats>>> = ({ signal }) => getEnrollmentStats({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEnrollmentStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEnrollmentStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getEnrollmentStats>>>
+export type GetEnrollmentStatsQueryError = ErrorType<unknown>
+
+
+
+export function useGetEnrollmentStats<TData = Awaited<ReturnType<typeof getEnrollmentStats>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEnrollmentStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEnrollmentStatsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getGetPatientsByStatusUrl = () => {
 
 
@@ -4452,6 +4529,343 @@ export function useGetRecentActivity<TData = Awaited<ReturnType<typeof getRecent
 
 
 
+
+export const getListProgramEnrollmentsUrl = (params?: ListProgramEnrollmentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/program-enrollments?${stringifiedParams}` : `/api/program-enrollments`
+}
+
+export const listProgramEnrollments = async (params?: ListProgramEnrollmentsParams, options?: RequestInit): Promise<ProgramEnrollmentList> => {
+
+  return customFetch<ProgramEnrollmentList>(getListProgramEnrollmentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProgramEnrollmentsQueryKey = (params?: ListProgramEnrollmentsParams,) => {
+    return [
+    `/api/program-enrollments`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListProgramEnrollmentsQueryOptions = <TData = Awaited<ReturnType<typeof listProgramEnrollments>>, TError = ErrorType<unknown>>(params?: ListProgramEnrollmentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProgramEnrollments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProgramEnrollmentsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProgramEnrollments>>> = ({ signal }) => listProgramEnrollments(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProgramEnrollments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProgramEnrollmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listProgramEnrollments>>>
+export type ListProgramEnrollmentsQueryError = ErrorType<unknown>
+
+
+
+export function useListProgramEnrollments<TData = Awaited<ReturnType<typeof listProgramEnrollments>>, TError = ErrorType<unknown>>(
+ params?: ListProgramEnrollmentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProgramEnrollments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProgramEnrollmentsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateProgramEnrollmentUrl = () => {
+
+
+
+
+  return `/api/program-enrollments`
+}
+
+export const createProgramEnrollment = async (programEnrollmentInput: ProgramEnrollmentInput, options?: RequestInit): Promise<ProgramEnrollment> => {
+
+  return customFetch<ProgramEnrollment>(getCreateProgramEnrollmentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      programEnrollmentInput,)
+  }
+);}
+
+
+
+
+export const getCreateProgramEnrollmentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProgramEnrollment>>, TError,{data: BodyType<ProgramEnrollmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createProgramEnrollment>>, TError,{data: BodyType<ProgramEnrollmentInput>}, TContext> => {
+
+const mutationKey = ['createProgramEnrollment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProgramEnrollment>>, {data: BodyType<ProgramEnrollmentInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createProgramEnrollment(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateProgramEnrollmentMutationResult = NonNullable<Awaited<ReturnType<typeof createProgramEnrollment>>>
+    export type CreateProgramEnrollmentMutationBody = BodyType<ProgramEnrollmentInput>
+    export type CreateProgramEnrollmentMutationError = ErrorType<unknown>
+
+    export const useCreateProgramEnrollment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProgramEnrollment>>, TError,{data: BodyType<ProgramEnrollmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createProgramEnrollment>>,
+        TError,
+        {data: BodyType<ProgramEnrollmentInput>},
+        TContext
+      > => {
+      return useMutation(getCreateProgramEnrollmentMutationOptions(options));
+    }
+
+export const getUpdateProgramEnrollmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/program-enrollments/${id}`
+}
+
+export const updateProgramEnrollment = async (id: string,
+    programEnrollmentUpdate: ProgramEnrollmentUpdate, options?: RequestInit): Promise<ProgramEnrollment> => {
+
+  return customFetch<ProgramEnrollment>(getUpdateProgramEnrollmentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      programEnrollmentUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateProgramEnrollmentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProgramEnrollment>>, TError,{id: string;data: BodyType<ProgramEnrollmentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateProgramEnrollment>>, TError,{id: string;data: BodyType<ProgramEnrollmentUpdate>}, TContext> => {
+
+const mutationKey = ['updateProgramEnrollment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProgramEnrollment>>, {id: string;data: BodyType<ProgramEnrollmentUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateProgramEnrollment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateProgramEnrollmentMutationResult = NonNullable<Awaited<ReturnType<typeof updateProgramEnrollment>>>
+    export type UpdateProgramEnrollmentMutationBody = BodyType<ProgramEnrollmentUpdate>
+    export type UpdateProgramEnrollmentMutationError = ErrorType<unknown>
+
+    export const useUpdateProgramEnrollment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProgramEnrollment>>, TError,{id: string;data: BodyType<ProgramEnrollmentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateProgramEnrollment>>,
+        TError,
+        {id: string;data: BodyType<ProgramEnrollmentUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateProgramEnrollmentMutationOptions(options));
+    }
+
+export const getCompleteProgramEnrollmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/program-enrollments/${id}/complete`
+}
+
+export const completeProgramEnrollment = async (id: string, options?: RequestInit): Promise<ProgramEnrollment> => {
+
+  return customFetch<ProgramEnrollment>(getCompleteProgramEnrollmentUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCompleteProgramEnrollmentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeProgramEnrollment>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeProgramEnrollment>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['completeProgramEnrollment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeProgramEnrollment>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  completeProgramEnrollment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompleteProgramEnrollmentMutationResult = NonNullable<Awaited<ReturnType<typeof completeProgramEnrollment>>>
+
+    export type CompleteProgramEnrollmentMutationError = ErrorType<unknown>
+
+    export const useCompleteProgramEnrollment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeProgramEnrollment>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completeProgramEnrollment>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getCompleteProgramEnrollmentMutationOptions(options));
+    }
+
+export const getCancelProgramEnrollmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/program-enrollments/${id}/cancel`
+}
+
+export const cancelProgramEnrollment = async (id: string, options?: RequestInit): Promise<ProgramEnrollment> => {
+
+  return customFetch<ProgramEnrollment>(getCancelProgramEnrollmentUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCancelProgramEnrollmentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelProgramEnrollment>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelProgramEnrollment>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['cancelProgramEnrollment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelProgramEnrollment>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  cancelProgramEnrollment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelProgramEnrollmentMutationResult = NonNullable<Awaited<ReturnType<typeof cancelProgramEnrollment>>>
+
+    export type CancelProgramEnrollmentMutationError = ErrorType<unknown>
+
+    export const useCancelProgramEnrollment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelProgramEnrollment>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelProgramEnrollment>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getCancelProgramEnrollmentMutationOptions(options));
+    }
 
 export const getUploadFileUrl = () => {
 

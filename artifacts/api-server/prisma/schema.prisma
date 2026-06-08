@@ -27,8 +27,9 @@ model Tenant {
   users         User[]
   patients      Patient[]
   smsComs       SmsCommunication[]
-  auditLogs     AuditLog[]
-  notifications Notification[]
+  auditLogs          AuditLog[]
+  notifications      Notification[]
+  programEnrollments ProgramEnrollment[]
 
   @@map("tenants")
 }
@@ -224,6 +225,7 @@ model Program {
   tenant                 Tenant                  @relation(fields: [tenantId], references: [id])
   patients               Patient[]
   userProgramAssignments UserProgramAssignment[]
+  programEnrollments     ProgramEnrollment[]
 
   @@unique([tenantId, activationCode])
   @@index([tenantId])
@@ -289,6 +291,7 @@ model Patient {
   smsCommunications     SmsCommunication[]
   fileUploads           FileUpload[]
   onboardingLogs        AccountOnboardingLog[]
+  programEnrollments    ProgramEnrollment[]
 
   @@unique([tenantId, nhsNumber])
   @@index([tenantId])
@@ -644,3 +647,37 @@ model DatabaseSyncAudit {
   @@index([entityType, entityId])
   @@map("database_sync_audit")
 }
+
+// ─────────────────────────────────────────
+// PROGRAM ENROLLMENT
+// ─────────────────────────────────────────
+
+model ProgramEnrollment {
+  id          String           @id @default(uuid())
+  tenantId    String
+  patientId   String
+  programId   String
+  enrolledAt  DateTime         @default(now())
+  completedAt DateTime?
+  status      EnrollmentStatus @default(ACTIVE)
+  notes       String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deletedAt   DateTime?
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([patientId])
+  @@index([programId])
+  @@map("program_enrollments")
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+

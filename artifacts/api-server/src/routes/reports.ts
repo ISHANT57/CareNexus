@@ -44,6 +44,50 @@ router.get("/dashboard", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/reports/enrollment-stats
+router.get("/enrollment-stats", async (req, res, next) => {
+  try {
+    const tenantId = req.tenantId!;
+    const base = { tenantId, deletedAt: null };
+
+    const [
+      totalEnrollments,
+      activeEnrollments,
+      completedEnrollments,
+    ] = await Promise.all([
+      prisma.programEnrollment.count({ where: base }),
+      prisma.programEnrollment.count({ where: { ...base, status: "ACTIVE" } }),
+      prisma.programEnrollment.count({ where: { ...base, status: "COMPLETED" } }),
+    ]);
+
+    const rows = await prisma.programEnrollment.groupBy({
+      by: ["programId"],
+      where: base,
+      _count: { id: true },
+    });
+    
+    const programIds = rows.map((r) => r.programId).filter(Boolean) as string[];
+    const programs = await prisma.program.findMany({
+      where: { id: { in: programIds } },
+      select: { id: true, name: true },
+    });
+    const nameMap = Object.fromEntries(programs.map((p) => [p.id, p.name]));
+    
+    const enrollmentsByProgram = rows.map((r) => ({
+      programId: r.programId ?? "",
+      programName: nameMap[r.programId ?? ""] ?? "Unknown",
+      count: r._count.id,
+    }));
+
+    res.json({
+      totalEnrollments,
+      activeEnrollments,
+      completedEnrollments,
+      enrollmentsByProgram,
+    });
+  } catch (err) { next(err); }
+});
+
 // GET /api/reports/patients-by-status
 router.get("/patients-by-status", async (req, res, next) => {
   try {

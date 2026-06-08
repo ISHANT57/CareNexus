@@ -22,6 +22,7 @@ tags:
   - name: notifications
   - name: auditLogs
   - name: reports
+  - name: programEnrollments
 
 paths:
   /healthz:
@@ -1301,6 +1302,20 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardStats"
 
+  /reports/enrollment-stats:
+    get:
+      operationId: getEnrollmentStats
+      tags: [reports]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Enrollment statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnrollmentStats"
+
   /reports/patients-by-status:
     get:
       operationId: getPatientsByStatus
@@ -1353,6 +1368,126 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AuditLog"
+
+  # ── Program Enrollments ───────────────────────────────────────────────────
+  /program-enrollments:
+    get:
+      operationId: listProgramEnrollments
+      tags: [programEnrollments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patientId
+          in: query
+          schema:
+            type: string
+        - name: programId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of program enrollments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgramEnrollmentList"
+    post:
+      operationId: createProgramEnrollment
+      tags: [programEnrollments]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProgramEnrollmentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgramEnrollment"
+
+  /program-enrollments/{id}:
+    patch:
+      operationId: updateProgramEnrollment
+      tags: [programEnrollments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProgramEnrollmentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgramEnrollment"
+
+  /program-enrollments/{id}/complete:
+    post:
+      operationId: completeProgramEnrollment
+      tags: [programEnrollments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgramEnrollment"
+
+  /program-enrollments/{id}/cancel:
+    post:
+      operationId: cancelProgramEnrollment
+      tags: [programEnrollments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgramEnrollment"
 
   /api/files:
     post:
@@ -2407,3 +2542,80 @@ components:
         file:
           type: string
           format: binary
+
+    ProgramEnrollment:
+      type: object
+      required: [id, tenantId, patientId, programId, status, enrolledAt, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        patientId:
+          type: string
+        programId:
+          type: string
+        enrolledAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [ACTIVE, COMPLETED, CANCELLED]
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        program:
+          $ref: "#/components/schemas/Program"
+
+    ProgramEnrollmentList:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProgramEnrollment"
+        meta:
+          $ref: "#/components/schemas/Meta"
+
+    ProgramEnrollmentInput:
+      type: object
+      required: [patientId, programId]
+      properties:
+        patientId:
+          type: string
+        programId:
+          type: string
+        notes:
+          type: string
+
+    ProgramEnrollmentUpdate:
+      type: object
+      properties:
+        notes:
+          type: string
+
+    EnrollmentStats:
+      type: object
+      required: [totalEnrollments, activeEnrollments, completedEnrollments, enrollmentsByProgram]
+      properties:
+        totalEnrollments:
+          type: integer
+        activeEnrollments:
+          type: integer
+        completedEnrollments:
+          type: integer
+        enrollmentsByProgram:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProgramCount"

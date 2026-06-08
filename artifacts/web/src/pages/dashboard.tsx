@@ -1,4 +1,4 @@
-import { useGetDashboardStats, useGetPatientsByStatus, useGetPatientsByProgram, useGetRecentActivity } from "@workspace/api-client-react";
+import { useGetDashboardStats, useGetPatientsByStatus, useGetPatientsByProgram, useGetRecentActivity, useGetEnrollmentStats } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Users, Activity, Building2, FolderGit2, Calendar, MessageSquare, ArrowUpRight } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
@@ -8,6 +8,7 @@ export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
   const { data: statusData, isLoading: statusLoading } = useGetPatientsByStatus();
   const { data: programData, isLoading: programLoading } = useGetPatientsByProgram();
+  const { data: enrollmentStats, isLoading: enrollmentStatsLoading } = useGetEnrollmentStats();
   const { data: activityData, isLoading: activityLoading } = useGetRecentActivity({ limit: 5 });
 
   const COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
@@ -76,6 +77,48 @@ export default function DashboardPage() {
               <p className="text-xs text-muted-foreground mt-1">
                 Clinics across {stats.totalPrograms} programs
               </p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+
+      {/* Program Enrollments Overview */}
+      {enrollmentStatsLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={`e-${i}`} className="h-32 rounded-xl" />
+          ))}
+        </div>
+      ) : enrollmentStats ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-primary/5 border-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Enrollments</CardTitle>
+              <FolderGit2 className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{enrollmentStats.totalEnrollments}</div>
+              <p className="text-xs text-muted-foreground mt-1">Across all programs</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-emerald-500/5 border-emerald-500/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Enrollments</CardTitle>
+              <Activity className="h-4 w-4 text-emerald-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{enrollmentStats.activeEnrollments}</div>
+              <p className="text-xs text-muted-foreground mt-1">Currently in progress</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-blue-500/5 border-blue-500/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Completed</CardTitle>
+              <Users className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{enrollmentStats.completedEnrollments}</div>
+              <p className="text-xs text-muted-foreground mt-1">Successfully finished</p>
             </CardContent>
           </Card>
         </div>

@@ -429,8 +429,39 @@ _Auth + tenant required._
 ### GET /api/reports/patients-by-program
 **Response 200:** `[{ "programId": "uuid", "programName": "string", "count": number }]`
 
+### GET /api/reports/enrollment-stats
+**Response 200:** `{ "totalEnrollments": number, "activeEnrollments": number, "completedEnrollments": number, "enrollmentsByProgram": [{ "programId": "uuid", "programName": "string", "count": number }] }`
+
 ### GET /api/reports/recent-activity
 **Response 200:** Array of last 10 AuditLog entries with `actor` relation included (fields: `id`, `entityType`, `entityId`, `action`, `createdAt`, `actor.firstName`, `actor.lastName`).
+
+---
+
+## Module 14 — Program Enrollments (`/api/program-enrollments`)
+_Auth + tenant required._
+
+### GET /api/program-enrollments
+_CLINICAL_ROLES._
+Query params: `patientId`, `programId`, `status`, `page`, `limit`
+**Response 200:** `{ data: ProgramEnrollment[], meta: { total, page, limit, totalPages } }`
+
+### POST /api/program-enrollments
+_CLINICAL_ROLES._
+**Body:** `{ "patientId": "uuid", "programId": "uuid", "notes?": "string" }`
+**Response 201:** ProgramEnrollment object.
+
+### PATCH /api/program-enrollments/:id
+_CLINICAL_ROLES._
+**Body:** `{ "notes?": "string" }`
+**Response 200:** Updated ProgramEnrollment object.
+
+### POST /api/program-enrollments/:id/complete
+_CLINICAL_ROLES._ Marks enrollment as COMPLETED.
+**Response 200:** Updated ProgramEnrollment object.
+
+### POST /api/program-enrollments/:id/cancel
+_CLINICAL_ROLES._ Marks enrollment as CANCELLED.
+**Response 200:** Updated ProgramEnrollment object.
 
 ---
 

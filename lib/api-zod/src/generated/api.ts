@@ -1209,6 +1209,18 @@ export const GetDashboardStatsResponse = zod.object({
 })
 
 
+export const GetEnrollmentStatsResponse = zod.object({
+  "totalEnrollments": zod.number(),
+  "activeEnrollments": zod.number(),
+  "completedEnrollments": zod.number(),
+  "enrollmentsByProgram": zod.array(zod.object({
+  "programId": zod.string(),
+  "programName": zod.string(),
+  "count": zod.number()
+}))
+})
+
+
 export const GetPatientsByStatusResponseItem = zod.object({
   "status": zod.string(),
   "count": zod.number()
@@ -1257,6 +1269,125 @@ export const GetRecentActivityResponseItem = zod.object({
 }).optional()
 })
 export const GetRecentActivityResponse = zod.array(GetRecentActivityResponseItem)
+
+
+export const ListProgramEnrollmentsQueryParams = zod.object({
+  "patientId": zod.coerce.string().optional(),
+  "programId": zod.coerce.string().optional(),
+  "status": zod.coerce.string().optional(),
+  "page": zod.coerce.number().optional(),
+  "limit": zod.coerce.number().optional()
+})
+
+export const ListProgramEnrollmentsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "tenantId": zod.string(),
+  "patientId": zod.string(),
+  "programId": zod.string(),
+  "enrolledAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullish(),
+  "status": zod.enum(['ACTIVE', 'COMPLETED', 'CANCELLED']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "program": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+})),
+  "meta": zod.object({
+  "total": zod.number(),
+  "page": zod.number(),
+  "limit": zod.number(),
+  "pages": zod.number()
+})
+})
+
+
+export const CreateProgramEnrollmentBody = zod.object({
+  "patientId": zod.string(),
+  "programId": zod.string(),
+  "notes": zod.string().optional()
+})
+
+
+export const UpdateProgramEnrollmentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateProgramEnrollmentBody = zod.object({
+  "notes": zod.string().optional()
+})
+
+export const UpdateProgramEnrollmentResponse = zod.object({
+  "id": zod.string(),
+  "tenantId": zod.string(),
+  "patientId": zod.string(),
+  "programId": zod.string(),
+  "enrolledAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullish(),
+  "status": zod.enum(['ACTIVE', 'COMPLETED', 'CANCELLED']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "program": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+})
+
+
+export const CompleteProgramEnrollmentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const CompleteProgramEnrollmentResponse = zod.object({
+  "id": zod.string(),
+  "tenantId": zod.string(),
+  "patientId": zod.string(),
+  "programId": zod.string(),
+  "enrolledAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullish(),
+  "status": zod.enum(['ACTIVE', 'COMPLETED', 'CANCELLED']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "program": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+})
+
+
+export const CancelProgramEnrollmentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const CancelProgramEnrollmentResponse = zod.object({
+  "id": zod.string(),
+  "tenantId": zod.string(),
+  "patientId": zod.string(),
+  "programId": zod.string(),
+  "enrolledAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullish(),
+  "status": zod.enum(['ACTIVE', 'COMPLETED', 'CANCELLED']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "program": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+})
 
 
 /**

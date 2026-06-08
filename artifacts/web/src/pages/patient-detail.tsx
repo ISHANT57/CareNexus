@@ -6,7 +6,9 @@ import {
   useListAssignments, useCreateAssignment, useDeleteAssignment, getListAssignmentsQueryKey,
   useListUsers,
   useCreateCommunication, useListCommunications, getListCommunicationsQueryKey,
-  useUploadFile, useListFiles, useDeleteFile, getListFilesQueryKey
+  useUploadFile, useListFiles, useDeleteFile, getListFilesQueryKey,
+  useListProgramEnrollments, useCreateProgramEnrollment, useCompleteProgramEnrollment, useCancelProgramEnrollment, getListProgramEnrollmentsQueryKey,
+  useListPrograms
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -15,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, MapPin, Phone, Mail, Calendar, Building2, Activity, ArrowLeft, ChevronDown, Plus, Trash2, UserPlus, MessageSquare, Send, Upload, FileText, Download } from "lucide-react";
+import { User, MapPin, Phone, Mail, Calendar, Building2, Activity, ArrowLeft, ChevronDown, Plus, Trash2, UserPlus, MessageSquare, Send, Upload, FileText, Download, CheckCircle, XCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -50,6 +52,54 @@ export default function PatientDetailPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const uploadFile = useUploadFile();
   const deleteFile = useDeleteFile();
+
+  const enrollmentsKey = getListProgramEnrollmentsQueryKey({ patientId: id });
+  const { data: enrollments, isLoading: isEnrollmentsLoading } = useListProgramEnrollments(
+    { patientId: id },
+    { query: { enabled: !isNew && !!id, queryKey: enrollmentsKey } }
+  );
+
+  const [isEnrollDialogOpen, setIsEnrollDialogOpen] = useState(false);
+  const [enrollProgramId, setEnrollProgramId] = useState("");
+  const createEnrollment = useCreateProgramEnrollment();
+  const completeEnrollment = useCompleteProgramEnrollment();
+  const cancelEnrollment = useCancelProgramEnrollment();
+
+  const { data: programsData } = useListPrograms({ limit: 100 }, { query: { enabled: isEnrollDialogOpen, queryKey: ["programs", "list"] } });
+
+  const handleEnroll = async () => {
+    if (!enrollProgramId) return;
+    try {
+      await createEnrollment.mutateAsync({ data: { patientId: id, programId: enrollProgramId } });
+      queryClient.invalidateQueries({ queryKey: enrollmentsKey });
+      queryClient.invalidateQueries({ queryKey: getGetPatientJourneyQueryKey(id) });
+      setIsEnrollDialogOpen(false);
+      setEnrollProgramId("");
+      toast({ title: "Enrolled successfully" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Failed to enroll", description: err.message });
+    }
+  };
+
+  const handleCompleteEnrollment = async (enrollmentId: string) => {
+    try {
+      await completeEnrollment.mutateAsync({ id: enrollmentId });
+      queryClient.invalidateQueries({ queryKey: enrollmentsKey });
+      toast({ title: "Enrollment completed" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Action failed", description: err.message });
+    }
+  };
+
+  const handleCancelEnrollment = async (enrollmentId: string) => {
+    try {
+      await cancelEnrollment.mutateAsync({ id: enrollmentId });
+      queryClient.invalidateQueries({ queryKey: enrollmentsKey });
+      toast({ title: "Enrollment cancelled" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Action failed", description: err.message });
+    }
+  };
 
   const handleStatusChange = async (newStatus: 'ACTIVE' | 'INACTIVE') => {
     try {
@@ -324,6 +374,114 @@ export default function PatientDetailPage() {
                    </div>
                  </div>
                </div>
+             </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg">Program Enrollments</CardTitle>
+              <Dialog open={isEnrollDialogOpen} onOpenChange={setIsEnrollDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="h-8">
+                    <Plus className="w-4 h-4 mr-1" /> Enroll
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Enroll in Program</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label>Select Program</Label>
+                      <Select value={enrollProgramId} onValueChange={setEnrollProgramId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose a program..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {programsData?.data?.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => { setIsEnrollDialogOpen(false); setEnrollProgramId(""); }}>Cancel</Button>
+                    <Button onClick={handleEnroll} disabled={!enrollProgramId || createEnrollment.isPending}>Enroll</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {isEnrollmentsLoading ? (
+                <Skeleton className="h-20 w-full" />
+              ) : enrollments?.data?.length ? (
+                <div className="space-y-4">
+                  {enrollments.data.map((enrollment) => (
+                    <div key={enrollment.id} className="flex flex-col gap-3 p-4 border rounded-md border-border bg-background">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Activity className="w-5 h-5 text-primary" />
+                          <span className="font-medium">{enrollment.program?.name}</span>
+                        </div>
+                        <Badge variant={enrollment.status === "ACTIVE" ? "default" : "secondary"}>
+                          {enrollment.status}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground flex items-center justify-between">
+                        <span>Enrolled: {format(new Date(enrollment.enrolledAt), 'MMM d, yyyy')}</span>
+                        {enrollment.completedAt && <span>Ended: {format(new Date(enrollment.completedAt), 'MMM d, yyyy')}</span>}
+                      </div>
+                      {enrollment.status === "ACTIVE" && (
+                        <div className="flex justify-end gap-2 pt-2 border-t border-border mt-1">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-destructive">
+                                <XCircle className="w-4 h-4 mr-1" /> Cancel
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Cancel Enrollment</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to cancel the enrollment in {enrollment.program?.name}?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Close</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleCancelEnrollment(enrollment.id)}>Yes, Cancel</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="ghost" className="h-8 text-primary hover:text-primary">
+                                <CheckCircle className="w-4 h-4 mr-1" /> Complete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Complete Enrollment</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Mark the enrollment in {enrollment.program?.name} as successfully completed?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Close</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleCompleteEnrollment(enrollment.id)}>Yes, Complete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground py-2 text-center">No program enrollments found.</div>
+              )}
             </CardContent>
           </Card>
         </div>

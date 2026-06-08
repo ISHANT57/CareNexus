@@ -78,6 +78,7 @@ TenantID:  e727eb86-cd40-487a-b651-1db925c58376
 - [x] Roles management UI (`/roles` page with full CRUD and permission management)
 - [x] AuthGuard flash on hard refresh — FIXED (token getter initialised at module load; query disabled when no token)
 - [x] Mobile responsive sidebar (hamburger menu + slide-in drawer on small screens)
+- [x] Program Enrollment Module (ProgramEnrollment models, routes, codegen, patient detail UI, and dashboard stats)
 
 ---
 

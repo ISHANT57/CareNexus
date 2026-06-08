@@ -23,6 +23,7 @@ Tenant
   │     ├── DoctorPatientAssignment[] (patientId + doctorId + clinicId + areaId)
   │     ├── SmsCommunication[]       (patientId optional FK)
   │     ├── FileUpload[]             (patientId + uploaderId FKs)
+  │     ├── ProgramEnrollment[]      (patientId + programId FKs)
   │     └── AccountOnboardingLog[]   (patientId optional FK)
   ├── AuditLog[]           (tenantId + actorId(userId) FKs, APPEND-ONLY)
   └── Notification[]       (tenantId + userId FKs)
@@ -370,6 +371,25 @@ Bulk import log. One row per patient row in the CSV.
 
 ---
 
+### `program_enrollments`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | |
+| `tenantId` | UUID FK → tenants | |
+| `patientId` | UUID FK → patients | |
+| `programId` | UUID FK → programs | |
+| `status` | Enum EnrollmentStatus | ACTIVE / COMPLETED / CANCELLED |
+| `notes` | String? | |
+| `enrolledAt` | DateTime | |
+| `completedAt` | DateTime? | |
+| `createdAt` | DateTime | |
+| `updatedAt` | DateTime | |
+| `deletedAt` | DateTime? | Soft delete |
+
+Indexes: `tenantId`, `patientId`, `programId`.
+
+---
+
 ### `audit_logs`
 **APPEND-ONLY. Never delete rows from this table.**
 
@@ -432,3 +452,4 @@ Indexes: `userId`, `token`.
 | `SmsStatus` | `QUEUED`, `SENT`, `DELIVERED`, `FAILED`, `UNDELIVERED` |
 | `AuditAction` | `CREATE`, `UPDATE`, `DELETE`, `LOGIN`, `LOGOUT` |
 | `NotificationType` | `INFO`, `WARNING`, `ERROR`, `SUCCESS` |
+| `EnrollmentStatus` | `ACTIVE`, `COMPLETED`, `CANCELLED` |

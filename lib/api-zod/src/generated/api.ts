@@ -1221,6 +1221,24 @@ export const GetEnrollmentStatsResponse = zod.object({
 })
 
 
+export const GetAppointmentStatsResponse = zod.object({
+  "totalAppointments": zod.number(),
+  "scheduledAppointments": zod.number(),
+  "completedAppointments": zod.number(),
+  "cancelledAppointments": zod.number(),
+  "appointmentsByClinic": zod.array(zod.object({
+  "clinicId": zod.string().optional(),
+  "clinicName": zod.string().optional(),
+  "count": zod.number().optional()
+})),
+  "appointmentsByDoctor": zod.array(zod.object({
+  "doctorId": zod.string().optional(),
+  "doctorName": zod.string().optional(),
+  "count": zod.number().optional()
+}))
+})
+
+
 export const GetPatientsByStatusResponseItem = zod.object({
   "status": zod.string(),
   "count": zod.number()
@@ -1386,6 +1404,539 @@ export const CancelProgramEnrollmentResponse = zod.object({
   "name": zod.string(),
   "description": zod.string().nullish(),
   "createdAt": zod.string()
+}).optional()
+})
+
+
+export const ListAppointmentsQueryParams = zod.object({
+  "patientId": zod.coerce.string().optional(),
+  "doctorId": zod.coerce.string().optional(),
+  "clinicId": zod.coerce.string().optional(),
+  "page": zod.coerce.number().optional(),
+  "limit": zod.coerce.number().optional()
+})
+
+export const ListAppointmentsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "tenantId": zod.string(),
+  "patientId": zod.string(),
+  "doctorId": zod.string(),
+  "clinicId": zod.string(),
+  "appointmentDate": zod.coerce.date(),
+  "durationMinutes": zod.number(),
+  "status": zod.enum(['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "patient": zod.object({
+  "id": zod.string(),
+  "nhsNumber": zod.string(),
+  "title": zod.string().nullish(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "email": zod.string().nullish(),
+  "mobile": zod.string(),
+  "altMobile": zod.string().nullish(),
+  "gender": zod.string().nullish(),
+  "dob": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "postalCode": zod.string().nullish(),
+  "country": zod.string().nullish(),
+  "ethnicity": zod.string().nullish(),
+  "patientGroup": zod.string().nullish(),
+  "userType": zod.string().nullish(),
+  "status": zod.string(),
+  "isTest": zod.boolean().optional(),
+  "createdAt": zod.string(),
+  "program": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional(),
+  "clinic": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "area": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+}).optional(),
+  "area": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+}).optional(),
+  "doctor": zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "mobile": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
+  "status": zod.string(),
+  "lastLoginAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "role": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "isSystem": zod.boolean().optional(),
+  "createdAt": zod.string()
+}).optional()
+}).optional(),
+  "clinic": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "area": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+}).optional()
+})),
+  "meta": zod.object({
+  "total": zod.number(),
+  "page": zod.number(),
+  "limit": zod.number(),
+  "pages": zod.number()
+})
+})
+
+
+export const CreateAppointmentBody = zod.object({
+  "patientId": zod.string(),
+  "doctorId": zod.string(),
+  "clinicId": zod.string(),
+  "appointmentDate": zod.coerce.date(),
+  "durationMinutes": zod.number().optional(),
+  "notes": zod.string().optional()
+})
+
+
+export const UpdateAppointmentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateAppointmentBody = zod.object({
+  "appointmentDate": zod.coerce.date().optional(),
+  "durationMinutes": zod.number().optional(),
+  "notes": zod.string().optional()
+})
+
+export const UpdateAppointmentResponse = zod.object({
+  "id": zod.string(),
+  "tenantId": zod.string(),
+  "patientId": zod.string(),
+  "doctorId": zod.string(),
+  "clinicId": zod.string(),
+  "appointmentDate": zod.coerce.date(),
+  "durationMinutes": zod.number(),
+  "status": zod.enum(['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "patient": zod.object({
+  "id": zod.string(),
+  "nhsNumber": zod.string(),
+  "title": zod.string().nullish(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "email": zod.string().nullish(),
+  "mobile": zod.string(),
+  "altMobile": zod.string().nullish(),
+  "gender": zod.string().nullish(),
+  "dob": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "postalCode": zod.string().nullish(),
+  "country": zod.string().nullish(),
+  "ethnicity": zod.string().nullish(),
+  "patientGroup": zod.string().nullish(),
+  "userType": zod.string().nullish(),
+  "status": zod.string(),
+  "isTest": zod.boolean().optional(),
+  "createdAt": zod.string(),
+  "program": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional(),
+  "clinic": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "area": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+}).optional(),
+  "area": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+}).optional(),
+  "doctor": zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "mobile": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
+  "status": zod.string(),
+  "lastLoginAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "role": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "isSystem": zod.boolean().optional(),
+  "createdAt": zod.string()
+}).optional()
+}).optional(),
+  "clinic": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "area": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+}).optional()
+})
+
+
+export const CompleteAppointmentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const CompleteAppointmentResponse = zod.object({
+  "id": zod.string(),
+  "tenantId": zod.string(),
+  "patientId": zod.string(),
+  "doctorId": zod.string(),
+  "clinicId": zod.string(),
+  "appointmentDate": zod.coerce.date(),
+  "durationMinutes": zod.number(),
+  "status": zod.enum(['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "patient": zod.object({
+  "id": zod.string(),
+  "nhsNumber": zod.string(),
+  "title": zod.string().nullish(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "email": zod.string().nullish(),
+  "mobile": zod.string(),
+  "altMobile": zod.string().nullish(),
+  "gender": zod.string().nullish(),
+  "dob": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "postalCode": zod.string().nullish(),
+  "country": zod.string().nullish(),
+  "ethnicity": zod.string().nullish(),
+  "patientGroup": zod.string().nullish(),
+  "userType": zod.string().nullish(),
+  "status": zod.string(),
+  "isTest": zod.boolean().optional(),
+  "createdAt": zod.string(),
+  "program": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional(),
+  "clinic": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "area": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+}).optional(),
+  "area": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+}).optional(),
+  "doctor": zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "mobile": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
+  "status": zod.string(),
+  "lastLoginAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "role": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "isSystem": zod.boolean().optional(),
+  "createdAt": zod.string()
+}).optional()
+}).optional(),
+  "clinic": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "area": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+}).optional()
+})
+
+
+export const CancelAppointmentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const CancelAppointmentResponse = zod.object({
+  "id": zod.string(),
+  "tenantId": zod.string(),
+  "patientId": zod.string(),
+  "doctorId": zod.string(),
+  "clinicId": zod.string(),
+  "appointmentDate": zod.coerce.date(),
+  "durationMinutes": zod.number(),
+  "status": zod.enum(['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "patient": zod.object({
+  "id": zod.string(),
+  "nhsNumber": zod.string(),
+  "title": zod.string().nullish(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "email": zod.string().nullish(),
+  "mobile": zod.string(),
+  "altMobile": zod.string().nullish(),
+  "gender": zod.string().nullish(),
+  "dob": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "postalCode": zod.string().nullish(),
+  "country": zod.string().nullish(),
+  "ethnicity": zod.string().nullish(),
+  "patientGroup": zod.string().nullish(),
+  "userType": zod.string().nullish(),
+  "status": zod.string(),
+  "isTest": zod.boolean().optional(),
+  "createdAt": zod.string(),
+  "program": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional(),
+  "clinic": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "area": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+}).optional(),
+  "area": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+}).optional(),
+  "doctor": zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "mobile": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
+  "status": zod.string(),
+  "lastLoginAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "role": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "isSystem": zod.boolean().optional(),
+  "createdAt": zod.string()
+}).optional()
+}).optional(),
+  "clinic": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "area": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+}).optional()
+})
+
+
+export const NoShowAppointmentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const NoShowAppointmentResponse = zod.object({
+  "id": zod.string(),
+  "tenantId": zod.string(),
+  "patientId": zod.string(),
+  "doctorId": zod.string(),
+  "clinicId": zod.string(),
+  "appointmentDate": zod.coerce.date(),
+  "durationMinutes": zod.number(),
+  "status": zod.enum(['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "patient": zod.object({
+  "id": zod.string(),
+  "nhsNumber": zod.string(),
+  "title": zod.string().nullish(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "email": zod.string().nullish(),
+  "mobile": zod.string(),
+  "altMobile": zod.string().nullish(),
+  "gender": zod.string().nullish(),
+  "dob": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "postalCode": zod.string().nullish(),
+  "country": zod.string().nullish(),
+  "ethnicity": zod.string().nullish(),
+  "patientGroup": zod.string().nullish(),
+  "userType": zod.string().nullish(),
+  "status": zod.string(),
+  "isTest": zod.boolean().optional(),
+  "createdAt": zod.string(),
+  "program": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional(),
+  "clinic": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "area": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+}).optional(),
+  "area": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
+}).optional(),
+  "doctor": zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "mobile": zod.string().nullish(),
+  "avatarUrl": zod.string().nullish(),
+  "status": zod.string(),
+  "lastLoginAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "role": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "isSystem": zod.boolean().optional(),
+  "createdAt": zod.string()
+}).optional()
+}).optional(),
+  "clinic": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "address": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "area": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.string()
+}).optional()
 }).optional()
 })
 

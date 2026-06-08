@@ -23,6 +23,7 @@ import AreasPage from "@/pages/areas";
 import AuditLogsPage from "@/pages/audit-logs";
 import SettingsPage from "@/pages/settings";
 import NotificationsPage from "@/pages/notifications";
+import AppointmentsPage from "@/pages/appointments";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,9 @@ function Router() {
       </Route>
       <Route path="/notifications">
         <AppLayout><NotificationsPage /></AppLayout>
+      </Route>
+      <Route path="/appointments">
+        <AppLayout><AppointmentsPage /></AppLayout>
       </Route>
       
       <Route component={NotFound} />

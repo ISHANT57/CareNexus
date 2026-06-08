@@ -576,6 +576,74 @@ export interface EnrollmentStats {
   enrollmentsByProgram: ProgramCount[];
 }
 
+export type AppointmentStatus = typeof AppointmentStatus[keyof typeof AppointmentStatus];
+
+
+export const AppointmentStatus = {
+  SCHEDULED: 'SCHEDULED',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+  NO_SHOW: 'NO_SHOW',
+} as const;
+
+export interface Appointment {
+  id: string;
+  tenantId: string;
+  patientId: string;
+  doctorId: string;
+  clinicId: string;
+  appointmentDate: string;
+  durationMinutes: number;
+  status: AppointmentStatus;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  patient?: Patient;
+  doctor?: User;
+  clinic?: Clinic;
+}
+
+export interface AppointmentList {
+  data: Appointment[];
+  meta: Meta;
+}
+
+export interface AppointmentInput {
+  patientId: string;
+  doctorId: string;
+  clinicId: string;
+  appointmentDate: string;
+  durationMinutes?: number;
+  notes?: string;
+}
+
+export interface AppointmentUpdate {
+  appointmentDate?: string;
+  durationMinutes?: number;
+  notes?: string;
+}
+
+export type AppointmentStatsAppointmentsByClinicItem = {
+  clinicId?: string;
+  clinicName?: string;
+  count?: number;
+};
+
+export type AppointmentStatsAppointmentsByDoctorItem = {
+  doctorId?: string;
+  doctorName?: string;
+  count?: number;
+};
+
+export interface AppointmentStats {
+  totalAppointments: number;
+  scheduledAppointments: number;
+  completedAppointments: number;
+  cancelledAppointments: number;
+  appointmentsByClinic: AppointmentStatsAppointmentsByClinicItem[];
+  appointmentsByDoctor: AppointmentStatsAppointmentsByDoctorItem[];
+}
+
 export type VerifyEmailParams = {
 token: string;
 };
@@ -654,6 +722,14 @@ export type ListProgramEnrollmentsParams = {
 patientId?: string;
 programId?: string;
 status?: string;
+page?: number;
+limit?: number;
+};
+
+export type ListAppointmentsParams = {
+patientId?: string;
+doctorId?: string;
+clinicId?: string;
 page?: number;
 limit?: number;
 };

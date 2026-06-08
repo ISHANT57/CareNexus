@@ -140,4 +140,59 @@ router.get("/recent-activity", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/reports/appointment-stats
+router.get("/appointment-stats", async (req, res, next) => {
+  try {
+    const tenantId = req.tenantId!;
+    const base = { tenantId, deletedAt: null };
+
+    const [
+      totalAppointments,
+      scheduledAppointments,
+      completedAppointments,
+      cancelledAppointments
+    ] = await Promise.all([
+      prisma.appointment.count({ where: base }),
+      prisma.appointment.count({ where: { ...base, status: "SCHEDULED" } }),
+      prisma.appointment.count({ where: { ...base, status: "COMPLETED" } }),
+      prisma.appointment.count({ where: { ...base, status: "CANCELLED" } }),
+    ]);
+
+    const clinicRows = await prisma.appointment.groupBy({
+      by: ["clinicId"],
+      where: base,
+      _count: { id: true },
+    });
+    const clinicIds = clinicRows.map(r => r.clinicId).filter(Boolean) as string[];
+    const clinics = await prisma.clinic.findMany({ where: { id: { in: clinicIds } }, select: { id: true, name: true }});
+    const clinicNameMap = Object.fromEntries(clinics.map(c => [c.id, c.name]));
+
+    const doctorRows = await prisma.appointment.groupBy({
+      by: ["doctorId"],
+      where: base,
+      _count: { id: true },
+    });
+    const doctorIds = doctorRows.map(r => r.doctorId).filter(Boolean) as string[];
+    const doctors = await prisma.user.findMany({ where: { id: { in: doctorIds } }, select: { id: true, firstName: true, lastName: true }});
+    const doctorNameMap = Object.fromEntries(doctors.map(d => [d.id, `${d.firstName} ${d.lastName}`.trim()]));
+
+    res.json({
+      totalAppointments,
+      scheduledAppointments,
+      completedAppointments,
+      cancelledAppointments,
+      appointmentsByClinic: clinicRows.map(r => ({
+        clinicId: r.clinicId ?? "",
+        clinicName: clinicNameMap[r.clinicId ?? ""] ?? "Unknown",
+        count: r._count.id
+      })),
+      appointmentsByDoctor: doctorRows.map(r => ({
+        doctorId: r.doctorId ?? "",
+        doctorName: doctorNameMap[r.doctorId ?? ""] ?? "Unknown",
+        count: r._count.id
+      })),
+    });
+  } catch (err) { next(err); }
+});
+
 export default router;

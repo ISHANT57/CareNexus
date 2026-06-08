@@ -12,6 +12,7 @@ import {
   UserCircle,
   Menu,
   X,
+  Calendar,
 } from "lucide-react";
 import { useGetMe, useLogout } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { useState } from "react";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/patients", label: "Patients", icon: Users },
+  { href: "/appointments", label: "Appointments", icon: Calendar },
   { href: "/users", label: "Team Members", icon: UserCircle },
   { href: "/roles", label: "Roles", icon: ClipboardList },
   { href: "/clinics", label: "Clinics", icon: Building2 },

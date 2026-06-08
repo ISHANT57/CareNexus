@@ -8,7 +8,9 @@ import {
   useCreateCommunication, useListCommunications, getListCommunicationsQueryKey,
   useUploadFile, useListFiles, useDeleteFile, getListFilesQueryKey,
   useListProgramEnrollments, useCreateProgramEnrollment, useCompleteProgramEnrollment, useCancelProgramEnrollment, getListProgramEnrollmentsQueryKey,
-  useListPrograms
+  useListPrograms,
+  useListAppointments, useCreateAppointment, useCancelAppointment, useCompleteAppointment, getListAppointmentsQueryKey,
+  useListClinics
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -66,6 +68,66 @@ export default function PatientDetailPage() {
   const cancelEnrollment = useCancelProgramEnrollment();
 
   const { data: programsData } = useListPrograms({ limit: 100 }, { query: { enabled: isEnrollDialogOpen, queryKey: ["programs", "list"] } });
+
+  // Appointments
+  const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
+  const [appointmentDoctorId, setAppointmentDoctorId] = useState("");
+  const [appointmentClinicId, setAppointmentClinicId] = useState("");
+  const [appointmentDate, setAppointmentDate] = useState("");
+  const [appointmentTime, setAppointmentTime] = useState("");
+  
+  const appointmentsKey = getListAppointmentsQueryKey({ patientId: id });
+  const { data: appointmentsData, isLoading: isAppointmentsLoading } = useListAppointments(
+    { patientId: id },
+    { query: { enabled: !isNew && !!id, queryKey: appointmentsKey } }
+  );
+
+  const createAppointment = useCreateAppointment();
+  const cancelAppointmentMutation = useCancelAppointment();
+  const completeAppointmentMutation = useCompleteAppointment();
+
+  const { data: clinicsData } = useListClinics({ limit: 100 }, { query: { enabled: isAppointmentDialogOpen, queryKey: ["clinics", "list"] } });
+
+  const handleScheduleAppointment = async () => {
+    if (!appointmentDoctorId || !appointmentClinicId || !appointmentDate || !appointmentTime) return;
+    try {
+      // Combine date and time
+      const datetimeStr = `${appointmentDate}T${appointmentTime}:00Z`; // Simple UTC assuming local inputs are handled simply
+      await createAppointment.mutateAsync({
+        data: {
+          patientId: id,
+          doctorId: appointmentDoctorId,
+          clinicId: appointmentClinicId,
+          appointmentDate: datetimeStr,
+          durationMinutes: 30
+        }
+      });
+      queryClient.invalidateQueries({ queryKey: appointmentsKey });
+      setIsAppointmentDialogOpen(false);
+      setAppointmentDoctorId("");
+      setAppointmentClinicId("");
+      setAppointmentDate("");
+      setAppointmentTime("");
+      toast({ title: "Appointment scheduled successfully" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Failed to schedule", description: err.message });
+    }
+  };
+
+  const handleAppointmentAction = async (appointmentId: string, action: 'cancel' | 'complete') => {
+    try {
+      if (action === 'cancel') {
+        await cancelAppointmentMutation.mutateAsync({ id: appointmentId });
+      } else {
+        await completeAppointmentMutation.mutateAsync({ id: appointmentId });
+        queryClient.invalidateQueries({ queryKey: getGetPatientJourneyQueryKey(id) });
+      }
+      queryClient.invalidateQueries({ queryKey: appointmentsKey });
+      toast({ title: `Appointment ${action === 'cancel' ? 'cancelled' : 'completed'}` });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Action failed", description: err.message });
+    }
+  };
 
   const handleEnroll = async () => {
     if (!enrollProgramId) return;
@@ -487,6 +549,134 @@ export default function PatientDetailPage() {
         </div>
 
         <div className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Appointments
+              </CardTitle>
+              <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="h-8">
+                    <Plus className="w-4 h-4 mr-1" /> Schedule
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Schedule Appointment</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label>Doctor</Label>
+                      <Select value={appointmentDoctorId} onValueChange={setAppointmentDoctorId}>
+                        <SelectTrigger><SelectValue placeholder="Select doctor..." /></SelectTrigger>
+                        <SelectContent>
+                          {usersData?.data?.filter(u => u.role?.name === "DOCTOR" || u.role?.name === "SUPERADMIN").map((u) => (
+                            <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Clinic</Label>
+                      <Select value={appointmentClinicId} onValueChange={setAppointmentClinicId}>
+                        <SelectTrigger><SelectValue placeholder="Select clinic..." /></SelectTrigger>
+                        <SelectContent>
+                          {clinicsData?.data?.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label>Date</Label>
+                        <input type="date" value={appointmentDate} onChange={e => setAppointmentDate(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Time</Label>
+                        <input type="time" value={appointmentTime} onChange={e => setAppointmentTime(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsAppointmentDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleScheduleAppointment} disabled={!appointmentDoctorId || !appointmentClinicId || !appointmentDate || !appointmentTime || createAppointment.isPending}>
+                      Schedule
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {isAppointmentsLoading ? (
+                <Skeleton className="h-10 w-full" />
+              ) : appointmentsData?.data?.length ? (
+                <div className="space-y-3">
+                  {appointmentsData.data.map((appt) => (
+                    <div key={appt.id} className="flex flex-col gap-2 py-3 border-b border-border last:border-0">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={appt.status === "SCHEDULED" ? "default" : appt.status === "COMPLETED" ? "secondary" : "destructive"} className="text-xs">
+                            {appt.status}
+                          </Badge>
+                          <span className="text-sm font-medium">
+                            {format(new Date(appt.appointmentDate), "MMM d, yyyy 'at' HH:mm")}
+                          </span>
+                        </div>
+                        {appt.status === "SCHEDULED" && (
+                          <div className="flex justify-end gap-2">
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-destructive">
+                                  <XCircle className="w-4 h-4 mr-1" /> Cancel
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
+                                  <AlertDialogDescription>Are you sure you want to cancel this appointment?</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Close</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleAppointmentAction(appt.id, 'cancel')}>Yes, Cancel</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button size="sm" variant="ghost" className="h-8 text-primary hover:text-primary">
+                                  <CheckCircle className="w-4 h-4 mr-1" /> Complete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Complete Appointment</AlertDialogTitle>
+                                  <AlertDialogDescription>Mark this appointment as successfully completed? This will add a consultation journey event.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Close</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleAppointmentAction(appt.id, 'complete')}>Yes, Complete</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground grid grid-cols-2 gap-1 mt-1">
+                        <span className="flex items-center gap-1"><User className="w-3 h-3" /> Dr. {appt.doctor?.firstName} {appt.doctor?.lastName}</span>
+                        <span className="flex items-center gap-1"><Building2 className="w-3 h-3" /> {appt.clinic?.name}</span>
+                      </div>
+                      {appt.notes && <p className="text-sm mt-1 bg-muted/50 p-2 rounded-md">{appt.notes}</p>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground py-2 text-center">No appointments found.</div>
+              )}
+            </CardContent>
+          </Card>
+        </div>        <div className="space-y-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg">Care Team</CardTitle>

@@ -30,6 +30,7 @@ model Tenant {
   auditLogs          AuditLog[]
   notifications      Notification[]
   programEnrollments ProgramEnrollment[]
+  appointments       Appointment[]
 
   @@map("tenants")
 }
@@ -74,6 +75,7 @@ model Clinic {
   patients                 Patient[]
   userClinicAssignments    UserClinicAssignment[]
   doctorPatientAssignments DoctorPatientAssignment[]
+  appointments             Appointment[]
 
   @@unique([areaId, name])
   @@index([tenantId])
@@ -164,6 +166,7 @@ model User {
   notifications        Notification[]
   uploadedFiles        FileUpload[]
   refreshTokens        RefreshToken[]
+  appointments         Appointment[]
 
   @@index([tenantId])
   @@index([email])
@@ -292,6 +295,7 @@ model Patient {
   fileUploads           FileUpload[]
   onboardingLogs        AccountOnboardingLog[]
   programEnrollments    ProgramEnrollment[]
+  appointments          Appointment[]
 
   @@unique([tenantId, nhsNumber])
   @@index([tenantId])
@@ -679,5 +683,42 @@ enum EnrollmentStatus {
   ACTIVE
   COMPLETED
   CANCELLED
+}
+
+// ─────────────────────────────────────────
+// APPOINTMENTS
+// ─────────────────────────────────────────
+
+model Appointment {
+  id              String            @id @default(uuid())
+  tenantId        String
+  patientId       String
+  doctorId        String
+  clinicId        String
+  appointmentDate DateTime
+  durationMinutes Int               @default(30)
+  status          AppointmentStatus @default(SCHEDULED)
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  deletedAt       DateTime?
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  User    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  clinic  Clinic  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([clinicId])
+  @@map("appointments")
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
 }
 

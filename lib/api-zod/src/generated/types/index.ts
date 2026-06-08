@@ -6,6 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './appointment';
+export * from './appointmentInput';
+export * from './appointmentList';
+export * from './appointmentStats';
+export * from './appointmentStatsAppointmentsByClinicItem';
+export * from './appointmentStatsAppointmentsByDoctorItem';
+export * from './appointmentStatus';
+export * from './appointmentUpdate';
 export * from './area';
 export * from './areaInput';
 export * from './areaList';
@@ -34,6 +42,7 @@ export * from './healthStatus';
 export * from './importPatientsRequest';
 export * from './importPatientsResponse';
 export * from './importPatientsResponseErrorsItem';
+export * from './listAppointmentsParams';
 export * from './listAreasParams';
 export * from './listAssignmentsParams';
 export * from './listAuditLogsParams';

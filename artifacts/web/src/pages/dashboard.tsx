@@ -1,4 +1,4 @@
-import { useGetDashboardStats, useGetPatientsByStatus, useGetPatientsByProgram, useGetRecentActivity, useGetEnrollmentStats } from "@workspace/api-client-react";
+import { useGetDashboardStats, useGetPatientsByStatus, useGetPatientsByProgram, useGetRecentActivity, useGetEnrollmentStats, useGetAppointmentStats } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Users, Activity, Building2, FolderGit2, Calendar, MessageSquare, ArrowUpRight } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
@@ -10,6 +10,7 @@ export default function DashboardPage() {
   const { data: programData, isLoading: programLoading } = useGetPatientsByProgram();
   const { data: enrollmentStats, isLoading: enrollmentStatsLoading } = useGetEnrollmentStats();
   const { data: activityData, isLoading: activityLoading } = useGetRecentActivity({ limit: 5 });
+  const { data: appointmentStats, isLoading: appointmentStatsLoading } = useGetAppointmentStats();
 
   const COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
@@ -124,6 +125,58 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
+      {/* Appointment Stats Overview */}
+      {appointmentStatsLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={`a-${i}`} className="h-32 rounded-xl" />
+          ))}
+        </div>
+      ) : appointmentStats ? (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-primary/5 border-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Appointments</CardTitle>
+              <Calendar className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{appointmentStats.totalAppointments}</div>
+              <p className="text-xs text-muted-foreground mt-1">All time</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-amber-500/5 border-amber-500/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Scheduled</CardTitle>
+              <Calendar className="h-4 w-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{appointmentStats.scheduledAppointments}</div>
+              <p className="text-xs text-muted-foreground mt-1">Upcoming</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-emerald-500/5 border-emerald-500/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Completed</CardTitle>
+              <Users className="h-4 w-4 text-emerald-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{appointmentStats.completedAppointments}</div>
+              <p className="text-xs text-muted-foreground mt-1">Successfully finished</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-destructive/5 border-destructive/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
+              <Activity className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{appointmentStats.cancelledAppointments}</div>
+              <p className="text-xs text-muted-foreground mt-1">Cancelled</p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="col-span-1">
           <CardHeader>
@@ -176,6 +229,56 @@ export default function DashboardPage() {
                   <YAxis axisLine={false} tickLine={false} />
                   <Tooltip cursor={{ fill: 'transparent' }} />
                   <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground">No data available</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Appointments by Clinic</CardTitle>
+            <CardDescription>Volume of appointments per clinic</CardDescription>
+          </CardHeader>
+          <CardContent className="h-80">
+            {appointmentStatsLoading ? (
+              <Skeleton className="h-full w-full" />
+            ) : appointmentStats && appointmentStats.appointmentsByClinic?.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={appointmentStats.appointmentsByClinic} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="clinicName" axisLine={false} tickLine={false} />
+                  <YAxis axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{ fill: 'transparent' }} />
+                  <Bar dataKey="count" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground">No data available</div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Appointments by Doctor</CardTitle>
+            <CardDescription>Volume of appointments per doctor</CardDescription>
+          </CardHeader>
+          <CardContent className="h-80">
+            {appointmentStatsLoading ? (
+              <Skeleton className="h-full w-full" />
+            ) : appointmentStats && appointmentStats.appointmentsByDoctor?.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={appointmentStats.appointmentsByDoctor} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="doctorName" axisLine={false} tickLine={false} />
+                  <YAxis axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{ fill: 'transparent' }} />
+                  <Bar dataKey="count" fill="hsl(var(--chart-5))" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (

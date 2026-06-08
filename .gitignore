@@ -1,49 +1,71 @@
 # See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
-# compiled output
-dist
-tmp
-out-tsc
-*.tsbuildinfo
-.expo
-.expo-shared
-
 # dependencies
-node_modules
+node_modules/
+/node_modules
+npm-debug.log
+yarn-error.log
+testem.log
+pnpm-debug.log
+
+# compiled output
+dist/
+build/
+out/
+tmp/
+temp/
+out-tsc/
+*.tsbuildinfo
+.expo/
+.expo-shared/
+
+# Cache, logs, temporary files
+.cache/
+.local/
+logs/
+*.log
+/coverage/
+/.sass-cache/
 
 # IDEs and editors
-/.idea
+.idea/
+.vscode/
 .project
 .classpath
 .c9/
 *.launch
 .settings/
 *.sublime-workspace
+.fleet/
 
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+# OS-generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+ehthumbs_vista.db
+Thumbs.db
+desktop.ini
+
+# Environments and Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+secrets.json
+credentials.json
 
 # misc
-/.sass-cache
 /connect.lock
-/coverage
 /libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
-/typings
+/typings/
 
-# System Files
-.DS_Store
-Thumbs.db
-
+# Replit / Cursor specific
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
-
-# Replit
-.cache/
-.local/
+.replit-artifact/

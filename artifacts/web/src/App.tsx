@@ -10,15 +10,18 @@ import RegisterPage from "@/pages/register";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import DashboardPage from "@/pages/dashboard";
+import PatientsPage from "@/pages/patients";
+import PatientDetailPage from "@/pages/patient-detail";
+import NewPatientPage from "@/pages/patient-new";
 import UsersPage from "@/pages/users";
 import NewUserPage from "@/pages/user-new";
 import UserDetailPage from "@/pages/user-detail";
 import RolesPage from "@/pages/roles";
-import SettingsPage from "@/pages/settings";
-import PatientsPage from "@/pages/patients";
-import PatientDetailPage from "@/pages/patient-detail";
-import NewPatientPage from "@/pages/patient-new";
+import ClinicsPage from "@/pages/clinics";
+import ProgramsPage from "@/pages/programs";
+import AreasPage from "@/pages/areas";
 import AuditLogsPage from "@/pages/audit-logs";
+import SettingsPage from "@/pages/settings";
 import NotificationsPage from "@/pages/notifications";
 
 const queryClient = new QueryClient();
@@ -31,7 +34,7 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       
-      {/* Protected Routes */}
+      {/* Protected Routes wrapped in AppLayout */}
       <Route path="/">
         <Redirect to="/dashboard" />
       </Route>
@@ -58,19 +61,30 @@ function Router() {
       <Route path="/users">
         <AppLayout><UsersPage /></AppLayout>
       </Route>
+
       <Route path="/roles">
         <AppLayout><RolesPage /></AppLayout>
       </Route>
-      <Route path="/settings">
-        <AppLayout><SettingsPage /></AppLayout>
+
+      <Route path="/clinics">
+        <AppLayout><ClinicsPage /></AppLayout>
+      </Route>
+      <Route path="/programs">
+        <AppLayout><ProgramsPage /></AppLayout>
+      </Route>
+      <Route path="/areas">
+        <AppLayout><AreasPage /></AppLayout>
       </Route>
       <Route path="/audit-logs">
         <AppLayout><AuditLogsPage /></AppLayout>
       </Route>
+      <Route path="/settings">
+        <AppLayout><SettingsPage /></AppLayout>
+      </Route>
       <Route path="/notifications">
         <AppLayout><NotificationsPage /></AppLayout>
       </Route>
-
+      
       <Route component={NotFound} />
     </Switch>
   );

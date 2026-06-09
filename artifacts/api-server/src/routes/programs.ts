@@ -13,6 +13,7 @@ router.use(authenticate, requireTenant);
 
 const ProgramSchema = z.object({
   name: z.string().min(1).max(100),
+  description: z.string().max(500).optional().nullable(),
   activationCode: z.string().max(50).optional().nullable(),
   channelId: z.number().int().optional().nullable(),
   logoUrl: z.string().url().optional().nullable(),

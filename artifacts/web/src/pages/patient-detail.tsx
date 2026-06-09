@@ -172,7 +172,14 @@ export default function PatientDetailPage() {
   const handleAssignDoctor = async () => {
     if (!selectedDoctorId) return;
     try {
-      await createAssignment.mutateAsync({ data: { patientId: id, userId: selectedDoctorId } });
+      // Use the patient's existing clinicId and areaId for context
+      const clinicId = patient?.clinic?.id ?? "";
+      const areaId = patient?.area?.id ?? "";
+      if (!clinicId || !areaId) {
+        toast({ variant: "destructive", title: "Cannot assign", description: "Patient must have a clinic and area set before assigning a doctor." });
+        return;
+      }
+      await createAssignment.mutateAsync({ data: { patientId: id, doctorId: selectedDoctorId, clinicId, areaId } });
       queryClient.invalidateQueries({ queryKey: assignmentsKey });
       setIsAssignDialogOpen(false);
       setSelectedDoctorId("");
@@ -747,8 +754,8 @@ export default function PatientDetailPage() {
                               <User className="w-4 h-4 text-primary" />
                             </div>
                             <div>
-                              <div className="text-sm font-medium">{assignment.user?.firstName} {assignment.user?.lastName}</div>
-                              <div className="text-xs text-muted-foreground">{assignment.user?.role?.name}</div>
+                              <div className="text-sm font-medium">{assignment.doctor?.firstName} {assignment.doctor?.lastName}</div>
+                              <div className="text-xs text-muted-foreground">{assignment.doctor?.role?.name ?? "Doctor"} {assignment.clinic?.name ? `• ${assignment.clinic.name}` : ""}</div>
                             </div>
                           </div>
                           <AlertDialog>
@@ -756,7 +763,7 @@ export default function PatientDetailPage() {
                               <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
-                              <AlertDialogHeader><AlertDialogTitle>Remove Assignment</AlertDialogTitle><AlertDialogDescription>Remove {assignment.user?.firstName} {assignment.user?.lastName} from this patient's care team?</AlertDialogDescription></AlertDialogHeader>
+                              <AlertDialogHeader><AlertDialogTitle>Remove Assignment</AlertDialogTitle><AlertDialogDescription>Remove {assignment.doctor?.firstName} {assignment.doctor?.lastName} from this patient's care team?</AlertDialogDescription></AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <AlertDialogAction onClick={() => handleUnassign(assignment.id)}>Remove</AlertDialogAction>

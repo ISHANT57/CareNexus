@@ -1,22 +1,42 @@
 import { useState } from "react";
-import { useListPrograms, useCreateProgram, useUpdateProgram, useDeleteProgram, getListProgramsQueryKey } from "@workspace/api-client-react";
+import {
+  useListPrograms,
+  useCreateProgram,
+  useUpdateProgram,
+  useDeleteProgram,
+  getListProgramsQueryKey,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { FolderGit2, Plus, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { FolderGit2, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Search, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 const PAGE_SIZE = 20;
+
+const PROGRAM_COLORS = [
+  "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  "bg-purple-500/10 text-purple-700 dark:text-purple-400",
+  "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  "bg-rose-500/10 text-rose-700 dark:text-rose-400",
+  "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
+];
 
 export default function ProgramsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const { data, isLoading } = useListPrograms({ page, limit: PAGE_SIZE });
   const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;
   const createProgram = useCreateProgram();
@@ -31,10 +51,7 @@ export default function ProgramsPage() {
 
   const openCreate = () => { setName(""); setDescription(""); setIsCreateOpen(true); };
   const openEdit = (program: { id: string; name: string; description?: string | null }) => {
-    setEditId(program.id);
-    setName(program.name);
-    setDescription(program.description ?? "");
-    setIsEditOpen(true);
+    setEditId(program.id); setName(program.name); setDescription(program.description ?? ""); setIsEditOpen(true);
   };
 
   const handleCreate = async () => {
@@ -43,7 +60,7 @@ export default function ProgramsPage() {
       await createProgram.mutateAsync({ data: { name: name.trim(), description: description.trim() || undefined } });
       queryClient.invalidateQueries({ queryKey: getListProgramsQueryKey() });
       setIsCreateOpen(false);
-      toast({ title: "Program created" });
+      toast({ title: "Program created successfully" });
     } catch (err: any) { toast({ variant: "destructive", title: "Failed to create", description: err.message }); }
   };
 
@@ -53,7 +70,7 @@ export default function ProgramsPage() {
       await updateProgram.mutateAsync({ id: editId, data: { name: name.trim(), description: description.trim() || undefined } });
       queryClient.invalidateQueries({ queryKey: getListProgramsQueryKey() });
       setIsEditOpen(false);
-      toast({ title: "Program updated" });
+      toast({ title: "Program updated successfully" });
     } catch (err: any) { toast({ variant: "destructive", title: "Failed to update", description: err.message }); }
   };
 
@@ -65,44 +82,53 @@ export default function ProgramsPage() {
     } catch (err: any) { toast({ variant: "destructive", title: "Failed to delete", description: err.message }); }
   };
 
+  const filteredPrograms = (data?.data ?? []).filter((p) =>
+    !search || p.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   const ProgramFormFields = () => (
     <div className="grid gap-4 py-4">
       <div className="grid gap-2">
-        <Label>Program Name *</Label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Diabetes Management" />
+        <Label>Program Name <span className="text-destructive">*</span></Label>
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Diabetes Management Programme" />
       </div>
       <div className="grid gap-2">
         <Label>Description</Label>
-        <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description" />
+        <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description of this clinical program" />
       </div>
     </div>
   );
 
   return (
-    <div className="p-8 space-y-6 flex-1 overflow-y-auto">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Clinical Programs</h1>
-          <p className="text-muted-foreground mt-2">Care pathways and treatment programs.</p>
+    <div className="flex-1 overflow-y-auto bg-background">
+      <div className="bg-card border-b border-border px-8 py-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Clinical Programs</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              {data?.meta?.total ? `${data.meta.total} ` : ""}Care pathways and treatment programs.
+            </p>
+          </div>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" onClick={openCreate}>
+                <Plus className="w-4 h-4 mr-2" />Create Program
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-sm">
+              <DialogHeader><DialogTitle>Create New Program</DialogTitle></DialogHeader>
+              <ProgramFormFields />
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreate} disabled={createProgram.isPending || !name.trim()}>Create</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" />Create Program</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Create New Program</DialogTitle></DialogHeader>
-            <ProgramFormFields />
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreate} disabled={createProgram.isPending || !name.trim()}>Create</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
 
-      {/* Edit dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Edit Program</DialogTitle></DialogHeader>
           <ProgramFormFields />
           <DialogFooter>
@@ -112,84 +138,110 @@ export default function ProgramsPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="p-8 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search programs..."
+              className="pl-9 bg-card"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            />
+          </div>
+          {search && <Badge variant="secondary">{filteredPrograms.length} shown</Badge>}
+        </div>
+
         {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground col-span-full">Loading programs...</div>
-        ) : !data?.data || data.data.length === 0 ? (
-          <div className="text-center p-8 text-muted-foreground border border-dashed border-border rounded-lg col-span-full">
-            No programs found.
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-40 rounded-xl" />)}
+          </div>
+        ) : filteredPrograms.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+            <FolderGit2 className="w-12 h-12 mb-3 opacity-20" />
+            <p className="font-medium">{search ? "No programs match your search" : "No programs yet"}</p>
+            {!search && (
+              <Button size="sm" className="mt-4" onClick={openCreate}>
+                <Plus className="w-4 h-4 mr-2" />Create First Program
+              </Button>
+            )}
           </div>
         ) : (
-          data.data.map((program) => (
-            <Card key={program.id} data-testid={`card-program-${program.id}`}>
-              <CardHeader className="flex flex-row items-start justify-between gap-2">
-                <CardTitle className="flex items-center gap-2">
-                  <FolderGit2 className="w-5 h-5 text-primary shrink-0" />
-                  {program.name}
-                </CardTitle>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(program)}>
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Program</AlertDialogTitle>
-                        <AlertDialogDescription>Delete "{program.name}"? This cannot be undone.</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDelete(program.id)}>Delete</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {program.description || 'No description provided.'}
-                </p>
-                <div className="text-xs text-muted-foreground mt-4 pt-4 border-t border-border">
-                  Created {new Date(program.createdAt).toLocaleDateString()}
-                </div>
-              </CardContent>
-            </Card>
-          ))
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredPrograms.map((program, index) => {
+              const colorClass = PROGRAM_COLORS[index % PROGRAM_COLORS.length];
+              return (
+                <Card
+                  key={program.id}
+                  data-testid={`card-program-${program.id}`}
+                  className="group hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorClass.split(" ").slice(0, 2).join(" ")}`}>
+                        <FolderGit2 className={`w-5 h-5 ${colorClass.split(" ").slice(2).join(" ")}`} />
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(program)}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Program</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Delete "{program.name}"? Patients enrolled in this program will lose their program assignment.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(program.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                    <h3 className="font-semibold text-sm">{program.name}</h3>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                      {program.description ?? "No description provided."}
+                    </p>
+                  </CardContent>
+                  <CardFooter className="px-5 pb-4 pt-0 flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(program.createdAt).toLocaleDateString("en-GB")}
+                    </p>
+                    {(program as any).enrollmentCount !== undefined && (
+                      <Badge variant="secondary" className="text-xs">
+                        <Users className="w-3 h-3 mr-1" />
+                        {(program as any).enrollmentCount} enrolled
+                      </Badge>
+                    )}
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {totalPages > 1 && !search && (
+          <div className="flex items-center justify-between pt-2">
+            <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+                <ChevronLeft className="w-4 h-4" />Prev
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+                Next<ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
         )}
       </div>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-6 p-4 border-t border-border">
-          <span className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Prev
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages}
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

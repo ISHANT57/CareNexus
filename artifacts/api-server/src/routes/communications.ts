@@ -22,6 +22,91 @@ const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_T
   : null;
 const twilioFromNumber = process.env.TWILIO_FROM_NUMBER || "+15555555555";
 
+router.get("/", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, next) => {
+  try {
+    const { skip, take, page, limit } = paginate(req.query);
+    const { patientId, status } = req.query as Record<string, string>;
+    const where: Record<string, unknown> = { tenantId: req.tenantId! };
+    if (patientId) where["patientId"] = patientId;
+    if (status) where["status"] = status;
+
+    const [total, comms] = await Promise.all([
+      prisma.smsCommunication.count({ where }),
+      prisma.smsCommunication.findMany({
+        where, skip, take, orderBy: { createdAt: "desc" },
+        include: { patient: { select: { id: true, firstName: true, lastName: true, nhsNumber: true } } },
+      }),
+    ]);
+    res.json({ data: comms, meta: paginationMeta(total, page, limit) });
+  } catch (err) { next(err); }
+});
+
+router.post("/", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, next) => {
+  try {
+    const { patientId, type, subject, body: msgBody } = req.body as { patientId: string; type: string; subject: string; body?: string };
+    if (!patientId) throw Errors.validation("patientId is required");
+
+    const patient = await prisma.patient.findFirst({
+      where: { id: patientId, tenantId: req.tenantId!, deletedAt: null },
+      select: { id: true, mobile: true, optOut: true },
+    });
+    if (!patient) throw Errors.notFound("Patient");
+
+    const message = msgBody || subject || "";
+    let record = await prisma.smsCommunication.create({
+      data: {
+        tenantId: req.tenantId!,
+        patientId: patient.id,
+        mobile: patient.mobile,
+        messageText: message,
+        status: "QUEUED",
+      },
+    });
+
+    if (twilioClient && patient.mobile && !patient.optOut) {
+      try {
+        const twilioMsg = await twilioClient.messages.create({
+          body: message,
+          from: twilioFromNumber,
+          to: patient.mobile,
+        });
+        record = await prisma.smsCommunication.update({
+          where: { id: record.id },
+          data: { twilioSid: twilioMsg.sid, status: "SENT", sentAt: new Date() },
+        });
+      } catch (_) {
+        await prisma.smsCommunication.update({ where: { id: record.id }, data: { status: "FAILED" } });
+      }
+    }
+
+    res.status(201).json(record);
+  } catch (err) { next(err); }
+});
+
+router.get("/:id", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, next) => {
+  try {
+    const comm = await prisma.smsCommunication.findFirst({
+      where: { id: req.params["id"] as string, tenantId: req.tenantId! },
+      include: { patient: { select: { id: true, firstName: true, lastName: true } } },
+    });
+    if (!comm) throw Errors.notFound("Communication");
+    res.json(comm);
+  } catch (err) { next(err); }
+});
+
+router.delete("/:id", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, next) => {
+  try {
+    const comm = await prisma.smsCommunication.findFirst({
+      where: { id: req.params["id"] as string, tenantId: req.tenantId! },
+    });
+    if (!comm) throw Errors.notFound("Communication");
+    // SMS messages aren't truly deleted — we mark them CANCELLED
+    await prisma.smsCommunication.update({ where: { id: comm.id }, data: { status: "CANCELLED" as never } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── Legacy /sms sub-routes (kept for backwards compatibility) ─────────────────
 router.get("/sms", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);

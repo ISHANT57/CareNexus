@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { 
-  useListRoles, 
-  useCreateRole, 
-  useListRolePermissions, 
-  useAddRolePermission, 
+import { useState, useMemo } from "react";
+import {
+  useListRoles,
+  useCreateRole,
+  useListRolePermissions,
+  useAddRolePermission,
   useRemoveRolePermission,
   getListRolesQueryKey,
-  getListRolePermissionsQueryKey
+  getListRolePermissionsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,9 +14,72 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Shield, Plus, Trash2, ShieldCheck, Check, Search, ShieldOff } from "lucide-react";
+import { Shield, Plus, ShieldCheck, ShieldOff, Loader2, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+
+// Resource groups with their actions and descriptions
+const RESOURCE_GROUPS = [
+  {
+    group: "Clinical",
+    color: "text-emerald-600 dark:text-emerald-400",
+    bgColor: "bg-emerald-50 dark:bg-emerald-950/20",
+    resources: [
+      { key: "patients", label: "Patients", description: "Patient records and demographics" },
+      { key: "consultations", label: "Consultations", description: "Clinical consultation notes" },
+      { key: "appointments", label: "Appointments", description: "Scheduling and attendance" },
+      { key: "journeys", label: "Patient Journey", description: "Status transitions and events" },
+    ],
+  },
+  {
+    group: "Administration",
+    color: "text-blue-600 dark:text-blue-400",
+    bgColor: "bg-blue-50 dark:bg-blue-950/20",
+    resources: [
+      { key: "users", label: "Team Members", description: "User accounts and profiles" },
+      { key: "roles", label: "Roles", description: "Role definitions and assignments" },
+      { key: "assignments", label: "Assignments", description: "Doctor-patient assignments" },
+    ],
+  },
+  {
+    group: "Organization",
+    color: "text-purple-600 dark:text-purple-400",
+    bgColor: "bg-purple-50 dark:bg-purple-950/20",
+    resources: [
+      { key: "clinics", label: "Clinics", description: "Clinic locations and settings" },
+      { key: "areas", label: "Areas", description: "Geographic area management" },
+      { key: "programs", label: "Programs", description: "Clinical program pathways" },
+    ],
+  },
+  {
+    group: "Communications",
+    color: "text-amber-600 dark:text-amber-400",
+    bgColor: "bg-amber-50 dark:bg-amber-950/20",
+    resources: [
+      { key: "communications", label: "SMS / Comms", description: "Patient communications" },
+      { key: "notifications", label: "Notifications", description: "System notifications" },
+    ],
+  },
+  {
+    group: "System",
+    color: "text-slate-600 dark:text-slate-400",
+    bgColor: "bg-slate-50 dark:bg-slate-950/20",
+    resources: [
+      { key: "audit_logs", label: "Audit Logs", description: "System audit trail access" },
+      { key: "reports", label: "Reports", description: "Analytics and reporting" },
+      { key: "files", label: "File Uploads", description: "Patient document management" },
+    ],
+  },
+];
+
+const ACTIONS = [
+  { key: "create", label: "Create", short: "C" },
+  { key: "read", label: "Read", short: "R" },
+  { key: "update", label: "Update", short: "U" },
+  { key: "delete", label: "Delete", short: "D" },
+];
 
 export default function RolesPage() {
   const queryClient = useQueryClient();
@@ -25,7 +88,6 @@ export default function RolesPage() {
   const createRole = useCreateRole();
 
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
-  
   const [isCreateRoleOpen, setIsCreateRoleOpen] = useState(false);
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleDescription, setNewRoleDescription] = useState("");
@@ -37,253 +99,366 @@ export default function RolesPage() {
     }
     try {
       await createRole.mutateAsync({
-        data: { name: newRoleName.trim(), description: newRoleDescription.trim() || undefined }
+        data: { name: newRoleName.trim(), description: newRoleDescription.trim() || undefined },
       });
       queryClient.invalidateQueries({ queryKey: getListRolesQueryKey() });
       setIsCreateRoleOpen(false);
       setNewRoleName("");
       setNewRoleDescription("");
-      toast({ title: "Role created" });
+      toast({ title: "Role created successfully" });
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Failed to create", description: err.message });
+      toast({ variant: "destructive", title: "Failed to create role", description: err.message });
     }
   };
 
-  const selectedRole = rolesData?.data?.find(r => r.id === selectedRoleId);
+  const selectedRole = rolesData?.data?.find((r) => r.id === selectedRoleId);
 
   return (
-    <div className="p-8 space-y-6 flex-1 overflow-y-auto h-full flex flex-col">
-      <div className="flex justify-between items-center shrink-0">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Roles & Permissions</h1>
-          <p className="text-muted-foreground mt-2">Manage access control and capabilities.</p>
-        </div>
-        <Dialog open={isCreateRoleOpen} onOpenChange={setIsCreateRoleOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Role
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Role</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label>Role Name</Label>
-                <Input value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} placeholder="e.g. Clinical Lead" />
-              </div>
-              <div className="grid gap-2">
-                <Label>Description</Label>
-                <Input value={newRoleDescription} onChange={(e) => setNewRoleDescription(e.target.value)} placeholder="Brief description" />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateRoleOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreateRole} disabled={createRole.isPending || !newRoleName.trim()}>
-                Create
+    <div className="flex-1 overflow-y-auto bg-background">
+      {/* Header */}
+      <div className="bg-card border-b border-border px-8 py-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Roles & Permissions</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Define roles and configure granular access control for your team.
+            </p>
+          </div>
+          <Dialog open={isCreateRoleOpen} onOpenChange={setIsCreateRoleOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Role
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>Create New Role</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label>Role Name <span className="text-destructive">*</span></Label>
+                  <Input
+                    value={newRoleName}
+                    onChange={(e) => setNewRoleName(e.target.value)}
+                    placeholder="e.g. Clinical Lead"
+                    onKeyDown={(e) => e.key === "Enter" && handleCreateRole()}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Description</Label>
+                  <Input
+                    value={newRoleDescription}
+                    onChange={(e) => setNewRoleDescription(e.target.value)}
+                    placeholder="Brief description of this role"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCreateRoleOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreateRole} disabled={createRole.isPending || !newRoleName.trim()}>
+                  {createRole.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Create Role
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      <div className="flex gap-6 flex-1 min-h-0">
+      <div className="p-8 flex gap-6 min-h-0" style={{ height: "calc(100vh - 130px)" }}>
         {/* Roles List */}
-        <Card className="w-1/3 flex flex-col min-h-0">
-          <CardHeader className="pb-3 shrink-0">
-            <CardTitle className="text-lg">Roles</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-y-auto p-0">
-            {isLoadingRoles ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">Loading...</div>
-            ) : rolesData?.data?.length === 0 ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">No roles found.</div>
-            ) : (
-              <div className="divide-y divide-border">
-                {rolesData?.data?.map((role) => (
-                  <div
-                    key={role.id}
-                    onClick={() => setSelectedRoleId(role.id)}
-                    className={`p-4 cursor-pointer transition-colors hover:bg-muted/50 ${
-                      selectedRoleId === role.id ? "bg-primary/5 border-l-4 border-l-primary" : "border-l-4 border-l-transparent"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="font-medium flex items-center gap-2">
-                        <Shield className={`w-4 h-4 ${selectedRoleId === role.id ? "text-primary" : "text-muted-foreground"}`} />
-                        {role.name}
+        <div className="w-64 shrink-0 flex flex-col">
+          <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <CardHeader className="pb-3 shrink-0">
+              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Roles ({rolesData?.data?.length ?? 0})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto p-0">
+              {isLoadingRoles ? (
+                <div className="p-4 space-y-2">
+                  {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
+                </div>
+              ) : rolesData?.data?.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">
+                  No roles configured.
+                </div>
+              ) : (
+                <div className="p-2 space-y-1">
+                  {rolesData?.data?.map((role) => (
+                    <button
+                      key={role.id}
+                      onClick={() => setSelectedRoleId(role.id)}
+                      className={cn(
+                        "w-full text-left px-3 py-3 rounded-lg transition-all border",
+                        selectedRoleId === role.id
+                          ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                          : "border-transparent hover:bg-muted/50 hover:border-border"
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-0.5">
+                        <div className="font-medium text-sm flex items-center gap-2">
+                          <Shield className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                          <span className="truncate">{role.name}</span>
+                        </div>
+                        {role.isSystem && (
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "text-[9px] shrink-0",
+                              selectedRoleId === role.id && "bg-primary-foreground/20 text-primary-foreground border-primary-foreground/20"
+                            )}
+                          >
+                            System
+                          </Badge>
+                        )}
                       </div>
-                      {role.isSystem && <Badge variant="secondary" className="text-[10px]">System</Badge>}
-                    </div>
-                    {role.description && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-1 ml-6">{role.description}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                      {role.description && (
+                        <p className={cn(
+                          "text-xs line-clamp-1 ml-5",
+                          selectedRoleId === role.id ? "text-primary-foreground/70" : "text-muted-foreground"
+                        )}>
+                          {role.description}
+                        </p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Permissions Panel */}
-        <Card className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 min-w-0 flex flex-col min-h-0">
           {selectedRole ? (
-            <PermissionsManager role={selectedRole} />
+            <PermissionsMatrix role={selectedRole} />
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 text-center h-full">
-              <ShieldCheck className="w-12 h-12 mb-4 text-muted-foreground/30" />
+            <Card className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+              <ShieldCheck className="w-16 h-16 mb-4 opacity-15" />
               <p className="text-lg font-medium">Select a role</p>
-              <p className="text-sm">Choose a role from the list to manage its permissions</p>
-            </div>
+              <p className="text-sm mt-1 text-center max-w-xs">
+                Choose a role from the list on the left to view and configure its permissions
+              </p>
+            </Card>
           )}
-        </Card>
+        </div>
       </div>
     </div>
   );
 }
 
-// Map of common resources and actions in the system for the UI
-const RESOURCES = [
-  "patients", "users", "roles", "clinics", "programs", "areas", "assignments", "communications", "journeys"
-];
-
-const ACTIONS = [
-  "create", "read", "update", "delete", "manage"
-];
-
-function PermissionsManager({ role }: { role: { id: string; name: string; isSystem?: boolean | null; description?: string | null } }) {
+function PermissionsMatrix({ role }: { role: { id: string; name: string; isSystem?: boolean | null; description?: string | null } }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   const permissionsKey = getListRolePermissionsQueryKey(role.id);
   const { data, isLoading } = useListRolePermissions(role.id, { query: { queryKey: permissionsKey } });
   const addPermission = useAddRolePermission();
   const removePermission = useRemoveRolePermission();
 
-  const [resource, setResource] = useState(RESOURCES[0]);
-  const [action, setAction] = useState(ACTIONS[0]);
+  const [pendingOps, setPendingOps] = useState<Set<string>>(new Set());
 
-  const handleAdd = async () => {
+  const grantedSet = useMemo(() => {
+    const s = new Set<string>();
+    data?.data?.forEach((p: any) => {
+      s.add(`${p.resource}:${p.action}`);
+      if (p.action === "*") {
+        // Has wildcard — grant all
+        RESOURCE_GROUPS.flatMap((g) => g.resources).forEach((r) => {
+          ACTIONS.forEach((a) => s.add(`${r.key}:${a.key}`));
+        });
+      }
+      if (p.resource === "*") {
+        RESOURCE_GROUPS.flatMap((g) => g.resources).forEach((r) => {
+          s.add(`${r.key}:${p.action}`);
+        });
+      }
+    });
+    return s;
+  }, [data]);
+
+  const hasFullAccess = data?.data?.some((p: any) => p.resource === "*" && p.action === "*");
+
+  const findPermissionId = (resource: string, action: string) => {
+    return data?.data?.find((p: any) =>
+      (p.resource === resource && p.action === action) ||
+      (p.resource === "*") ||
+      (p.resource === resource && p.action === "*")
+    )?.id;
+  };
+
+  const togglePermission = async (resource: string, action: string) => {
+    const opKey = `${resource}:${action}`;
+    const isGranted = grantedSet.has(opKey);
+
+    setPendingOps((prev) => new Set(prev).add(opKey));
     try {
-      await addPermission.mutateAsync({
-        id: role.id,
-        data: { resource, action }
+      if (isGranted) {
+        // Find the exact or parent permission to remove
+        const exactPermId = data?.data?.find(
+          (p: any) => p.resource === resource && p.action === action
+        )?.id;
+        if (exactPermId) {
+          await removePermission.mutateAsync({ id: role.id, permissionId: exactPermId });
+        }
+      } else {
+        await addPermission.mutateAsync({ id: role.id, data: { resource, action } });
+      }
+      queryClient.invalidateQueries({ queryKey: permissionsKey });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Failed to update permission", description: err.message });
+    } finally {
+      setPendingOps((prev) => {
+        const next = new Set(prev);
+        next.delete(opKey);
+        return next;
       });
-      queryClient.invalidateQueries({ queryKey: permissionsKey });
-      toast({ title: "Permission added" });
-    } catch (err: any) {
-      toast({ variant: "destructive", title: "Failed to add", description: err.message });
     }
   };
 
-  const handleRemove = async (permissionId: string) => {
-    try {
-      await removePermission.mutateAsync({ id: role.id, permissionId });
-      queryClient.invalidateQueries({ queryKey: permissionsKey });
-      toast({ title: "Permission removed" });
-    } catch (err: any) {
-      toast({ variant: "destructive", title: "Failed to remove", description: err.message });
+  const toggleAllForResource = async (resource: string) => {
+    const allGranted = ACTIONS.every((a) => grantedSet.has(`${resource}:${a.key}`));
+    for (const action of ACTIONS) {
+      const opKey = `${resource}:${action.key}`;
+      const isGranted = grantedSet.has(opKey);
+      if (allGranted && isGranted) {
+        const permId = data?.data?.find(
+          (p: any) => p.resource === resource && p.action === action.key
+        )?.id;
+        if (permId) {
+          await removePermission.mutateAsync({ id: role.id, permissionId: permId });
+        }
+      } else if (!allGranted && !isGranted) {
+        await addPermission.mutateAsync({ id: role.id, data: { resource, action: action.key } });
+      }
     }
+    queryClient.invalidateQueries({ queryKey: permissionsKey });
   };
-
-  const hasFullAccess = data?.data?.some(p => p.resource === "*" && p.action === "*");
 
   return (
-    <>
+    <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
       <CardHeader className="pb-4 border-b border-border shrink-0">
-        <div className="flex justify-between items-start">
+        <div className="flex items-start justify-between">
           <div>
-            <CardTitle>{role.name} Permissions</CardTitle>
-            <CardDescription className="mt-1">{role.description || "Manage access to resources for this role"}</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-primary" />
+              {role.name}
+              {role.isSystem && (
+                <Badge variant="outline" className="text-[10px] ml-1">System Role</Badge>
+              )}
+            </CardTitle>
+            <CardDescription className="mt-1">
+              {role.description ?? "Configure granular access permissions for this role"}
+            </CardDescription>
           </div>
-          {role.isSystem && (
-            <Badge variant="outline" className="bg-muted text-muted-foreground">
-              System predefined role
-            </Badge>
+          {hasFullAccess && (
+            <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+              <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Full Access (wildcard)</span>
+            </div>
           )}
         </div>
       </CardHeader>
-      
-      <CardContent className="p-6 flex flex-col h-full overflow-hidden">
-        {hasFullAccess && (
-          <div className="mb-6 p-4 rounded-lg bg-primary/10 border border-primary/20 flex items-start gap-3">
-            <ShieldCheck className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-            <div>
-              <h4 className="font-medium text-primary">Full System Access</h4>
-              <p className="text-sm text-primary/80">This role has unrestricted access (`*` on `*`). Individual permissions are bypassed.</p>
+
+      <CardContent className="flex-1 overflow-y-auto p-0">
+        {isLoading ? (
+          <div className="p-6 space-y-4">
+            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
+          </div>
+        ) : (
+          <div className="p-6 space-y-6">
+            {/* Legend */}
+            <div className="flex items-center gap-6 text-xs text-muted-foreground pb-2 border-b border-border">
+              <span className="font-medium">Permissions Matrix</span>
+              {ACTIONS.map((a) => (
+                <span key={a.key} className="font-medium uppercase tracking-wider w-16 text-center">
+                  {a.label}
+                </span>
+              ))}
+              <span className="font-medium w-16 text-center">All</span>
+            </div>
+
+            {RESOURCE_GROUPS.map(({ group, color, bgColor, resources }) => (
+              <div key={group}>
+                <p className={cn("text-xs font-bold uppercase tracking-widest mb-3", color)}>
+                  {group}
+                </p>
+                <div className="space-y-1.5">
+                  {resources.map(({ key: resource, label, description }) => {
+                    const allGranted = ACTIONS.every((a) => grantedSet.has(`${resource}:${a.key}`));
+                    return (
+                      <div
+                        key={resource}
+                        className={cn(
+                          "flex items-center gap-6 px-4 py-3 rounded-lg border transition-colors",
+                          allGranted ? `${bgColor} border-current/10` : "border-transparent hover:bg-muted/30"
+                        )}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{label}</p>
+                          <p className="text-xs text-muted-foreground">{description}</p>
+                        </div>
+                        {ACTIONS.map((action) => {
+                          const opKey = `${resource}:${action.key}`;
+                          const granted = grantedSet.has(opKey);
+                          const pending = pendingOps.has(opKey);
+                          return (
+                            <button
+                              key={action.key}
+                              onClick={() => togglePermission(resource, action.key)}
+                              disabled={pending || hasFullAccess}
+                              title={`${granted ? "Revoke" : "Grant"} ${action.label} on ${label}`}
+                              className={cn(
+                                "w-16 h-8 rounded-md border-2 flex items-center justify-center transition-all font-medium text-xs",
+                                pending ? "opacity-50 cursor-wait" : "cursor-pointer",
+                                granted
+                                  ? "bg-primary border-primary text-primary-foreground hover:bg-primary/80"
+                                  : "border-border bg-transparent text-muted-foreground hover:border-primary/50 hover:text-primary"
+                              )}
+                            >
+                              {pending ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : granted ? (
+                                <Check className="w-3.5 h-3.5" />
+                              ) : (
+                                <X className="w-3.5 h-3.5 opacity-30" />
+                              )}
+                            </button>
+                          );
+                        })}
+                        {/* Toggle all for this resource */}
+                        <button
+                          onClick={() => toggleAllForResource(resource)}
+                          disabled={hasFullAccess}
+                          title={allGranted ? "Revoke all permissions" : "Grant all permissions"}
+                          className={cn(
+                            "w-16 h-8 rounded-md border-2 flex items-center justify-center transition-all text-xs font-semibold",
+                            allGranted
+                              ? "bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600"
+                              : "border-dashed border-border text-muted-foreground hover:border-emerald-500 hover:text-emerald-600"
+                          )}
+                        >
+                          {allGranted ? "All ✓" : "All"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Raw permissions count */}
+            <div className="pt-4 border-t border-border">
+              <p className="text-xs text-muted-foreground">
+                {data?.data?.length ?? 0} permission rule{data?.data?.length !== 1 ? "s" : ""} configured
+                {hasFullAccess && " · Wildcard grants full access"}
+              </p>
             </div>
           </div>
         )}
-
-        <div className="mb-6 grid grid-cols-[1fr_1fr_auto] gap-3 items-end">
-          <div className="space-y-2">
-            <Label>Resource</Label>
-            <select 
-              value={resource} 
-              onChange={e => setResource(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="*">All Resources (*)</option>
-              {RESOURCES.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <Label>Action</Label>
-            <select 
-              value={action} 
-              onChange={e => setAction(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="*">All Actions (*)</option>
-              {ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
-          </div>
-          <Button onClick={handleAdd} disabled={addPermission.isPending}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Rule
-          </Button>
-        </div>
-
-        <div className="font-medium text-sm text-muted-foreground mb-3">Active Rules ({data?.data?.length || 0})</div>
-        
-        <div className="flex-1 overflow-y-auto min-h-0 border rounded-md">
-          {isLoading ? (
-            <div className="p-8 text-center text-muted-foreground">Loading permissions...</div>
-          ) : !data?.data || data.data.length === 0 ? (
-            <div className="p-8 text-center flex flex-col items-center justify-center text-muted-foreground h-full">
-              <ShieldOff className="w-8 h-8 mb-2 opacity-20" />
-              No permissions granted
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {data.data.map(p => (
-                <div key={p.id} className="p-3 flex items-center justify-between hover:bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-mono font-medium">
-                      {p.action}
-                    </div>
-                    <span className="text-sm text-muted-foreground">on</span>
-                    <div className="bg-secondary text-secondary-foreground px-2 py-1 rounded text-xs font-mono font-medium">
-                      {p.resource}
-                    </div>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => handleRemove(p.id)}
-                    disabled={removePermission.isPending}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </CardContent>
-    </>
+    </Card>
   );
 }

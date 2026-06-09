@@ -1773,7 +1773,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Consultation"
 
-  /api/files:
+  /files:
     post:
       summary: Upload a file
       operationId: uploadFile
@@ -1811,7 +1811,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginatedFiles"
-  /api/files/{id}:
+  /files/{id}:
     get:
       summary: Get file metadata
       operationId: getFile
@@ -1850,7 +1850,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OkResponse"
-  /api/files/{fileKey}/download:
+  /files/{fileKey}/download:
     get:
       summary: Download a file
       operationId: downloadFile
@@ -1871,7 +1871,7 @@ paths:
                 type: string
                 format: binary
 
-  /api/import/patients:
+  /import/patients:
     post:
       summary: Bulk import patients via CSV
       operationId: importPatients
@@ -2558,33 +2558,51 @@ components:
     # ── Assignment ──────────────────────────────────────────────────────────
     Assignment:
       type: object
-      required: [id, patientId, userId, createdAt]
+      required: [id, patientId, doctorId, clinicId, areaId, createdAt]
       properties:
         id:
           type: string
         patientId:
           type: string
-        userId:
+        doctorId:
           type: string
-        notes:
-          type: ["string", "null"]
+        clinicId:
+          type: string
+        areaId:
+          type: string
+        isTemp:
+          type: boolean
         createdAt:
           type: string
-        user:
+        doctor:
           $ref: "#/components/schemas/User"
         patient:
           $ref: "#/components/schemas/Patient"
+        clinic:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
+        area:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string }
 
     AssignmentInput:
       type: object
-      required: [patientId, userId]
+      required: [patientId, doctorId, clinicId, areaId]
       properties:
         patientId:
           type: string
-        userId:
+        doctorId:
           type: string
-        notes:
+        clinicId:
           type: string
+        areaId:
+          type: string
+        isTemp:
+          type: boolean
 
     AssignmentList:
       type: object

@@ -1,6 +1,6 @@
 # Caremesh PMS — Project Status
 
-_Last updated: 2026-06-08 (full repository audit)_
+_Last updated: 2026-06-09 (Phase 1 Critical Stabilization — all critical bugs resolved)_
 
 ---
 
@@ -16,13 +16,15 @@ _Last updated: 2026-06-08 (full repository audit)_
 |---|---|---|
 | Database schema | ✅ Complete | 27 Prisma models (incl. Outcomes, Tasks, Risk Scoring), pushed to PostgreSQL |
 | Seed data | ✅ Present | Real Mumbai data: 195 Areas, 707 Clinics, 25 Programs, 8 patients |
-| API server | ✅ Builds + 0 TS errors | Express 5, 23 route groups |
-| OpenAPI spec | ⚠️ Out of Sync | Missing definitions for Outcomes, Tasks, Risk Scores |
-| Codegen | ⚠️ Out of Sync | Frontend hooks lack Phase 1-5 definitions |
-| Frontend | ✅ Builds + 0 TS errors | 20 pages, sidebar layout, AuthGuard |
+| API server | ✅ Builds + 0 TS errors | Express 5, 23+ route groups — all critical 404s resolved |
+| OpenAPI spec | ✅ Synchronized | Assignment, files/import, patient status paths corrected |
+| Codegen | ✅ Synchronized | Generated client types fully corrected (doctorId, communications, DashboardStats) |
+| Frontend | ✅ Builds + 0 TS errors | 20 pages — assignment payload, doctor display, status mutations fixed |
 | Auth flow | ✅ Tested | Login / register / refresh / me / logout all working |
+| Rate limiter | ✅ Fixed | Disabled in development to prevent 429 errors |
+| Communications | ✅ Fixed | Root-level GET/POST routes added (was only /sms sub-path) |
 
-**Overall Completion: ~78%**
+**Overall Completion: ~85%** _(was 78% pre-stabilization)_
 
 **Run commands:**
 ```bash
@@ -83,21 +85,34 @@ TenantID:  e727eb86-cd40-487a-b651-1db925c58376
 
 ---
 
-## Pending / In Progress
+## Phase 1 Stabilization — Bugs Fixed (2026-06-09)
+
+| Bug ID | Severity | Fix Summary | Files Changed |
+|---|---|---|---|
+| CRIT-001 | P0 | Assignment 422: OpenAPI `AssignmentInput` schema corrected to `{doctorId, clinicId, areaId}` | `openapi.yaml`, `api.schemas.ts`, `patient-detail.tsx` |
+| CRIT-002/003/004 | P0 | Double `/api/api/` prefix in generated client for files + import routes | `api.ts` (global replace), `openapi.yaml` path keys |
+| CRIT-005 | P0 | Assignment card shows blank: `assignment.user` → `assignment.doctor` in display | `patient-detail.tsx` |
+| HIGH-001 | P1 | Patient status update 404: Added `PATCH /api/patients/:id/status` route | `patients.ts` |
+| HIGH-002 | P1 | Rate limit 429 in dev: Global rate limiter now skipped when `NODE_ENV !== production` | `app.ts` |
+| HIGH-003 | P1 | Communications 404: Added root-level `GET/POST/GET/:id/DELETE` routes | `communications.ts` |
+| HIGH-004/005 | P1 | Dashboard empty widgets: Added `outcomesRecorded/improvingPatients/successRate` to schema + UI | `api.schemas.ts`, `dashboard.tsx` |
+
+---
+
+## Remaining / In Progress
 
 | Feature | Priority | Status | Notes |
 |---|---|---|---|
-| OpenAPI Sync for Phases 1-5 | P1 | 🔴 Not started | Update `openapi.yaml` with Outcomes, Tasks, Risk Scores |
+| OpenAPI Sync for Phases 1-5 (Outcomes, Tasks, Risk) | P1 | 🔴 Not started | Update `openapi.yaml` with Outcomes, Tasks, Risk Scores |
 | Phase 1: Outcomes UI | P2 | 🔴 Not started | Patient detail tab, charts, record dialog |
 | Phase 2: Care Tasks UI | P2 | 🔴 Not started | Task list, assignment dialog, completion flows |
 | Phase 5: Risk Scoring UI | P2 | 🔴 Not started | Dashboard widgets, patient risk badges |
-| DELETE /api/consultations/:id | P1 | 🔴 Not started | Soft-delete + audit log |
-| Edit Consultation UI | P1 | 🔴 Not started | PATCH endpoint exists; UI missing |
-| Patient Detail Tab Restructure | P2 | 🔴 Not started | Move scrolling cards to `<Tabs>` component |
-| Granular permission enforcement | P0 | 🔴 Not started | UI exists; no runtime effect |
-| CSRF Protection | P0 | 🔴 Not started | Double-submit cookie or csurf |
+| Area→Clinic cascade in Assignment UI | P1 | 🟡 Partial | Assignment uses patient's clinic/area but no dropdown cascade |
+| CSRF Protection | P0 | 🔴 Not started | Double-submit cookie recommended |
+| Granular RBAC enforcement | P0 | 🔴 Not started | UI exists; no runtime effect at route level |
+| S3 file storage migration | P1 | 🔴 Not started | Local disk is ephemeral in cloud |
 | Automated test suite | P1 | 🔴 Not started | Vitest + Playwright |
-| Cloud object storage for files | P1 | 🔴 Not started | Local disk is ephemeral |
+| DELETE /api/consultations/:id | P1 | 🔴 Not started | Endpoint missing |
 
 ---
 

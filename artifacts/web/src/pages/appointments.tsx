@@ -1,159 +1,239 @@
+import { useState } from "react";
 import { useListAppointments, getListAppointmentsQueryKey, useCancelAppointment, useCompleteAppointment, useGetMe } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar as CalendarIcon, User, Building2, CheckCircle, XCircle } from "lucide-react";
+import { Calendar as CalendarIcon, User, Building2, CheckCircle, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+
+const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
+  SCHEDULED: { label: "Scheduled", class: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20" },
+  COMPLETED: { label: "Completed", class: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20" },
+  CANCELLED: { label: "Cancelled", class: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20" },
+  NO_SHOW: { label: "No Show", class: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20" },
+};
+
+const PAGE_SIZE = 20;
 
 export default function AppointmentsPage() {
   const { data: me } = useGetMe();
   const isDoctor = me?.role === "DOCTOR";
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [filterStatus, setFilterStatus] = useState("");
+  const [page, setPage] = useState(1);
 
   const queryParams = isDoctor ? { doctorId: me?.id } : {};
   const appointmentsKey = getListAppointmentsQueryKey(queryParams);
-  
+
   const { data: appointmentsData, isLoading } = useListAppointments(
     queryParams,
     { query: { enabled: !!me, queryKey: appointmentsKey } }
   );
 
-  const cancelAppointmentMutation = useCancelAppointment();
-  const completeAppointmentMutation = useCompleteAppointment();
+  const cancelMutation = useCancelAppointment();
+  const completeMutation = useCompleteAppointment();
 
-  const handleAction = async (appointmentId: string, action: 'cancel' | 'complete') => {
+  const handleAction = async (appointmentId: string, action: "cancel" | "complete") => {
     try {
-      if (action === 'cancel') {
-        await cancelAppointmentMutation.mutateAsync({ id: appointmentId });
+      if (action === "cancel") {
+        await cancelMutation.mutateAsync({ id: appointmentId });
       } else {
-        await completeAppointmentMutation.mutateAsync({ id: appointmentId });
+        await completeMutation.mutateAsync({ id: appointmentId });
       }
       queryClient.invalidateQueries({ queryKey: appointmentsKey });
-      toast({ title: `Appointment ${action === 'cancel' ? 'cancelled' : 'completed'}` });
+      toast({ title: `Appointment ${action === "cancel" ? "cancelled" : "completed"} successfully` });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Action failed", description: err.message });
     }
   };
 
+  const allAppointments = appointmentsData?.data ?? [];
+  const filtered = filterStatus ? allAppointments.filter((a) => a.status === filterStatus) : allAppointments;
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
-    <div className="p-8 space-y-8 flex-1 overflow-y-auto">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Appointments</h1>
-          <p className="text-muted-foreground mt-2">Manage clinical appointments and schedules.</p>
+    <div className="flex-1 overflow-y-auto bg-background">
+      <div className="bg-card border-b border-border px-8 py-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Appointments</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              {isDoctor ? "Your scheduled appointments" : "All clinical appointments across the trust"}.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CalendarIcon className="w-4 h-4" />
+            {allAppointments.length} total
+          </div>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarIcon className="w-5 h-5" />
-            {isDoctor ? "My Upcoming Appointments" : "All Appointments"}
-          </CardTitle>
-          <CardDescription>
-            {isDoctor ? "Appointments scheduled with you." : "View all scheduled appointments across the tenant."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
-            </div>
-          ) : appointmentsData?.data?.length ? (
-            <div className="rounded-md border">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-muted text-muted-foreground uppercase">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Date & Time</th>
-                    <th className="px-4 py-3 font-medium">Patient</th>
-                    {!isDoctor && <th className="px-4 py-3 font-medium">Doctor</th>}
-                    <th className="px-4 py-3 font-medium">Clinic</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {appointmentsData.data.map((appt) => (
-                    <tr key={appt.id} className="hover:bg-muted/50">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {format(new Date(appt.appointmentDate), "MMM d, yyyy HH:mm")}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link href={`/patients/${appt.patientId}`} className="text-primary hover:underline font-medium">
-                          {appt.patient?.firstName} {appt.patient?.lastName}
-                        </Link>
-                      </td>
-                      {!isDoctor && (
-                        <td className="px-4 py-3 text-muted-foreground flex items-center gap-2">
-                          <User className="w-4 h-4" /> Dr. {appt.doctor?.lastName}
-                        </td>
-                      )}
-                      <td className="px-4 py-3 text-muted-foreground">
-                        <span className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4" /> {appt.clinic?.name}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={appt.status === "SCHEDULED" ? "default" : appt.status === "COMPLETED" ? "secondary" : "destructive"}>
-                          {appt.status}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {appt.status === "SCHEDULED" && (
-                          <div className="flex justify-end gap-2">
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="sm" variant="ghost" className="h-8 text-primary hover:text-primary px-2">
-                                  <CheckCircle className="w-4 h-4 mr-1" /> Complete
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Complete Appointment</AlertDialogTitle>
-                                  <AlertDialogDescription>Mark this appointment as completed?</AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Close</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleAction(appt.id, 'complete')}>Yes, Complete</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-destructive px-2">
-                                  <XCircle className="w-4 h-4 mr-1" /> Cancel
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
-                                  <AlertDialogDescription>Are you sure you want to cancel this appointment?</AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Close</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleAction(appt.id, 'cancel')}>Yes, Cancel</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="py-8 text-center text-muted-foreground">No appointments scheduled.</div>
+      <div className="p-8 space-y-4">
+        {/* Filters */}
+        <div className="flex items-center gap-3">
+          <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v === "ALL" ? "" : v); setPage(1); }}>
+            <SelectTrigger className="w-44 bg-card">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All statuses</SelectItem>
+              <SelectItem value="SCHEDULED">Scheduled</SelectItem>
+              <SelectItem value="COMPLETED">Completed</SelectItem>
+              <SelectItem value="CANCELLED">Cancelled</SelectItem>
+              <SelectItem value="NO_SHOW">No Show</SelectItem>
+            </SelectContent>
+          </Select>
+          {filterStatus && (
+            <Badge variant="secondary">{filtered.length} shown</Badge>
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        <Card className="overflow-hidden">
+          <CardContent className="p-0">
+            {isLoading ? (
+              <div className="space-y-1 p-4">
+                {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
+              </div>
+            ) : paginated.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <CalendarIcon className="w-12 h-12 mb-3 opacity-20" />
+                <p className="font-medium">No appointments found</p>
+                <p className="text-sm mt-1">{filterStatus ? "Try changing the status filter" : "No appointments scheduled yet"}</p>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Date & Time</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Patient</TableHead>
+                        {!isDoctor && <TableHead className="font-semibold text-xs uppercase tracking-wide">Doctor</TableHead>}
+                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Clinic</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Status</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Type</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wide text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginated.map((appt) => {
+                        const statusCfg = STATUS_CONFIG[appt.status] ?? { label: appt.status, class: "bg-muted text-muted-foreground" };
+                        return (
+                          <TableRow key={appt.id} className="hover:bg-muted/20 transition-colors">
+                            <TableCell className="whitespace-nowrap text-sm">
+                              <div className="font-medium">{format(new Date(appt.appointmentDate), "MMM d, yyyy")}</div>
+                              <div className="text-xs text-muted-foreground">{format(new Date(appt.appointmentDate), "HH:mm")}</div>
+                            </TableCell>
+                            <TableCell>
+                              <Link href={`/patients/${appt.patientId}`}>
+                                <span className="text-sm font-medium text-primary hover:underline cursor-pointer">
+                                  {appt.patient?.firstName} {appt.patient?.lastName}
+                                </span>
+                              </Link>
+                            </TableCell>
+                            {!isDoctor && (
+                              <TableCell>
+                                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                  <User className="w-3.5 h-3.5 shrink-0" />
+                                  {appt.doctor ? `${appt.doctor.firstName} ${appt.doctor.lastName}` : "—"}
+                                </div>
+                              </TableCell>
+                            )}
+                            <TableCell>
+                              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                <Building2 className="w-3.5 h-3.5 shrink-0" />
+                                <span className="truncate max-w-[140px]">{appt.clinic?.name ?? "—"}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={cn("text-xs font-medium", statusCfg.class)}>
+                                {statusCfg.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-xs text-muted-foreground capitalize">
+                                {(appt as any).appointmentType?.toLowerCase() ?? "—"}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {appt.status === "SCHEDULED" && (
+                                <div className="flex justify-end gap-1">
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button size="sm" variant="ghost" className="h-8 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20">
+                                        <CheckCircle className="w-3.5 h-3.5 mr-1" />Complete
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Complete Appointment</AlertDialogTitle>
+                                        <AlertDialogDescription>Mark this appointment as completed?</AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleAction(appt.id, "complete")}>
+                                          Yes, Complete
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button size="sm" variant="ghost" className="h-8 text-xs text-muted-foreground hover:text-destructive">
+                                        <XCircle className="w-3.5 h-3.5 mr-1" />Cancel
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
+                                        <AlertDialogDescription>Are you sure you want to cancel this appointment?</AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Keep</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleAction(appt.id, "cancel")} className="bg-destructive hover:bg-destructive/90">
+                                          Yes, Cancel
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between px-6 py-4 border-t border-border">
+                    <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+                        <ChevronLeft className="w-4 h-4" />Prev
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+                        Next<ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

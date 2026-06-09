@@ -47,15 +47,18 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // ── Global rate limiting ──────────────────────────────────────────────────────
-app.use(
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 300,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: { code: "RATE_LIMITED", message: "Too many requests" } },
-  }),
-);
+// Skip in development to avoid 429 errors during hot-reload / rapid testing
+if (process.env.NODE_ENV === "production") {
+  app.use(
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 300,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { error: { code: "RATE_LIMITED", message: "Too many requests" } },
+    }),
+  );
+}
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use("/api", router);

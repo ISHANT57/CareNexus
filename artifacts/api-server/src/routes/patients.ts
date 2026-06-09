@@ -227,6 +227,29 @@ router.post("/:id/journey", CLINICAL_ROLES, validateBody(JourneySchema), async (
   } catch (err) { next(err); }
 });
 
+// PATCH /api/patients/:id/status — dedicated status update endpoint
+const StatusSchema = z.object({
+  status: z.enum(["ACTIVE", "INACTIVE"]),
+  notes: z.string().max(500).optional().nullable(),
+});
+
+router.patch("/:id/status", CLINICAL_ROLES, validateBody(StatusSchema), async (req, res, next) => {
+  try {
+    const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
+    if (!patient) throw Errors.notFound("Patient");
+    const { status, notes } = req.body as z.infer<typeof StatusSchema>;
+    const updated = await prisma.patient.update({ where: { id: patient.id }, data: { status } });
+    // Record status change as journey event if notes provided
+    if (notes) {
+      await prisma.patientJourneyEvent.create({
+        data: { patientId: patient.id, status: "NEW", notes: `Status changed to ${status}. ${notes}`, actedBy: req.user!.userId },
+      });
+    }
+    await createAuditLog({ req, entityType: "Patient", entityId: patient.id, action: "UPDATE", before: { status: patient.status }, after: { status } });
+    res.json(updated);
+  } catch (err) { next(err); }
+});
+
 // PATCH /api/patients/:id/gp
 router.patch("/:id/gp", CLINICAL_ROLES, validateBody(GpSchema), async (req, res, next) => {
   try {

@@ -393,18 +393,24 @@ export interface PatientJourneyList {
 export interface Assignment {
   id: string;
   patientId: string;
-  userId: string;
+  doctorId: string;
+  clinicId: string;
+  areaId: string;
+  isTemp?: boolean;
   /** @nullable */
-  notes?: string | null;
   createdAt: string;
-  user?: User;
+  doctor?: User;
   patient?: Patient;
+  clinic?: { id: string; name: string };
+  area?: { id: string; name: string };
 }
 
 export interface AssignmentInput {
   patientId: string;
-  userId: string;
-  notes?: string;
+  doctorId: string;
+  clinicId: string;
+  areaId: string;
+  isTemp?: boolean;
 }
 
 export interface AssignmentList {
@@ -479,6 +485,9 @@ export interface DashboardStats {
   totalPrograms: number;
   newPatientsThisMonth: number;
   pendingCommunications: number;
+  outcomesRecorded?: number;
+  improvingPatients?: number;
+  successRate?: number;
 }
 
 export interface StatusCount {
@@ -755,10 +764,13 @@ areaId?: string;
 
 export type ListAssignmentsParams = {
 patientId?: string;
-userId?: string;
+doctorId?: string;
+clinicId?: string;
+areaId?: string;
 page?: number;
 limit?: number;
 };
+
 
 export type ListCommunicationsParams = {
 patientId?: string;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   useListAreas,
   useCreateArea,
@@ -44,8 +44,12 @@ export default function AreasPage() {
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
 
-  const filteredAreas = (data?.data ?? []).filter((a) =>
-    !search || a.name.toLowerCase().includes(search.toLowerCase())
+  // Memoized — only recomputes when data or search changes, not on dialog state changes
+  const filteredAreas = useMemo(() =>
+    (data?.data ?? []).filter((a) =>
+      !search || a.name.toLowerCase().includes(search.toLowerCase())
+    ),
+    [data?.data, search]
   );
 
   const handleCreateArea = async () => {

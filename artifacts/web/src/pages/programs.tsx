@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   useListPrograms,
   useCreateProgram,
@@ -32,6 +32,42 @@ const PROGRAM_COLORS = [
   "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
 ];
 
+// ─── CRITICAL FIX: Defined OUTSIDE the component ─────────────────────────────
+// Previously defined inside ProgramsPage(), which caused React to treat it as a
+// new component type on every render, unmounting + remounting DOM inputs on every
+// keystroke. Now it's a stable reference that React can reconcile normally.
+interface ProgramFormFieldsProps {
+  name: string;
+  onNameChange: (v: string) => void;
+  description: string;
+  onDescriptionChange: (v: string) => void;
+}
+
+function ProgramFormFields({ name, onNameChange, description, onDescriptionChange }: ProgramFormFieldsProps) {
+  return (
+    <div className="grid gap-4 py-4">
+      <div className="grid gap-2">
+        <Label>Program Name <span className="text-destructive">*</span></Label>
+        <Input
+          value={name}
+          onChange={(e) => onNameChange(e.target.value)}
+          placeholder="e.g. Diabetes Management Programme"
+          autoFocus
+        />
+      </div>
+      <div className="grid gap-2">
+        <Label>Description</Label>
+        <Input
+          value={description}
+          onChange={(e) => onDescriptionChange(e.target.value)}
+          placeholder="Brief description of this clinical program"
+        />
+      </div>
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function ProgramsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -49,12 +85,12 @@ export default function ProgramsPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
-  const openCreate = () => { setName(""); setDescription(""); setIsCreateOpen(true); };
-  const openEdit = (program: { id: string; name: string; description?: string | null }) => {
+  const openCreate = useCallback(() => { setName(""); setDescription(""); setIsCreateOpen(true); }, []);
+  const openEdit = useCallback((program: { id: string; name: string; description?: string | null }) => {
     setEditId(program.id); setName(program.name); setDescription(program.description ?? ""); setIsEditOpen(true);
-  };
+  }, []);
 
-  const handleCreate = async () => {
+  const handleCreate = useCallback(async () => {
     if (!name.trim()) { toast({ variant: "destructive", title: "Name is required" }); return; }
     try {
       await createProgram.mutateAsync({ data: { name: name.trim(), description: description.trim() || undefined } });
@@ -62,9 +98,9 @@ export default function ProgramsPage() {
       setIsCreateOpen(false);
       toast({ title: "Program created successfully" });
     } catch (err: any) { toast({ variant: "destructive", title: "Failed to create", description: err.message }); }
-  };
+  }, [name, description, createProgram, queryClient, toast]);
 
-  const handleEdit = async () => {
+  const handleEdit = useCallback(async () => {
     if (!name.trim()) { toast({ variant: "destructive", title: "Name is required" }); return; }
     try {
       await updateProgram.mutateAsync({ id: editId, data: { name: name.trim(), description: description.trim() || undefined } });
@@ -72,31 +108,22 @@ export default function ProgramsPage() {
       setIsEditOpen(false);
       toast({ title: "Program updated successfully" });
     } catch (err: any) { toast({ variant: "destructive", title: "Failed to update", description: err.message }); }
-  };
+  }, [name, description, editId, updateProgram, queryClient, toast]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     try {
       await deleteProgram.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: getListProgramsQueryKey() });
       toast({ title: "Program deleted" });
     } catch (err: any) { toast({ variant: "destructive", title: "Failed to delete", description: err.message }); }
-  };
+  }, [deleteProgram, queryClient, toast]);
 
-  const filteredPrograms = (data?.data ?? []).filter((p) =>
-    !search || p.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const ProgramFormFields = () => (
-    <div className="grid gap-4 py-4">
-      <div className="grid gap-2">
-        <Label>Program Name <span className="text-destructive">*</span></Label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Diabetes Management Programme" />
-      </div>
-      <div className="grid gap-2">
-        <Label>Description</Label>
-        <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description of this clinical program" />
-      </div>
-    </div>
+  // Memoized filtering — only recomputes when data or search changes
+  const filteredPrograms = useMemo(() =>
+    (data?.data ?? []).filter((p) =>
+      !search || p.name.toLowerCase().includes(search.toLowerCase())
+    ),
+    [data?.data, search]
   );
 
   return (
@@ -117,7 +144,12 @@ export default function ProgramsPage() {
             </DialogTrigger>
             <DialogContent className="max-w-sm">
               <DialogHeader><DialogTitle>Create New Program</DialogTitle></DialogHeader>
-              <ProgramFormFields />
+              <ProgramFormFields
+                name={name}
+                onNameChange={setName}
+                description={description}
+                onDescriptionChange={setDescription}
+              />
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
                 <Button onClick={handleCreate} disabled={createProgram.isPending || !name.trim()}>Create</Button>
@@ -130,7 +162,12 @@ export default function ProgramsPage() {
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Edit Program</DialogTitle></DialogHeader>
-          <ProgramFormFields />
+          <ProgramFormFields
+            name={name}
+            onNameChange={setName}
+            description={description}
+            onDescriptionChange={setDescription}
+          />
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
             <Button onClick={handleEdit} disabled={updateProgram.isPending || !name.trim()}>Save Changes</Button>

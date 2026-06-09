@@ -48,8 +48,8 @@ export class DependencySyncService {
     if (!pgRecord) throw new Error(`Program ${id} not found in Postgres!`);
 
     await mysqlPool.execute(
-      `INSERT INTO programs (id, tenantId, name, activationCode, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [pgRecord.id, pgRecord.tenantId, pgRecord.name, pgRecord.activationCode, pgRecord.isActive ? 1 : 0, pgRecord.createdAt, pgRecord.updatedAt]
+      `INSERT INTO programs (id, tenantId, name, description, activationCode, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [pgRecord.id, pgRecord.tenantId, pgRecord.name, pgRecord.description, pgRecord.activationCode, pgRecord.isActive ? 1 : 0, pgRecord.createdAt, pgRecord.updatedAt]
     );
     logger.info(`[DEPENDENCY CHECK] Program Sync SUCCESS`);
   }

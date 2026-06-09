@@ -11,7 +11,9 @@ import {
   useListPrograms,
   useListAppointments, useCreateAppointment, useCancelAppointment, useCompleteAppointment, useUpdateAppointment, getListAppointmentsQueryKey,
   useListClinics,
-  useListConsultations, useCreateConsultation, useUpdateConsultation, getListConsultationsQueryKey
+  useListConsultations, useCreateConsultation, useUpdateConsultation, getListConsultationsQueryKey,
+  useListOutcomes, useCreateOutcome, getListOutcomesQueryKey,
+  useListOutcomeMetrics,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -20,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, MapPin, Phone, Mail, Calendar, Building2, Activity, ArrowLeft, ChevronDown, Plus, Trash2, UserPlus, MessageSquare, Send, Upload, FileText, Download, CheckCircle, XCircle, Pencil, ClipboardList, Clock } from "lucide-react";
+import { User, MapPin, Phone, Mail, Calendar, Building2, Activity, ArrowLeft, ChevronDown, Plus, Trash2, UserPlus, MessageSquare, Send, Upload, FileText, Download, CheckCircle, XCircle, Pencil, ClipboardList, Clock, TrendingUp, AlertCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -34,6 +36,46 @@ const emptyConsultationForm = {
   chiefComplaint: "", symptoms: "", observations: "", diagnosis: "",
   treatmentPlan: "", medications: "", followUpInstructions: ""
 };
+
+// ── ConsultationFormFields at module scope (prevents remount on every render) ──
+const ConsultationFormFields = ({ form, setForm }: { form: typeof emptyConsultationForm; setForm: (f: typeof emptyConsultationForm) => void }) => (
+  <div className="grid gap-4">
+    <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-2">
+        <label className="text-sm font-medium">Chief Complaint</label>
+        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.chiefComplaint} onChange={e => setForm({ ...form, chiefComplaint: e.target.value })} placeholder="Main reason for visit..." />
+      </div>
+      <div className="grid gap-2">
+        <label className="text-sm font-medium">Symptoms</label>
+        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.symptoms} onChange={e => setForm({ ...form, symptoms: e.target.value })} placeholder="Patient reported symptoms..." />
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-2">
+        <label className="text-sm font-medium">Observations</label>
+        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.observations} onChange={e => setForm({ ...form, observations: e.target.value })} placeholder="Clinical observations..." />
+      </div>
+      <div className="grid gap-2">
+        <label className="text-sm font-medium">Diagnosis</label>
+        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.diagnosis} onChange={e => setForm({ ...form, diagnosis: e.target.value })} placeholder="Primary and secondary diagnosis..." />
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-2">
+        <label className="text-sm font-medium">Treatment Plan</label>
+        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.treatmentPlan} onChange={e => setForm({ ...form, treatmentPlan: e.target.value })} placeholder="Recommended treatments..." />
+      </div>
+      <div className="grid gap-2">
+        <label className="text-sm font-medium">Medications</label>
+        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.medications} onChange={e => setForm({ ...form, medications: e.target.value })} placeholder="Prescribed medications..." />
+      </div>
+    </div>
+    <div className="grid gap-2">
+      <label className="text-sm font-medium">Follow-up Instructions</label>
+      <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.followUpInstructions} onChange={e => setForm({ ...form, followUpInstructions: e.target.value })} placeholder="Instructions for patient..." />
+    </div>
+  </div>
+);
 
 export default function PatientDetailPage() {
   const params = useParams();
@@ -104,6 +146,19 @@ export default function PatientDetailPage() {
   const [editConsultationId, setEditConsultationId] = useState("");
   const [editConsultationForm, setEditConsultationForm] = useState(emptyConsultationForm);
 
+  // ── Outcomes ───────────────────────────────────────────────────────────────────────
+  const createOutcome = useCreateOutcome();
+  const [isOutcomeDialogOpen, setIsOutcomeDialogOpen] = useState(false);
+  const [outcomeMetricId, setOutcomeMetricId] = useState("");
+  const [outcomeBaseline, setOutcomeBaseline] = useState("");
+  const [outcomeCurrent, setOutcomeCurrent] = useState("");
+  const [outcomeTarget, setOutcomeTarget] = useState("");
+  const [outcomeProgramId, setOutcomeProgramId] = useState("");
+  const [outcomeNotes, setOutcomeNotes] = useState("");
+
+  // ── Communications ───────────────────────────────────────────────────────────
+  const [commType, setCommType] = useState<"SMS" | "EMAIL">("SMS");
+
   // ── Queries ───────────────────────────────────────────────────────────────────
   const { data: patient, isLoading } = useGetPatient(id, {
     query: { enabled: !isNew && !!id, queryKey: getGetPatientQueryKey(id) }
@@ -143,6 +198,15 @@ export default function PatientDetailPage() {
   const { data: consultationsData, isLoading: isConsultationsLoading } = useListConsultations(
     { patientId: id },
     { query: { enabled: !isNew && !!id, queryKey: consultationsKey } }
+  );
+  const outcomesKey = getListOutcomesQueryKey({ patientId: id });
+  const { data: outcomesData, isLoading: isOutcomesLoading } = useListOutcomes(
+    { patientId: id },
+    { query: { enabled: !isNew && !!id, queryKey: outcomesKey } }
+  );
+  const { data: outcomeMetricsData } = useListOutcomeMetrics(
+    { limit: 100 },
+    { query: { enabled: isOutcomeDialogOpen, queryKey: ["outcome-metrics", "active"] } }
   );
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
@@ -202,13 +266,18 @@ export default function PatientDetailPage() {
   const handleSendSms = async () => {
     if (!smsMessage.trim()) return;
     try {
-      await createCommunication.mutateAsync({ data: { patientId: id, type: "SMS", subject: "SMS", body: smsMessage.trim() } });
+      const subject = commType === "EMAIL"
+        ? (document.getElementById("comm-subject") as HTMLInputElement)?.value?.trim() || "Message"
+        : commType;
+      await createCommunication.mutateAsync({
+        data: { patientId: id, type: commType, channel: commType, subject, body: smsMessage.trim() } as any
+      });
       queryClient.invalidateQueries({ queryKey: smsKey });
       setIsSmsDialogOpen(false);
       setSmsMessage("");
-      toast({ title: "SMS queued successfully" });
+      toast({ title: `${commType} sent successfully` });
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Failed to send SMS", description: err.message });
+      toast({ variant: "destructive", title: `Failed to send ${commType}`, description: err.message });
     }
   };
 
@@ -396,46 +465,6 @@ export default function PatientDetailPage() {
   }
 
   if (!patient) return <div className="p-8">Patient not found</div>;
-
-  // ── Consultation Form Fields ────────────────────────────────────────────────
-  const ConsultationFormFields = ({ form, setForm }: { form: typeof emptyConsultationForm; setForm: (f: typeof emptyConsultationForm) => void }) => (
-    <div className="grid gap-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="grid gap-2">
-          <Label>Chief Complaint</Label>
-          <Textarea value={form.chiefComplaint} onChange={e => setForm({ ...form, chiefComplaint: e.target.value })} placeholder="Main reason for visit..." />
-        </div>
-        <div className="grid gap-2">
-          <Label>Symptoms</Label>
-          <Textarea value={form.symptoms} onChange={e => setForm({ ...form, symptoms: e.target.value })} placeholder="Patient reported symptoms..." />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="grid gap-2">
-          <Label>Observations</Label>
-          <Textarea value={form.observations} onChange={e => setForm({ ...form, observations: e.target.value })} placeholder="Clinical observations..." />
-        </div>
-        <div className="grid gap-2">
-          <Label>Diagnosis</Label>
-          <Textarea value={form.diagnosis} onChange={e => setForm({ ...form, diagnosis: e.target.value })} placeholder="Primary and secondary diagnosis..." />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="grid gap-2">
-          <Label>Treatment Plan</Label>
-          <Textarea value={form.treatmentPlan} onChange={e => setForm({ ...form, treatmentPlan: e.target.value })} placeholder="Recommended treatments..." />
-        </div>
-        <div className="grid gap-2">
-          <Label>Medications</Label>
-          <Textarea value={form.medications} onChange={e => setForm({ ...form, medications: e.target.value })} placeholder="Prescribed medications..." />
-        </div>
-      </div>
-      <div className="grid gap-2">
-        <Label>Follow-up Instructions</Label>
-        <Textarea value={form.followUpInstructions} onChange={e => setForm({ ...form, followUpInstructions: e.target.value })} placeholder="Instructions for patient..." />
-      </div>
-    </div>
-  );
 
   return (
     <div className="p-8 flex-1 overflow-y-auto bg-muted/10">
@@ -859,8 +888,8 @@ export default function PatientDetailPage() {
                       <Select value={appointmentDoctorId} onValueChange={setAppointmentDoctorId}>
                         <SelectTrigger><SelectValue placeholder="Select doctor..." /></SelectTrigger>
                         <SelectContent>
-                          {usersData?.data?.filter(u => u.role?.name === "DOCTOR" || u.role?.name === "SUPERADMIN").map((u) => (
-                            <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</SelectItem>
+                          {usersData?.data?.filter(u => u.role?.name === "DOCTOR" || u.role?.name === "SUPER_ADMIN" || u.role?.name === "CLINIC_ADMIN").map((u) => (
+                            <SelectItem key={u.id} value={u.id}>{u.firstName} {u.lastName} — {u.role?.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -1033,6 +1062,169 @@ export default function PatientDetailPage() {
           </Card>
         </TabsContent>
 
+        {/* ── OUTCOMES TAB ───────────────────────────────────────────────────── */}
+        <TabsContent value="outcomes">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" /> Clinical Outcomes
+              </CardTitle>
+              <Dialog open={isOutcomeDialogOpen} onOpenChange={(o) => { setIsOutcomeDialogOpen(o); if (!o) { setOutcomeMetricId(""); setOutcomeBaseline(""); setOutcomeCurrent(""); setOutcomeTarget(""); setOutcomeProgramId(""); setOutcomeNotes(""); } }}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="h-8">
+                    <Plus className="w-4 h-4 mr-1" /> Record Outcome
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader><DialogTitle>Record Clinical Outcome</DialogTitle></DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label>Outcome Metric <span className="text-destructive">*</span></Label>
+                      <Select value={outcomeMetricId} onValueChange={setOutcomeMetricId}>
+                        <SelectTrigger><SelectValue placeholder="Select metric..." /></SelectTrigger>
+                        <SelectContent>
+                          {(outcomeMetricsData?.data ?? []).map((m: any) => (
+                            <SelectItem key={m.id} value={m.id}>
+                              {m.name} ({m.unit}) — {m.category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Program <span className="text-destructive">*</span></Label>
+                      <Select value={outcomeProgramId} onValueChange={setOutcomeProgramId}>
+                        <SelectTrigger><SelectValue placeholder="Select program..." /></SelectTrigger>
+                        <SelectContent>
+                          {(programsData?.data ?? []).map((p: any) => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="grid gap-2">
+                        <Label>Baseline Value <span className="text-destructive">*</span></Label>
+                        <input type="number" value={outcomeBaseline} onChange={e => setOutcomeBaseline(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="0" />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Current Value <span className="text-destructive">*</span></Label>
+                        <input type="number" value={outcomeCurrent} onChange={e => setOutcomeCurrent(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="0" />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Target Value <span className="text-destructive">*</span></Label>
+                        <input type="number" value={outcomeTarget} onChange={e => setOutcomeTarget(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="0" />
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Notes</Label>
+                      <Textarea value={outcomeNotes} onChange={e => setOutcomeNotes(e.target.value)} placeholder="Clinical notes..." rows={3} />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsOutcomeDialogOpen(false)}>Cancel</Button>
+                    <Button
+                      onClick={async () => {
+                        if (!outcomeMetricId || !outcomeProgramId || !outcomeBaseline || !outcomeCurrent || !outcomeTarget) {
+                          toast({ variant: "destructive", title: "All required fields must be filled" }); return;
+                        }
+                        try {
+                          await createOutcome.mutateAsync({ data: {
+                            patientId: id,
+                            programId: outcomeProgramId,
+                            outcomeMetricId,
+                            baselineValue: parseFloat(outcomeBaseline),
+                            currentValue: parseFloat(outcomeCurrent),
+                            targetValue: parseFloat(outcomeTarget),
+                            notes: outcomeNotes || undefined,
+                          }});
+                          queryClient.invalidateQueries({ queryKey: outcomesKey });
+                          setIsOutcomeDialogOpen(false);
+                          toast({ title: "Outcome recorded successfully" });
+                        } catch (err: any) {
+                          toast({ variant: "destructive", title: "Failed to record outcome", description: err.message });
+                        }
+                      }}
+                      disabled={createOutcome.isPending || !outcomeMetricId || !outcomeProgramId || !outcomeBaseline || !outcomeCurrent || !outcomeTarget}
+                    >
+                      {createOutcome.isPending ? "Recording..." : "Record Outcome"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {isOutcomesLoading ? (
+                <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}</div>
+              ) : !outcomesData?.data?.length ? (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <TrendingUp className="w-10 h-10 mb-3 opacity-20" />
+                  <p className="font-medium text-sm">No outcomes recorded yet</p>
+                  <p className="text-xs mt-1">Record clinical outcomes to track patient progress</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {outcomesData.data.map((outcome: any) => {
+                    const pct = outcome.progressPct ?? 0;
+                    const improved = (outcome.currentValue ?? 0) >= (outcome.baselineValue ?? 0);
+                    const metricName = outcome.outcomeMetric?.name ?? "Outcome";
+                    const unit = outcome.unit ?? outcome.outcomeMetric?.unit ?? "";
+                    const category = outcome.outcomeMetric?.category ?? "";
+                    return (
+                      <div key={outcome.id} className="border border-border rounded-xl p-4 space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-sm">{metricName}</span>
+                              {category && <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{category}</span>}
+                              {outcome.targetAchieved && (
+                                <span className="text-xs bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3" /> Target Achieved
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Recorded {outcome.measuredAt ? format(new Date(outcome.measuredAt), 'MMM d, yyyy') : format(new Date(outcome.createdAt), 'MMM d, yyyy')}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-foreground">
+                              {outcome.currentValue} {unit}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {improved ? '↑' : '↓'} {Math.abs(outcome.improvementPct ?? 0).toFixed(1)}% vs baseline
+                            </div>
+                          </div>
+                        </div>
+                        {/* Progress bar */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Baseline: {outcome.baselineValue} {unit}</span>
+                            <span>Target: {outcome.targetValue} {unit}</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2">
+                            <div
+                              className="h-2 rounded-full transition-all"
+                              style={{
+                                width: `${Math.min(100, pct)}%`,
+                                background: pct >= 100 ? '#10b981' : pct >= 50 ? '#3b82f6' : '#f59e0b'
+                              }}
+                            />
+                          </div>
+                          <div className="text-right text-xs text-muted-foreground">{pct}% to target</div>
+                        </div>
+                        {outcome.notes && (
+                          <p className="text-xs text-muted-foreground border-t border-border pt-2">{outcome.notes}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* ── FILES TAB ────────────────────────────────────────────────────── */}
         <TabsContent value="files">
           <Card>
@@ -1100,18 +1292,35 @@ export default function PatientDetailPage() {
         <TabsContent value="communications">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg flex items-center gap-2"><MessageSquare className="w-4 h-4" /> SMS Communications</CardTitle>
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2"><MessageSquare className="w-4 h-4" /> Communications</CardTitle>
+                <div className="flex gap-2 mt-2">
+                  <Button size="sm" variant={commType === "SMS" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setCommType("SMS")}>SMS</Button>
+                  <Button size="sm" variant={commType === "EMAIL" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setCommType("EMAIL")}>Email</Button>
+                </div>
+              </div>
               <Dialog open={isSmsDialogOpen} onOpenChange={setIsSmsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button size="sm" variant="outline" className="h-8"><Send className="w-4 h-4 mr-1" /> Send SMS</Button>
+                  <Button size="sm" variant="outline" className="h-8"><Send className="w-4 h-4 mr-1" /> Send {commType}</Button>
                 </DialogTrigger>
                 <DialogContent>
-                  <DialogHeader><DialogTitle>Send SMS to Patient</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>Send {commType} to Patient</DialogTitle></DialogHeader>
                   <div className="grid gap-4 py-4">
+                    {commType === "EMAIL" && (
+                      <div className="grid gap-2">
+                        <Label>Subject</Label>
+                        <input
+                          type="text"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          placeholder="Email subject..."
+                          id="comm-subject"
+                        />
+                      </div>
+                    )}
                     <div className="grid gap-2">
-                      <Label>Message</Label>
-                      <Textarea value={smsMessage} onChange={(e) => setSmsMessage(e.target.value)} placeholder="Type your message here..." rows={4} maxLength={1600} />
-                      <p className="text-xs text-muted-foreground text-right">{smsMessage.length}/1600</p>
+                      <Label>{commType === "EMAIL" ? "Body" : "Message"}</Label>
+                      <Textarea value={smsMessage} onChange={(e) => setSmsMessage(e.target.value)} placeholder={commType === "SMS" ? "Type your SMS message..." : "Type your email body..."} rows={4} maxLength={commType === "SMS" ? 1600 : 5000} />
+                      <p className="text-xs text-muted-foreground text-right">{smsMessage.length}/{commType === "SMS" ? 1600 : 5000}</p>
                     </div>
                   </div>
                   <DialogFooter>

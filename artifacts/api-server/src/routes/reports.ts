@@ -357,8 +357,6 @@ router.get("/follow-ups", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-export default router;
-
 // ── Clinic Stats ───────────────────────────────────────────────────────────────
 // GET /api/reports/clinic-stats — patients, appointments, enrollments per clinic
 router.get("/clinic-stats", async (req, res, next) => {
@@ -543,3 +541,5 @@ router.get("/outcomes-by-doctor", async (req, res, next) => {
     })));
   } catch (err) { next(err); }
 });
+
+export default router;

@@ -14,4 +14,7 @@ export interface DashboardStats {
   totalPrograms: number;
   newPatientsThisMonth: number;
   pendingCommunications: number;
+  outcomesRecorded: number;
+  improvingPatients: number;
+  successRate: number;
 }

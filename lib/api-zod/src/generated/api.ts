@@ -1217,7 +1217,10 @@ export const GetDashboardStatsResponse = zod.object({
   "totalClinics": zod.number(),
   "totalPrograms": zod.number(),
   "newPatientsThisMonth": zod.number(),
-  "pendingCommunications": zod.number()
+  "pendingCommunications": zod.number(),
+  "outcomesRecorded": zod.number(),
+  "improvingPatients": zod.number(),
+  "successRate": zod.number()
 })
 
 

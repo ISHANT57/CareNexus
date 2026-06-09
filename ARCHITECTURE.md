@@ -1,10 +1,10 @@
-# Caremesh PMS — Architecture Overview
+# CareNexus — Architecture Overview
 
-_Last updated: 2026-06-08 (full repository audit)_
+_Last updated: 2026-06-09 (final certification audit)_
 
 ## 1. High-Level Architecture
 
-Caremesh PMS is a monolithic, multi-tenant B2B SaaS platform designed for NHS mental health trusts.
+CareNexus is a monolithic, multi-tenant B2B SaaS platform designed for NHS mental health trusts.
 
 It is structured as a pnpm monorepo:
 - `@workspace/api-server` — Node.js / Express 5 REST API

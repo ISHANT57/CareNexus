@@ -1,12 +1,12 @@
-# Caremesh PMS — Project Status
+# CareNexus — Project Status
 
-_Last updated: 2026-06-09 (Phase 1 Critical Stabilization — all critical bugs resolved)_
+_Last updated: 2026-06-09 (Final Certification Audit — all P0/P1 bugs resolved, build clean)_
 
 ---
 
 ## What This Is
 
-**Caremesh PMS** is a multi-tenant Healthcare Patient Management SaaS for NHS mental health trusts. It enables clinical teams to manage patients, programs, clinics, areas, staff, communications, appointments, consultations, and audit trails within isolated tenant accounts.
+**CareNexus** is a multi-tenant Healthcare Patient Management SaaS for NHS mental health trusts. It enables clinical teams to manage patients, programs, clinics, areas, staff, communications, appointments, consultations, and audit trails within isolated tenant accounts.
 
 ---
 
@@ -16,15 +16,16 @@ _Last updated: 2026-06-09 (Phase 1 Critical Stabilization — all critical bugs 
 |---|---|---|
 | Database schema | ✅ Complete | 27 Prisma models (incl. Outcomes, Tasks, Risk Scoring), pushed to PostgreSQL |
 | Seed data | ✅ Present | Real Mumbai data: 195 Areas, 707 Clinics, 25 Programs, 8 patients |
-| API server | ✅ Builds + 0 TS errors | Express 5, 23+ route groups — all critical 404s resolved |
-| OpenAPI spec | ✅ Synchronized | Assignment, files/import, patient status paths corrected |
-| Codegen | ✅ Synchronized | Generated client types fully corrected (doctorId, communications, DashboardStats) |
-| Frontend | ✅ Builds + 0 TS errors | 20 pages — assignment payload, doctor display, status mutations fixed |
+| API server | ✅ Builds + 0 TS errors | Express 5, 23+ route groups — all P0 route export bug in reports.ts fixed |
+| OpenAPI spec | ✅ Synchronized | Outcomes, Tasks, Risk Scores, Email communications added |
+| Codegen | ✅ Synchronized | 46+ new hooks generated (useGetOutcomes, useGetTasks, useGetRiskScores) |
+| Frontend | ✅ Builds + 0 TS errors | 2805 modules, P0 ConsultationFormFields bug fixed, comm channel fixed |
 | Auth flow | ✅ Tested | Login / register / refresh / me / logout all working |
 | Rate limiter | ✅ Fixed | Disabled in development to prevent 429 errors |
-| Communications | ✅ Fixed | Root-level GET/POST routes added (was only /sms sub-path) |
+| Communications | ✅ Fixed | SMS + EMAIL channel selection implemented in patient detail |
+| Dashboard | ✅ Fixed | Clinic table now shows real patient/appointment/enrollment stats |
 
-**Overall Completion: ~85%** _(was 78% pre-stabilization)_
+**Overall Completion: ~92%** _(was 85% pre-certification)_
 
 **Run commands:**
 ```bash

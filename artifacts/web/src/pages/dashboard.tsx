@@ -8,10 +8,10 @@ import {
   useGetEnrollmentStats,
   useGetAppointmentStats,
   useGetConsultationStats,
-  useListClinics,
   useListProgramEnrollments,
   useGetMe,
 } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import {
@@ -104,18 +104,27 @@ function TenantDashboard() {
   const { data: consultationStats, isLoading: consultationLoading } = useGetConsultationStats({
     query: { staleTime: 5 * 60 * 1000 } as any
   });
-  // Clinic overview — use standard list endpoint (top 20)
-  const { data: clinicsData, isLoading: clinicStatsLoading } = useListClinics(
-    { limit: 20 } as any,
-    { query: { staleTime: 5 * 60 * 1000 } as any }
-  );
-  const clinicStats = useMemo(() => clinicsData?.data ?? [], [clinicsData]);
+  // Clinic performance — real stats from /api/reports/clinic-stats
+  const { data: clinicStatsData, isLoading: clinicStatsLoading } = useQuery({
+    queryKey: ["reports", "clinic-stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/reports/clinic-stats", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json() as Promise<Array<{ clinicId: string; clinicName: string; areaName: string; patientCount: number; appointmentCount: number; enrollmentCount: number }>>;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const clinicStats = useMemo(() => Array.isArray(clinicStatsData) ? clinicStatsData : [], [clinicStatsData]);
 
   // Program drill-down (lazy) — load enrollments for the selected program
   const { data: programEnrollmentsData, isLoading: programDetailsLoading } = useListProgramEnrollments(
     { programId: programDrillId ?? undefined, limit: 100 } as any,
     { query: { enabled: !!programDrillId, staleTime: 2 * 60 * 1000 } as any }
   );
+
+  // Enrollment bars — use enrollment stats grouped by program
+  const enrollmentByProgram = enrollmentStats?.enrollmentsByProgram ?? [];
+
   // Shape drill-down data to match the template
   const programDetails = useMemo(() => {
     if (!programDrillId || !programEnrollmentsData) return null;
@@ -145,9 +154,6 @@ function TenantDashboard() {
 
   const topDoctors = (consultationStats?.consultationsByDoctor ?? [])
     .slice().sort((a: any, b: any) => b.count - a.count).slice(0, 10);
-
-  // Enrollment bars — use enrollment stats grouped by program
-  const enrollmentByProgram = enrollmentStats?.enrollmentsByProgram ?? [];
 
   const now = new Date();
   const greeting = now.getHours() < 12 ? "Good morning" : now.getHours() < 17 ? "Good afternoon" : "Good evening";
@@ -391,19 +397,23 @@ function TenantDashboard() {
                     <tr className="border-b border-border">
                       <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Clinic</th>
                       <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Area</th>
-                      <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">City</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Patients</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Appts</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Enrollments</th>
                     </tr>
                   </thead>
                   <tbody>
                     {clinicStats.slice(0, 10).map((c: any) => (
-                      <tr key={c.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                        <td className="py-2.5 px-3 font-medium">{c.name}</td>
+                      <tr key={c.clinicId ?? c.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                        <td className="py-2.5 px-3 font-medium">{c.clinicName ?? c.name}</td>
                         <td className="py-2.5 px-3 text-muted-foreground">
                           <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3 shrink-0" />{c.area?.name || "—"}
+                            <MapPin className="w-3 h-3 shrink-0" />{c.areaName ?? c.area?.name ?? "—"}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-muted-foreground">{c.city || "—"}</td>
+                        <td className="py-2.5 px-3 text-right font-mono text-sm font-semibold">{c.patientCount ?? "—"}</td>
+                        <td className="py-2.5 px-3 text-right font-mono text-sm">{c.appointmentCount ?? "—"}</td>
+                        <td className="py-2.5 px-3 text-right font-mono text-sm">{c.enrollmentCount ?? "—"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -558,7 +568,7 @@ function TenantDashboard() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FolderGit2 className="w-5 h-5 text-primary" />
-              {programDetails?.program?.name ?? "Program"} — Enrolled Patients
+              {programDetails?.program?.programName ?? "Program"} — Enrolled Patients
             </DialogTitle>
           </DialogHeader>
 

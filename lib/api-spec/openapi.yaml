@@ -3159,7 +3159,7 @@ components:
     # ── Reports ─────────────────────────────────────────────────────────────
     DashboardStats:
       type: object
-      required: [totalPatients, activePatients, totalUsers, totalClinics, totalPrograms, newPatientsThisMonth, pendingCommunications]
+      required: [totalPatients, activePatients, totalUsers, totalClinics, totalPrograms, newPatientsThisMonth, pendingCommunications, outcomesRecorded, improvingPatients, successRate]
       properties:
         totalPatients:
           type: integer
@@ -3175,6 +3175,12 @@ components:
           type: integer
         pendingCommunications:
           type: integer
+        outcomesRecorded:
+          type: integer
+        improvingPatients:
+          type: integer
+        successRate:
+          type: number
 
     StatusCount:
       type: object

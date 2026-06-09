@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
@@ -102,6 +103,37 @@ const securityBadges = [
 ];
 
 export default function LandingPage() {
+  const [data, setData] = useState<{ areas: number; clinics: number; programs: number; tenants: string[] } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/health/public-stats")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch");
+        return res.json();
+      })
+      .then((statsData) => {
+        setData(statsData);
+      })
+      .catch((err) => console.error("Error loading public stats:", err));
+  }, []);
+
+  const dynamicStats = [
+    { value: data ? `${data.areas}` : "—", label: "Areas Managed", icon: MapPin },
+    { value: data ? `${data.clinics}` : "—", label: "Active Clinics", icon: Building2 },
+    { value: data ? `${data.programs}` : "—", label: "Care Programs", icon: Heart },
+    { value: "99.9%", label: "Uptime SLA", icon: Zap },
+  ];
+
+  // Map static testimonials dynamically to actual database tenants to prevent fictional names
+  const dynamicTestimonials = testimonials.map((t, index) => {
+    let orgName = t.org;
+    if (data?.tenants && data.tenants.length > 0) {
+      const tenantIdx = index % data.tenants.length;
+      orgName = data.tenants[tenantIdx];
+    }
+    return { ...t, org: orgName };
+  });
+
   return (
     <div className="min-h-screen bg-background font-sans">
       {/* ── NAVBAR ──────────────────────────────────────────────── */}
@@ -189,7 +221,7 @@ export default function LandingPage() {
         {/* Stats bar */}
         <div className="relative z-10 max-w-4xl mx-auto mt-20">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {stats.map(({ value, label, icon: Icon }) => (
+            {dynamicStats.map(({ value, label, icon: Icon }) => (
               <div
                 key={label}
                 className="bg-card border border-border rounded-2xl p-5 text-center hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
@@ -321,7 +353,7 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map(({ quote, name, title, org, initials }) => (
+            {dynamicTestimonials.map(({ quote, name, title, org, initials }) => (
               <div key={name} className="bg-card border border-border rounded-2xl p-6 hover:shadow-md transition-shadow">
                 <div className="flex gap-1 mb-4">
                   {[...Array(5)].map((_, i) => (

@@ -70,6 +70,29 @@ router.get("/database-metrics", async (_req, res) => {
   }
 });
 
+router.get("/public-stats", async (_req, res) => {
+  try {
+    const [areasCount, clinicsCount, programsCount, activeTenants] = await Promise.all([
+      prisma.area.count({ where: { deletedAt: null } }),
+      prisma.clinic.count({ where: { deletedAt: null } }),
+      prisma.program.count({ where: { deletedAt: null } }),
+      prisma.tenant.findMany({
+        where: { isActive: true, deletedAt: null },
+        select: { name: true },
+        orderBy: { name: "asc" },
+      }),
+    ]);
+    res.json({
+      areas: areasCount,
+      clinics: clinicsCount,
+      programs: programsCount,
+      tenants: activeTenants.map((t) => t.name),
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Keep original for backward compatibility if any
 router.get("/healthz", async (_req, res) => {
   res.redirect("/api/health/postgres");

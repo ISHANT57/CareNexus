@@ -39,6 +39,26 @@ export default function LoginPage() {
   const loginMutation = useLogin();
   const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
+  const [statsData, setStatsData] = useState<{ areas: number; clinics: number; programs: number } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/health/public-stats")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch");
+        return res.json();
+      })
+      .then((data) => {
+        setStatsData(data);
+      })
+      .catch((err) => console.error("Error loading stats:", err));
+  }, []);
+
+  const dynamicStats = [
+    { value: statsData ? `${statsData.areas}` : "—", label: "Areas" },
+    { value: statsData ? `${statsData.clinics}` : "—", label: "Clinics" },
+    { value: statsData ? `${statsData.programs}` : "—", label: "Programs" },
+    { value: "99.9%", label: "Uptime" },
+  ];
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -264,7 +284,7 @@ export default function LoginPage() {
         {/* Bottom — Stats */}
         <div className="relative z-10">
           <div className="grid grid-cols-4 gap-4 pt-8 border-t border-white/10">
-            {stats.map(({ value, label }) => (
+            {dynamicStats.map(({ value, label }) => (
               <div key={label} className="text-center">
                 <div className="text-2xl font-bold text-white">{value}</div>
                 <div className="text-white/50 text-xs mt-0.5">{label}</div>

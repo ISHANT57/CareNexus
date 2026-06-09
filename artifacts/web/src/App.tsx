@@ -27,6 +27,7 @@ import AuditLogsPage from "@/pages/audit-logs";
 import SettingsPage from "@/pages/settings";
 import NotificationsPage from "@/pages/notifications";
 import AppointmentsPage from "@/pages/appointments";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 
 // ─── PERFORMANCE FIX: Global QueryClient defaults ─────────────────────────────
 // Without staleTime, React Query refetches ALL active queries on every window focus
@@ -85,7 +86,11 @@ function Router() {
       </Route>
 
       <Route path="/roles">
-        <AppLayout><RolesPage /></AppLayout>
+        <AppLayout>
+          <RoleGuard allowedRoles={["SUPER_ADMIN"]}>
+            <RolesPage />
+          </RoleGuard>
+        </AppLayout>
       </Route>
 
       <Route path="/clinics">
@@ -95,13 +100,25 @@ function Router() {
         <AppLayout><ProgramsPage /></AppLayout>
       </Route>
       <Route path="/areas">
-        <AppLayout><AreasPage /></AppLayout>
+        <AppLayout>
+          <RoleGuard allowedRoles={["SUPER_ADMIN"]}>
+            <AreasPage />
+          </RoleGuard>
+        </AppLayout>
       </Route>
       <Route path="/tenants">
-        <AppLayout><TenantsPage /></AppLayout>
+        <AppLayout>
+          <RoleGuard allowedRoles={["SUPER_ADMIN"]}>
+            <TenantsPage />
+          </RoleGuard>
+        </AppLayout>
       </Route>
       <Route path="/audit-logs">
-        <AppLayout><AuditLogsPage /></AppLayout>
+        <AppLayout>
+          <RoleGuard allowedRoles={["SUPER_ADMIN", "AREA_ADMIN"]}>
+            <AuditLogsPage />
+          </RoleGuard>
+        </AppLayout>
       </Route>
       <Route path="/settings">
         <AppLayout><SettingsPage /></AppLayout>

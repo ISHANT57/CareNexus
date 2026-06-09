@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
   useGetDashboardStats,
@@ -8,8 +8,8 @@ import {
   useGetEnrollmentStats,
   useGetAppointmentStats,
   useGetConsultationStats,
-  useGetClinicStats,
-  useGetProgramDetails,
+  useListClinics,
+  useListProgramEnrollments,
   useGetMe,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -104,15 +104,39 @@ function TenantDashboard() {
   const { data: consultationStats, isLoading: consultationLoading } = useGetConsultationStats({
     query: { staleTime: 5 * 60 * 1000 } as any
   });
-  const { data: clinicStats, isLoading: clinicStatsLoading } = useGetClinicStats({
-    query: { staleTime: 5 * 60 * 1000 } as any
-  });
+  // Clinic overview — use standard list endpoint (top 20)
+  const { data: clinicsData, isLoading: clinicStatsLoading } = useListClinics(
+    { limit: 20 } as any,
+    { query: { staleTime: 5 * 60 * 1000 } as any }
+  );
+  const clinicStats = useMemo(() => clinicsData?.data ?? [], [clinicsData]);
 
-  // Program drill-down (lazy)
-  const { data: programDetails, isLoading: programDetailsLoading } = useGetProgramDetails(
-    programDrillId ?? "",
+  // Program drill-down (lazy) — load enrollments for the selected program
+  const { data: programEnrollmentsData, isLoading: programDetailsLoading } = useListProgramEnrollments(
+    { programId: programDrillId ?? undefined, limit: 100 } as any,
     { query: { enabled: !!programDrillId, staleTime: 2 * 60 * 1000 } as any }
   );
+  // Shape drill-down data to match the template
+  const programDetails = useMemo(() => {
+    if (!programDrillId || !programEnrollmentsData) return null;
+    const enrollments = programEnrollmentsData.data ?? [];
+    return {
+      program: enrollmentByProgram.find((p: any) => p.programId === programDrillId),
+      total: enrollments.length,
+      active: enrollments.filter((e: any) => e.status === "ACTIVE").length,
+      completed: enrollments.filter((e: any) => e.status === "COMPLETED").length,
+      cancelled: enrollments.filter((e: any) => e.status === "CANCELLED").length,
+      enrollments: enrollments.map((e: any) => ({
+        enrollmentId: e.id,
+        patientId: e.patient?.id ?? "",
+        patientName: e.patient ? `${e.patient.firstName} ${e.patient.lastName}` : "Unknown",
+        nhsNumber: e.patient?.nhsNumber ?? "—",
+        clinicName: e.patient?.clinic?.name ?? null,
+        doctorName: e.doctor ? `${e.doctor.firstName} ${e.doctor.lastName}` : null,
+        status: e.status,
+      })),
+    };
+  }, [programDrillId, programEnrollmentsData, enrollmentByProgram]);
 
   const isLoadingPrimary = statsLoading || enrollmentLoading || appointmentLoading || consultationLoading;
 
@@ -367,28 +391,26 @@ function TenantDashboard() {
                     <tr className="border-b border-border">
                       <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Clinic</th>
                       <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Area</th>
-                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Patients</th>
-                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Appointments</th>
-                      <th className="text-right py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Enrollments</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">City</th>
                     </tr>
                   </thead>
                   <tbody>
                     {clinicStats.slice(0, 10).map((c: any) => (
-                      <tr key={c.clinicId} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                        <td className="py-2.5 px-3 font-medium">{c.clinicName}</td>
-                        <td className="py-2.5 px-3 text-muted-foreground flex items-center gap-1">
-                          <MapPin className="w-3 h-3 shrink-0" />{c.areaName || "—"}
+                      <tr key={c.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                        <td className="py-2.5 px-3 font-medium">{c.name}</td>
+                        <td className="py-2.5 px-3 text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3 shrink-0" />{c.area?.name || "—"}
+                          </span>
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono">{c.patientCount}</td>
-                        <td className="py-2.5 px-3 text-right font-mono">{c.appointmentCount}</td>
-                        <td className="py-2.5 px-3 text-right font-mono">{c.enrollmentCount}</td>
+                        <td className="py-2.5 px-3 text-muted-foreground">{c.city || "—"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
                 {clinicStats.length > 10 && (
                   <div className="pt-3 text-center">
-                    <Link href="/clinics"><Button size="sm" variant="outline" className="text-xs">View all {clinicStats.length} clinics</Button></Link>
+                    <Link href="/clinics"><Button size="sm" variant="outline" className="text-xs">View all clinics →</Button></Link>
                   </div>
                 )}
               </div>

@@ -28,7 +28,26 @@ import SettingsPage from "@/pages/settings";
 import NotificationsPage from "@/pages/notifications";
 import AppointmentsPage from "@/pages/appointments";
 
-const queryClient = new QueryClient();
+// ─── PERFORMANCE FIX: Global QueryClient defaults ─────────────────────────────
+// Without staleTime, React Query refetches ALL active queries on every window focus
+// event (switching tabs, clicking away). With 20+ pages of data, this caused:
+//   - Sidebar notifications re-fetching on every interaction
+//   - Dashboard widgets flashing/re-fetching constantly
+//   - Dropdown options re-fetching mid-interaction
+// staleTime=60s means cached data is considered fresh for 60 seconds.
+// refetchOnWindowFocus=false eliminates focus-triggered refetches entirely.
+// ─────────────────────────────────────────────────────────────────────────────
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000,          // 60 seconds — data is fresh, no refetch needed
+      gcTime: 5 * 60 * 1000,         // 5 minutes — keep unused cache alive
+      refetchOnWindowFocus: false,   // Do NOT refetch when user switches tabs
+      refetchOnReconnect: true,      // DO refetch when network reconnects
+      retry: 1,                      // Only retry once on failure (was 3)
+    },
+  },
+});
 
 function Router() {
   return (

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, MapPin, Building2, Loader2 } from "lucide-react";
+import { ArrowLeft, MapPin, Building2, Loader2, AlertTriangle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAreaClinicCascade } from "@/hooks/use-area-clinic-cascade";
 
@@ -38,8 +38,8 @@ export default function NewPatientPage() {
 
   const { data: programs } = useListPrograms({ limit: 100 });
 
-  // ── Area → Clinic cascade ─────────────────────────────────────────────────────
-  const { areaId, clinicId, setAreaId, setClinicId, areas, clinics, areasLoading, clinicsLoading } =
+  // ── Area → Clinic cascade (tenant-aware) ─────────────────────────────────────
+  const { areaId, clinicId, setAreaId, setClinicId, areas, clinics, areasLoading, clinicsLoading, isTenantRequired } =
     useAreaClinicCascade();
 
   const form = useForm<PatientForm>({
@@ -252,6 +252,18 @@ export default function NewPatientPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {isTenantRequired && (
+                  <div className="col-span-full flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+                    <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-700 dark:text-amber-400">Tenant selection required</p>
+                      <p className="text-xs text-amber-600/80 dark:text-amber-500/80 mt-0.5">
+                        You are currently in &ldquo;Platform View (All Tenants)&rdquo; mode. Please select a specific
+                        tenant from the sidebar switcher before registering a patient.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <FormField
                   control={form.control}
                   name="programId"
@@ -362,7 +374,7 @@ export default function NewPatientPage() {
               <Link href="/patients">
                 <Button variant="outline" type="button">Cancel</Button>
               </Link>
-              <Button type="submit" disabled={createPatient.isPending}>
+              <Button type="submit" disabled={createPatient.isPending || isTenantRequired}>
                 {createPatient.isPending ? "Registering..." : "Register Patient"}
               </Button>
             </div>

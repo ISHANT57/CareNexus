@@ -153,10 +153,34 @@ router.post("/", ADMIN_ROLES, validateBody(PatientSchema), async (req, res, next
   try {
     const { gpDetails, referral, ...patientData } = req.body as z.infer<typeof PatientSchema>;
 
+    if (!req.tenantId) {
+      throw Errors.validation("A specific tenant must be selected to register a patient. Please select a tenant from the tenant switcher.");
+    }
+
     const existing = await prisma.patient.findUnique({
       where: { tenantId_nhsNumber: { tenantId: req.tenantId!, nhsNumber: patientData.nhsNumber } },
     });
     if (existing) throw Errors.conflict("Patient with this NHS Number already exists in the tenant");
+
+    // ── Cross-tenant integrity validation ────────────────────────────────────
+    // Verify area belongs to this tenant
+    const area = await prisma.area.findFirst({
+      where: { id: patientData.areaId, tenantId: req.tenantId!, deletedAt: null },
+    });
+    if (!area) throw Errors.validation(`Area does not belong to this tenant or does not exist`);
+
+    // Verify clinic belongs to this tenant AND to the selected area
+    const clinic = await prisma.clinic.findFirst({
+      where: { id: patientData.clinicId, tenantId: req.tenantId!, areaId: patientData.areaId, deletedAt: null },
+    });
+    if (!clinic) throw Errors.validation(`Clinic does not belong to this tenant/area or does not exist`);
+
+    // Verify program belongs to this tenant
+    const program = await prisma.program.findFirst({
+      where: { id: patientData.programId, tenantId: req.tenantId!, deletedAt: null },
+    });
+    if (!program) throw Errors.validation(`Program does not belong to this tenant or does not exist`);
+    // ─────────────────────────────────────────────────────────────────────────
 
     const patient = await patientService.createPatient({
       ...patientData,
@@ -178,7 +202,26 @@ router.patch("/:id", CLINICAL_ROLES, validateBody(PatientSchema.partial().omit({
     const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!patient) throw Errors.notFound("Patient");
     assertTenantMatch(req, patient.tenantId);
-    const updated = await patientService.updatePatient(patient.id, { ...req.body, updatedBy: req.user!.userId });
+
+    const body = req.body as Partial<Omit<z.infer<typeof PatientSchema>, "gpDetails" | "referral">>;
+    const tenantId = patient.tenantId;
+
+    // Cross-tenant integrity: if area/clinic/program being changed, validate they belong to tenant
+    if (body.areaId) {
+      const area = await prisma.area.findFirst({ where: { id: body.areaId, tenantId, deletedAt: null } });
+      if (!area) throw Errors.validation("Area does not belong to this tenant");
+    }
+    if (body.clinicId) {
+      const areaId = body.areaId ?? patient.areaId;
+      const clinic = await prisma.clinic.findFirst({ where: { id: body.clinicId, tenantId, areaId, deletedAt: null } });
+      if (!clinic) throw Errors.validation("Clinic does not belong to this tenant/area");
+    }
+    if (body.programId) {
+      const program = await prisma.program.findFirst({ where: { id: body.programId, tenantId, deletedAt: null } });
+      if (!program) throw Errors.validation("Program does not belong to this tenant");
+    }
+
+    const updated = await patientService.updatePatient(patient.id, { ...body, updatedBy: req.user!.userId });
     await createAuditLog({ req, entityType: "Patient", entityId: patient.id, action: "UPDATE", before: patient, after: req.body });
     res.json(updated);
   } catch (err) { next(err); }

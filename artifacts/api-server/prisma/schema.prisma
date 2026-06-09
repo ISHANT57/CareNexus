@@ -225,6 +225,7 @@ model Program {
   tenantId       String
   channelId      Int?
   name           String
+  description    String?
   logoUrl        String?
   activationCode String
   priority       Int       @default(0)

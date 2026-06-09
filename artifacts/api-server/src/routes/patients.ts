@@ -8,6 +8,7 @@ import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 import { createAuditLog } from "../lib/audit.js";
 import { PatientService } from "../services/PatientService.js";
+import { getRoleScope } from "../middlewares/roleScope.js";
 
 const router = Router();
 const patientService = new PatientService();
@@ -73,7 +74,9 @@ router.get("/", CLINICAL_ROLES, async (req, res, next) => {
     const { skip, take, page, limit } = paginate(req.query);
     const { clinicId, areaId, programId, journeyStatus, patientGroup, userType, q } = req.query as Record<string, string>;
 
-    const where: Record<string, unknown> = { tenantId: req.tenantId!, deletedAt: null };
+    const roleScope = await getRoleScope(req, "patient");
+    const where: Record<string, unknown> = { deletedAt: null, ...roleScope };
+    if (req.tenantId) where["tenantId"] = req.tenantId;
     if (clinicId) where["clinicId"] = clinicId;
     if (areaId) where["areaId"] = areaId;
     if (programId) where["programId"] = programId;
@@ -118,8 +121,9 @@ router.get("/", CLINICAL_ROLES, async (req, res, next) => {
 // GET /api/patients/:id
 router.get("/:id", CLINICAL_ROLES, async (req, res, next) => {
   try {
+    const roleScope = await getRoleScope(req, "patient");
     const patient = await prisma.patient.findFirst({
-      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null },
+      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope },
       include: {
         program: { select: { id: true, name: true } },
         clinic: { select: { id: true, name: true } },

@@ -9,6 +9,12 @@ import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 import { createAuditLog } from "../lib/audit.js";
 
+const ROLE_HIERARCHY: Record<string, string[]> = {
+  SUPER_ADMIN: ["SUPER_ADMIN", "AREA_ADMIN", "CLINIC_ADMIN", "DOCTOR", "OPERATOR", "STAFF"],
+  AREA_ADMIN: ["CLINIC_ADMIN", "DOCTOR", "OPERATOR", "STAFF"],
+  CLINIC_ADMIN: ["DOCTOR", "OPERATOR", "STAFF"],
+};
+
 const router = Router();
 router.use(authenticate, requireTenant);
 
@@ -80,6 +86,17 @@ router.post("/", ADMIN_ROLES, validateBody(CreateUserSchema), async (req, res, n
     const existing = await prisma.user.findUnique({ where: { email: data.email } });
     if (existing) throw Errors.conflict("Email already in use");
 
+    // Prevent non-super-admins from creating super admins
+    const targetRole = await prisma.role.findUnique({ where: { id: data.roleId } });
+    if (!targetRole) throw Errors.notFound("Role");
+    
+    const userRole = req.user?.role ?? "";
+    const allowedRoles = ROLE_HIERARCHY[userRole] || [];
+    
+    if (!allowedRoles.includes(targetRole.name)) {
+      throw Errors.forbidden(`Your role (${userRole}) is not permitted to create users with the ${targetRole.name} role`);
+    }
+
     const hashed = await bcrypt.hash(data.password, 12);
     const { clinicIds, programIds, ...rest } = data;
 
@@ -110,6 +127,19 @@ router.patch("/:id", ADMIN_ROLES, validateBody(UpdateUserSchema), async (req, re
     assertTenantMatch(req, user.tenantId);
 
     const { clinicIds, programIds, ...rest } = req.body as z.infer<typeof UpdateUserSchema>;
+
+    // Prevent non-super-admins from assigning SUPER_ADMIN role
+    if (rest.roleId) {
+      const targetRole = await prisma.role.findUnique({ where: { id: rest.roleId } });
+      if (!targetRole) throw Errors.notFound("Role");
+
+      const userRole = req.user?.role ?? "";
+      const allowedRoles = ROLE_HIERARCHY[userRole] || [];
+      
+      if (!allowedRoles.includes(targetRole.name)) {
+        throw Errors.forbidden(`Your role (${userRole}) is not permitted to assign the ${targetRole.name} role`);
+      }
+    }
     const updated = await prisma.user.update({
       where: { id: user.id },
       data: rest,

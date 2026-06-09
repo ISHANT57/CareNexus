@@ -4,6 +4,7 @@ import {
   useListPatients,
   useImportPatients,
   useListPrograms,
+  useListAreas,
   useListClinics,
   getListPatientsQueryKey,
 } from "@workspace/api-client-react";
@@ -59,6 +60,7 @@ export default function PatientsPage() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [filterStatus, setFilterStatus] = useState("");
   const [filterProgram, setFilterProgram] = useState("");
+  const [filterArea, setFilterArea] = useState("");
   const [filterClinic, setFilterClinic] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
@@ -67,17 +69,28 @@ export default function PatientsPage() {
   const importPatients = useImportPatients();
 
   const { data: programsData } = useListPrograms({ limit: 100 });
-  const { data: clinicsData } = useListClinics({ limit: 100 });
+  // Fetch all areas for the filter panel
+  const { data: areasData } = useListAreas({ limit: 500 });
+  // Fetch clinics scoped to the selected area (cascade)
+  const { data: clinicsData } = useListClinics(
+    { areaId: filterArea || undefined, limit: 500 },
+    { query: { enabled: true } as any }
+  );
 
   const programOptions = (programsData?.data ?? []).map((p: any) => ({
     value: p.id,
     label: p.name,
   }));
 
+  const areaOptions = (areasData?.data ?? []).map((a: any) => ({
+    value: a.id,
+    label: a.name,
+  }));
+
   const clinicOptions = (clinicsData?.data ?? []).map((c: any) => ({
     value: c.id,
     label: c.name,
-    description: c.area?.name,
+    description: filterArea ? undefined : c.area?.name,
   }));
 
   useEffect(() => {
@@ -90,7 +103,12 @@ export default function PatientsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [filterStatus, filterProgram, filterClinic]);
+  }, [filterStatus, filterProgram, filterArea, filterClinic]);
+
+  // When area changes, reset clinic filter (cascade)
+  useEffect(() => {
+    setFilterClinic("");
+  }, [filterArea]);
 
   const { data, isLoading } = useListPatients({
     q: debouncedSearch || undefined,
@@ -100,11 +118,12 @@ export default function PatientsPage() {
 
   const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;
 
-  const activeFilterCount = [filterStatus, filterProgram, filterClinic].filter(Boolean).length;
+  const activeFilterCount = [filterStatus, filterProgram, filterArea, filterClinic].filter(Boolean).length;
 
   const clearFilters = () => {
     setFilterStatus("");
     setFilterProgram("");
+    setFilterArea("");
     setFilterClinic("");
   };
 
@@ -229,7 +248,7 @@ export default function PatientsPage() {
 
         {/* Expanded Filter panel */}
         {showFilters && (
-          <div className="bg-card border border-border rounded-xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in-up">
+          <div className="bg-card border border-border rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in-up">
             <div className="space-y-2">
               <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Status
@@ -258,13 +277,31 @@ export default function PatientsPage() {
             </div>
             <div className="space-y-2">
               <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Clinic
+                Area
+              </Label>
+              <SearchableSelect
+                options={areaOptions}
+                value={filterArea}
+                onValueChange={setFilterArea}
+                placeholder="All areas"
+                searchPlaceholder="Search areas..."
+                clearable
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center justify-between">
+                <span>Clinic</span>
+                {filterArea && (
+                  <span className="text-[10px] normal-case font-normal text-primary">
+                    {clinicsData?.data?.length ?? 0} in area
+                  </span>
+                )}
               </Label>
               <SearchableSelect
                 options={clinicOptions}
                 value={filterClinic}
                 onValueChange={setFilterClinic}
-                placeholder="All clinics"
+                placeholder={filterArea ? "Select clinic" : "Select area first"}
                 searchPlaceholder="Search clinics..."
                 clearable
               />

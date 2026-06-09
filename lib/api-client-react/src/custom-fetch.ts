@@ -5,6 +5,7 @@ export type BodyType<T> = T;
 
 let _baseUrl = "";
 let _getToken: AuthTokenGetter = () => null;
+let _getTenantId: () => string | null = () => null;
 
 export function setBaseUrl(url: string) {
   _baseUrl = url;
@@ -14,13 +15,19 @@ export function setAuthTokenGetter(fn: AuthTokenGetter) {
   _getToken = fn;
 }
 
+export function setTenantIdGetter(fn: () => string | null) {
+  _getTenantId = fn;
+}
+
 export async function customFetch<T = unknown>(
   url: string,
   options: CustomFetchOptions = {}
 ): Promise<T> {
   const token = _getToken();
+  const tenantId = _getTenantId();
   const headers = new Headers(options.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (tenantId) headers.set("x-tenant-id", tenantId);
   if (!headers.has("Content-Type") && options.body) {
     headers.set("Content-Type", "application/json");
   }
@@ -32,8 +39,39 @@ export async function customFetch<T = unknown>(
   });
 
   if (response.status === 401 && typeof window !== "undefined") {
-    // If we're unauthorized, clear the token and redirect
     if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
+      try {
+        // Attempt to refresh the token
+        const refreshRes = await fetch(`${_baseUrl}/api/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+          credentials: "include",
+        });
+
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          localStorage.setItem("access_token", data.accessToken);
+          headers.set("Authorization", `Bearer ${data.accessToken}`);
+          
+          // Retry original request
+          const retryRes = await fetch(`${_baseUrl}${url}`, {
+            ...options,
+            headers,
+            credentials: "include",
+          });
+
+          if (retryRes.ok) {
+            if (retryRes.status === 204) return undefined as unknown as T;
+            return retryRes.json() as Promise<T>;
+          }
+        }
+      } catch (err) {
+        // Fall through to logout
+      }
+
+      // If refresh fails, clear everything and redirect to login
+      localStorage.removeItem("access_token");
       window.location.href = "/login";
     }
   }

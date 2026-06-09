@@ -7,6 +7,7 @@ import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js"
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 import { createAuditLog } from "../lib/audit.js";
+import { getRoleScope } from "../middlewares/roleScope.js";
 
 const router = Router();
 router.use(authenticate, requireTenant);
@@ -43,7 +44,8 @@ router.get("/", CLINICAL_ROLES, async (req, res, next) => {
     const doctorId = req.query["doctorId"] as string | undefined;
     const clinicId = req.query["clinicId"] as string | undefined;
 
-    const where: any = { tenantId: req.tenantId!, deletedAt: null };
+    const roleScope = await getRoleScope(req, "consultation");
+    const where: any = { tenantId: req.tenantId!, deletedAt: null, ...roleScope };
     if (patientId) where.patientId = patientId;
     if (doctorId) where.doctorId = doctorId;
     if (clinicId) where.clinicId = clinicId;
@@ -117,8 +119,9 @@ router.post("/", CLINICAL_ROLES, validateBody(ConsultationSchema), async (req, r
 
 router.get("/:id", CLINICAL_ROLES, async (req, res, next) => {
   try {
+    const roleScope = await getRoleScope(req, "consultation");
     const consultation = await prisma.consultation.findFirst({
-      where: { id: req.params["id"] as string, deletedAt: null },
+      where: { id: req.params["id"] as string, deletedAt: null, tenantId: req.tenantId!, ...roleScope },
       include: { patient: true, doctor: true, clinic: true, appointment: true },
     });
     if (!consultation) throw Errors.notFound("Consultation");
@@ -130,7 +133,10 @@ router.get("/:id", CLINICAL_ROLES, async (req, res, next) => {
 
 router.patch("/:id", CLINICAL_ROLES, validateBody(UpdateConsultationSchema), async (req, res, next) => {
   try {
-    const consultation = await prisma.consultation.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const roleScope = await getRoleScope(req, "consultation");
+    const consultation = await prisma.consultation.findFirst({ 
+      where: { id: req.params["id"] as string, deletedAt: null, tenantId: req.tenantId!, ...roleScope } 
+    });
     if (!consultation) throw Errors.notFound("Consultation");
     assertTenantMatch(req, consultation.tenantId);
 
@@ -155,7 +161,10 @@ router.patch("/:id", CLINICAL_ROLES, validateBody(UpdateConsultationSchema), asy
 
 router.delete("/:id", CLINICAL_ROLES, async (req, res, next) => {
   try {
-    const consultation = await prisma.consultation.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const roleScope = await getRoleScope(req, "consultation");
+    const consultation = await prisma.consultation.findFirst({ 
+      where: { id: req.params["id"] as string, deletedAt: null, tenantId: req.tenantId!, ...roleScope } 
+    });
     if (!consultation) throw Errors.notFound("Consultation");
     assertTenantMatch(req, consultation.tenantId);
 

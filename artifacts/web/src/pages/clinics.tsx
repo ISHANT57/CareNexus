@@ -63,7 +63,11 @@ export default function ClinicsPage() {
 
   useEffect(() => { setPage(1); }, [filterArea]);
 
-  const { data, isLoading } = useListClinics({ page, limit: PAGE_SIZE });
+  const { data, isLoading } = useListClinics({
+    page,
+    limit: PAGE_SIZE,
+    areaId: filterArea || undefined,
+  } as any);
   // Fetch ALL areas (no page limit) — FIX for BUG-002
   const { data: areasData, isLoading: areasLoading } = useListAreas({ limit: 500 });
   const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;

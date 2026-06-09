@@ -51,7 +51,7 @@ model Area {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  tenant                   Tenant                    @relation(fields: [tenantId], references: [id])
+  tenant                   Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   clinics                  Clinic[]
   patients                 Patient[]
   doctorPatientAssignments DoctorPatientAssignment[]
@@ -160,7 +160,7 @@ model User {
   createdBy            String?
   updatedBy            String?
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   role   Role   @relation(fields: [roleId], references: [id])
 
   clinicAssignments    UserClinicAssignment[]
@@ -234,7 +234,7 @@ model Program {
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
 
-  tenant                 Tenant                  @relation(fields: [tenantId], references: [id])
+  tenant                 Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   patients               Patient[]
   userProgramAssignments UserProgramAssignment[]
   programEnrollments     ProgramEnrollment[]
@@ -295,7 +295,7 @@ model Patient {
   createdBy             String?
   updatedBy             String?
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   program Program @relation(fields: [programId], references: [id])
   clinic  Clinic  @relation(fields: [clinicId], references: [id])
   area    Area    @relation(fields: [areaId], references: [id])
@@ -402,11 +402,11 @@ model PatientJourneyEvent {
   patientId String
   status    JourneyStatus
   notes     String?
-  actedBy   String
+  actedBy   String?
   createdAt DateTime      @default(now())
 
   patient     Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  actedByUser User    @relation(fields: [actedBy], references: [id])
+  actedByUser User?    @relation(fields: [actedBy], references: [id], onDelete: SetNull)
 
   @@index([patientId])
   @@map("patient_journey_events")
@@ -440,8 +440,8 @@ model DoctorPatientAssignment {
 
   area    Area    @relation(fields: [areaId], references: [id])
   clinic  Clinic  @relation(fields: [clinicId], references: [id])
-  doctor  User    @relation(fields: [doctorId], references: [id])
-  patient Patient @relation(fields: [patientId], references: [id])
+  doctor  User    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([doctorId])
@@ -466,8 +466,8 @@ model SmsCommunication {
   deliveredAt  DateTime?
   createdAt    DateTime  @default(now())
 
-  tenant  Tenant   @relation(fields: [tenantId], references: [id])
-  patient Patient? @relation(fields: [patientId], references: [id])
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patient Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([patientId])
@@ -491,7 +491,7 @@ model FileUpload {
   id         String    @id @default(uuid())
   tenantId   String
   patientId  String
-  uploaderId String
+  uploaderId String?
   fileKey    String
   fileUrl    String
   caseBlock  String?
@@ -500,8 +500,8 @@ model FileUpload {
   createdAt  DateTime  @default(now())
   deletedAt  DateTime?
 
-  patient  Patient @relation(fields: [patientId], references: [id])
-  uploader User    @relation(fields: [uploaderId], references: [id])
+  patient  Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  uploader User?    @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([patientId])
@@ -529,7 +529,7 @@ model AccountOnboardingLog {
   isTest        Boolean  @default(false)
   createdAt     DateTime @default(now())
 
-  patient Patient? @relation(fields: [patientId], references: [id])
+  patient Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([uploadBatchId])
@@ -553,8 +553,8 @@ model AuditLog {
   userAgent   String?
   createdAt   DateTime    @default(now())
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  actor  User?  @relation(fields: [actorId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actor  User?  @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([entityType, entityId])
@@ -585,7 +585,7 @@ model Notification {
   readAt    DateTime?
   createdAt DateTime         @default(now())
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, userId])
@@ -695,7 +695,7 @@ model ProgramEnrollment {
   updatedAt   DateTime         @updatedAt
   deletedAt   DateTime?
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
   program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
 
@@ -731,7 +731,7 @@ model Appointment {
 
   consultation    Consultation?
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
   doctor  User    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   clinic  Clinic  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
@@ -771,7 +771,7 @@ model Consultation {
   updatedAt            DateTime  @updatedAt
   deletedAt            DateTime?
 
-  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   patient     Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
   doctor      User        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
@@ -801,7 +801,7 @@ model OutcomeMetric {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  tenant   Tenant           @relation(fields: [tenantId], references: [id])
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   outcomes PatientOutcome[]
 
   @@unique([tenantId, code])
@@ -829,11 +829,11 @@ model PatientOutcome {
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?
 
-  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   patient       Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
   program       Program       @relation(fields: [programId], references: [id])
   outcomeMetric OutcomeMetric @relation(fields: [outcomeMetricId], references: [id])
-  doctor        User?         @relation("OutcomeDoctor", fields: [doctorId], references: [id])
+  doctor        User?         @relation("OutcomeDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([patientId])
@@ -864,8 +864,8 @@ model CareTask {
   id          String       @id @default(uuid())
   tenantId    String
   patientId   String
-  assignedBy  String
-  assignedTo  String
+  assignedBy  String?
+  assignedTo  String?
   title       String
   description String?
   priority    TaskPriority @default(MEDIUM)
@@ -876,10 +876,10 @@ model CareTask {
   updatedAt   DateTime     @updatedAt
   deletedAt   DateTime?
 
-  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   patient  Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  creator  User    @relation("TaskCreator",  fields: [assignedBy], references: [id])
-  assignee User    @relation("TaskAssignee", fields: [assignedTo], references: [id])
+  creator  User?    @relation("TaskCreator",  fields: [assignedBy], references: [id], onDelete: SetNull)
+  assignee User?    @relation("TaskAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([patientId])

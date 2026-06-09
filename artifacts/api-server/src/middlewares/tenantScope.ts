@@ -11,7 +11,9 @@ export function requireTenant(req: Request, _res: Response, next: NextFunction):
 
   if (req.user.role === "SUPER_ADMIN") {
     const headerTenantId = req.headers["x-tenant-id"] as string | undefined;
-    if (headerTenantId) {
+    if (headerTenantId === "ALL") {
+      req.tenantId = undefined; // Drop tenant filter for global queries
+    } else if (headerTenantId) {
       req.tenantId = headerTenantId;
     } else {
       req.tenantId = req.user.tenantId;

@@ -17,10 +17,21 @@ const RoleSchema = z.object({
 
 const SYSTEM_ROLES = ["SUPER_ADMIN", "AREA_ADMIN", "CLINIC_ADMIN", "DOCTOR", "OPERATOR", "STAFF"];
 
+const ROLE_HIERARCHY: Record<string, string[]> = {
+  SUPER_ADMIN: ["SUPER_ADMIN", "AREA_ADMIN", "CLINIC_ADMIN", "DOCTOR", "OPERATOR", "STAFF"],
+  AREA_ADMIN: ["CLINIC_ADMIN", "DOCTOR", "OPERATOR", "STAFF"],
+  CLINIC_ADMIN: ["DOCTOR", "OPERATOR", "STAFF"],
+};
+
 router.get("/", async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
-    const where = { OR: [{ tenantId: req.tenantId! }, { isSystem: true }] };
+    const where: any = { OR: [{ tenantId: req.tenantId! }, { isSystem: true }] };
+    // Filter out roles the user isn't allowed to see based on hierarchy
+    const userRole = req.user?.role ?? "";
+    const allowedRoles = ROLE_HIERARCHY[userRole] || [];
+    
+    where.name = { in: allowedRoles };
     const [total, roles] = await Promise.all([
       prisma.role.count({ where }),
       prisma.role.findMany({

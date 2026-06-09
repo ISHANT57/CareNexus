@@ -12,7 +12,8 @@ router.get("/", async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const { entityType, entityId, actorId, action } = req.query as Record<string, string>;
-    const where: Record<string, unknown> = { tenantId: req.tenantId! };
+    const where: Record<string, unknown> = {};
+    if (req.tenantId) where["tenantId"] = req.tenantId;
     if (entityType) where["entityType"] = entityType;
     if (entityId) where["entityId"] = entityId;
     if (actorId) where["actorId"] = actorId;
@@ -22,7 +23,10 @@ router.get("/", async (req, res, next) => {
       prisma.auditLog.count({ where }),
       prisma.auditLog.findMany({
         where, skip, take, orderBy: { createdAt: "desc" },
-        include: { actor: { select: { id: true, firstName: true, lastName: true, email: true } } },
+        include: { 
+          actor: { select: { id: true, firstName: true, lastName: true, email: true } },
+          tenant: { select: { id: true, name: true } }
+        },
       }),
     ]);
     res.json({ data: logs, meta: paginationMeta(total, page, limit) });

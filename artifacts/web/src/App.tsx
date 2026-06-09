@@ -2,9 +2,11 @@ import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { TenantProvider } from "@/contexts/TenantContext";
 import NotFound from "@/pages/not-found";
 
 import { AppLayout } from "@/components/layout/AppLayout";
+import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import ForgotPasswordPage from "@/pages/forgot-password";
@@ -20,6 +22,7 @@ import RolesPage from "@/pages/roles";
 import ClinicsPage from "@/pages/clinics";
 import ProgramsPage from "@/pages/programs";
 import AreasPage from "@/pages/areas";
+import TenantsPage from "@/pages/tenants";
 import AuditLogsPage from "@/pages/audit-logs";
 import SettingsPage from "@/pages/settings";
 import NotificationsPage from "@/pages/notifications";
@@ -30,19 +33,18 @@ const queryClient = new QueryClient();
 function Router() {
   return (
     <Switch>
+      {/* Public routes */}
+      <Route path="/" component={LandingPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/register" component={RegisterPage} />
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
-      
+
       {/* Protected Routes wrapped in AppLayout */}
-      <Route path="/">
-        <Redirect to="/dashboard" />
-      </Route>
       <Route path="/dashboard">
         <AppLayout><DashboardPage /></AppLayout>
       </Route>
-      
+
       <Route path="/patients/new">
         <AppLayout><NewPatientPage /></AppLayout>
       </Route>
@@ -76,6 +78,9 @@ function Router() {
       <Route path="/areas">
         <AppLayout><AreasPage /></AppLayout>
       </Route>
+      <Route path="/tenants">
+        <AppLayout><TenantsPage /></AppLayout>
+      </Route>
       <Route path="/audit-logs">
         <AppLayout><AuditLogsPage /></AppLayout>
       </Route>
@@ -88,7 +93,7 @@ function Router() {
       <Route path="/appointments">
         <AppLayout><AppointmentsPage /></AppLayout>
       </Route>
-      
+
       <Route component={NotFound} />
     </Switch>
   );
@@ -97,12 +102,14 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
+      <TenantProvider>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+        </TooltipProvider>
+      </TenantProvider>
     </QueryClientProvider>
   );
 }

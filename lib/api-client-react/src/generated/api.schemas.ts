@@ -490,6 +490,38 @@ export interface DashboardStats {
   successRate?: number;
 }
 
+export interface ClinicStat {
+  clinicId: string;
+  clinicName: string;
+  areaName: string;
+  patientCount: number;
+  appointmentCount: number;
+  enrollmentCount: number;
+}
+
+export interface ProgramEnrollmentDetail {
+  enrollmentId: string;
+  status: string;
+  enrolledAt: string;
+  completedAt?: string | null;
+  patientId: string;
+  patientName: string;
+  nhsNumber: string;
+  patientStatus: string;
+  clinicName: string;
+  areaName: string;
+  doctorName: string;
+}
+
+export interface ProgramDetails {
+  program: { id: string; name: string };
+  total: number;
+  active: number;
+  completed: number;
+  cancelled: number;
+  enrollments: ProgramEnrollmentDetail[];
+}
+
 export interface StatusCount {
   status: string;
   count: number;

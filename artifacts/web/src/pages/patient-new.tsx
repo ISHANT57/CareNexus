@@ -1,7 +1,8 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useCreatePatient, useListPrograms, useListClinics, useListAreas } from "@workspace/api-client-react";
+import { useCreatePatient, useListPrograms } from "@workspace/api-client-react";
 import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MapPin, Building2, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAreaClinicCascade } from "@/hooks/use-area-clinic-cascade";
 
 const patientSchema = z.object({
   nhsNumber: z.string().min(10, "NHS Number must be at least 10 characters").max(10),
@@ -34,9 +36,11 @@ export default function NewPatientPage() {
   const queryClient = useQueryClient();
   const createPatient = useCreatePatient();
 
-  const { data: programs } = useListPrograms();
-  const { data: clinics } = useListClinics();
-  const { data: areas } = useListAreas();
+  const { data: programs } = useListPrograms({ limit: 100 });
+
+  // ── Area → Clinic cascade ─────────────────────────────────────────────────────
+  const { areaId, clinicId, setAreaId, setClinicId, areas, clinics, areasLoading, clinicsLoading } =
+    useAreaClinicCascade();
 
   const form = useForm<PatientForm>({
     resolver: zodResolver(patientSchema),
@@ -54,6 +58,15 @@ export default function NewPatientPage() {
       areaId: "",
     },
   });
+
+  // Keep form in sync with cascade state
+  useEffect(() => {
+    form.setValue("areaId", areaId, { shouldValidate: !!areaId });
+  }, [areaId]);
+
+  useEffect(() => {
+    form.setValue("clinicId", clinicId, { shouldValidate: !!clinicId });
+  }, [clinicId]);
 
   const onSubmit = async (data: PatientForm) => {
     try {
@@ -234,7 +247,9 @@ export default function NewPatientPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Clinical Assignments</CardTitle>
-                <CardDescription>Initial placement within the service</CardDescription>
+                <CardDescription>
+                  Select an Area first — the Clinic dropdown will show only clinics within that area.
+                </CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <FormField
@@ -260,21 +275,35 @@ export default function NewPatientPage() {
                   )}
                 />
 
+                {/* STEP 1: Area selector */}
                 <FormField
                   control={form.control}
-                  name="clinicId"
+                  name="areaId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Clinic</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormLabel className="flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5" />
+                        Area
+                      </FormLabel>
+                      <Select
+                        value={areaId}
+                        onValueChange={(val) => {
+                          setAreaId(val);
+                          field.onChange(val);
+                        }}
+                        disabled={areasLoading}
+                      >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select clinic" />
+                            {areasLoading
+                              ? <span className="flex items-center gap-2 text-muted-foreground"><Loader2 className="w-3 h-3 animate-spin" />Loading...</span>
+                              : <SelectValue placeholder="Select area" />
+                            }
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          {clinics?.data.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        <SelectContent className="max-h-64">
+                          {areas.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -283,22 +312,43 @@ export default function NewPatientPage() {
                   )}
                 />
 
+                {/* STEP 2: Clinic selector — disabled until area selected */}
                 <FormField
                   control={form.control}
-                  name="areaId"
+                  name="clinicId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Area</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormLabel className="flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5" />
+                        Clinic
+                        {areaId && <span className="text-xs text-muted-foreground font-normal ml-1">({clinics.length} available)</span>}
+                      </FormLabel>
+                      <Select
+                        value={clinicId}
+                        onValueChange={(val) => {
+                          setClinicId(val);
+                          field.onChange(val);
+                        }}
+                        disabled={!areaId || clinicsLoading}
+                      >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select area" />
+                            {clinicsLoading
+                              ? <span className="flex items-center gap-2 text-muted-foreground"><Loader2 className="w-3 h-3 animate-spin" />Loading...</span>
+                              : !areaId
+                              ? <span className="text-muted-foreground">Select area first</span>
+                              : <SelectValue placeholder={clinics.length === 0 ? "No clinics in this area" : "Select clinic"} />
+                            }
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          {areas?.data.map((a) => (
-                            <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                          ))}
+                        <SelectContent className="max-h-64">
+                          {clinics.length === 0 && areaId && !clinicsLoading ? (
+                            <div className="py-4 text-center text-sm text-muted-foreground">No clinics found in this area</div>
+                          ) : (
+                            clinics.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />

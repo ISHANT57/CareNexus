@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
-import { LucideIcon, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { LucideIcon, TrendingUp, TrendingDown, Minus, ArrowRight } from "lucide-react";
+import { Link } from "wouter";
 
 interface StatCardProps {
   title: string;
@@ -12,6 +13,8 @@ interface StatCardProps {
   };
   variant?: "default" | "primary" | "success" | "warning" | "destructive";
   className?: string;
+  /** If provided, the card becomes a navigation link */
+  href?: string;
 }
 
 const variantStyles = {
@@ -42,7 +45,7 @@ const variantStyles = {
   },
 };
 
-export function StatCard({
+function StatCardInner({
   title,
   value,
   subtitle,
@@ -50,21 +53,30 @@ export function StatCard({
   trend,
   variant = "default",
   className,
+  href,
 }: StatCardProps) {
   const styles = variantStyles[variant];
 
   return (
     <div
       className={cn(
-        "rounded-xl border p-5 flex flex-col gap-3 transition-all hover:shadow-md hover:-translate-y-0.5",
+        "rounded-xl border p-5 flex flex-col gap-3 transition-all duration-200",
+        href
+          ? "cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:ring-2 hover:ring-primary/20 group"
+          : "hover:shadow-md hover:-translate-y-0.5",
         styles.card,
         className
       )}
     >
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", styles.icon)}>
-          <Icon className="w-4.5 h-4.5" />
+        <div className="flex items-center gap-1.5">
+          <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", styles.icon)}>
+            <Icon className="w-4.5 h-4.5" />
+          </div>
+          {href && (
+            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          )}
         </div>
       </div>
 
@@ -106,4 +118,15 @@ export function StatCard({
       )}
     </div>
   );
+}
+
+export function StatCard(props: StatCardProps) {
+  if (props.href) {
+    return (
+      <Link href={props.href}>
+        <StatCardInner {...props} />
+      </Link>
+    );
+  }
+  return <StatCardInner {...props} />;
 }

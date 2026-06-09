@@ -1,1 +1,1 @@
-export { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
+export { setBaseUrl, setAuthTokenGetter, setTenantIdGetter } from "@workspace/api-client-react";

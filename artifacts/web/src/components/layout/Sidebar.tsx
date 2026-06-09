@@ -17,24 +17,28 @@ import {
   Sun,
   Moon,
   Monitor,
-  Stethoscope,
 } from "lucide-react";
 import { useGetMe, useLogout, useListNotifications } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useTheme } from "@/components/ui/theme-provider";
 import { cn } from "@/lib/utils";
+import { TenantSwitcher } from "./TenantSwitcher";
+
+const ALL_ROLES = ["SUPER_ADMIN", "AREA_ADMIN", "CLINIC_ADMIN", "DOCTOR", "OPERATOR", "STAFF"];
+const ADMIN_ROLES = ["SUPER_ADMIN", "AREA_ADMIN", "CLINIC_ADMIN"];
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, group: "main" },
-  { href: "/patients", label: "Patients", icon: Users, group: "clinical" },
-  { href: "/appointments", label: "Appointments", icon: Calendar, group: "clinical" },
-  { href: "/users", label: "Team Members", icon: UserCircle, group: "admin" },
-  { href: "/roles", label: "Roles & Permissions", icon: Shield, group: "admin" },
-  { href: "/clinics", label: "Clinics", icon: Building2, group: "org" },
-  { href: "/programs", label: "Programs", icon: FolderGit2, group: "org" },
-  { href: "/areas", label: "Areas", icon: Map, group: "org" },
-  { href: "/audit-logs", label: "Audit Logs", icon: ScrollText, group: "system" },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, group: "main", allowedRoles: ALL_ROLES },
+  { href: "/patients", label: "Patients", icon: Users, group: "clinical", allowedRoles: ALL_ROLES },
+  { href: "/appointments", label: "Appointments", icon: Calendar, group: "clinical", allowedRoles: ["SUPER_ADMIN", "AREA_ADMIN", "CLINIC_ADMIN", "DOCTOR", "OPERATOR"] },
+  { href: "/tenants", label: "Tenants", icon: Building2, group: "admin", allowedRoles: ["SUPER_ADMIN"] },
+  { href: "/users", label: "Team Members", icon: UserCircle, group: "admin", allowedRoles: ADMIN_ROLES },
+  { href: "/roles", label: "Roles & Permissions", icon: Shield, group: "admin", allowedRoles: ["SUPER_ADMIN"] },
+  { href: "/clinics", label: "Clinics", icon: Building2, group: "org", allowedRoles: ["SUPER_ADMIN", "AREA_ADMIN"] },
+  { href: "/programs", label: "Programs", icon: FolderGit2, group: "org", allowedRoles: ADMIN_ROLES },
+  { href: "/areas", label: "Areas", icon: Map, group: "org", allowedRoles: ["SUPER_ADMIN"] },
+  { href: "/audit-logs", label: "Audit Logs", icon: ScrollText, group: "system", allowedRoles: ["SUPER_ADMIN"] },
 ];
 
 const navGroups = [
@@ -84,6 +88,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   const unreadCount = notificationsData?.data?.filter((n: any) => !n.readAt)?.length ?? 0;
 
+  const filteredItems = navItems.filter((item) => user?.role && item.allowedRoles.includes(user.role));
+
   const handleLogout = async () => {
     await logout.mutateAsync();
     localStorage.removeItem("access_token");
@@ -107,23 +113,28 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-sidebar-border shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center shadow-sm">
-            <Stethoscope className="w-4 h-4 text-sidebar-primary-foreground" />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm overflow-hidden shrink-0" style={{background: "linear-gradient(135deg, #003f9e 0%, #0066ff 100%)"}}>
+            <svg viewBox="0 0 32 32" fill="none" className="w-5 h-5">
+              <rect x="13" y="5" width="6" height="22" rx="2" fill="white" opacity="0.95"/>
+              <rect x="5" y="13" width="22" height="6" rx="2" fill="white" opacity="0.95"/>
+            </svg>
           </div>
           <div>
             <div className="font-bold text-base text-sidebar-foreground tracking-tight leading-none">
-              Caremesh
+              CareNexus
             </div>
-            <div className="text-[10px] text-sidebar-foreground/40 tracking-widest uppercase mt-0.5">
-              PMS Platform
+            <div className="text-[9px] text-sidebar-foreground/40 tracking-widest uppercase mt-0.5 leading-none">
+              Connected Care. Better Outcomes.
             </div>
           </div>
         </div>
       </div>
 
-      {/* User profile */}
+
+      {/* User profile & Tenant Switcher */}
       <div className="px-4 py-3 border-b border-sidebar-border shrink-0">
-        <div className="flex items-center gap-3">
+        <TenantSwitcher />
+        <div className="flex items-center gap-3 mt-4">
           <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center shrink-0 text-sm font-semibold text-sidebar-foreground/80">
             {user?.firstName?.[0]}{user?.lastName?.[0]}
           </div>
@@ -149,7 +160,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5" aria-label="Main navigation">
         {navGroups.map(({ key, label }) => {
-          const items = navItems.filter((item) => item.group === key);
+          const items = filteredItems.filter((item) => item.group === key);
           if (items.length === 0) return null;
           return (
             <div key={key} className={label ? "pt-3 first:pt-0" : ""}>

@@ -60,6 +60,15 @@ if (process.env.NODE_ENV === "production") {
   );
 }
 
+// ── Static file serving for local uploads ─────────────────────────────────────
+import path from "path";
+import { fileURLToPath } from "url";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const uploadsDir = path.resolve(__dirname, "../../../uploads");
+import fsSync from "fs";
+if (!fsSync.existsSync(uploadsDir)) fsSync.mkdirSync(uploadsDir, { recursive: true });
+app.use("/uploads", express.static(uploadsDir));
+
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use("/api", router);
 

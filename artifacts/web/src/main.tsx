@@ -6,7 +6,7 @@ import { ThemeProvider } from './components/ui/theme-provider.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider defaultTheme="system" storageKey="caremesh-ui-theme">
+    <ThemeProvider defaultTheme="system" storageKey="carenexus-ui-theme">
       <App />
     </ThemeProvider>
   </StrictMode>,

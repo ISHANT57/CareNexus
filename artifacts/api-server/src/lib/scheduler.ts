@@ -22,7 +22,7 @@ export function startRiskScoringScheduler(): void {
         const result = await calculateAllPatientRisks(tenant.id);
         logger.info(`[RiskScheduler] Tenant "${tenant.name}": processed=${result.processed} errors=${result.errors}`);
       } catch (err) {
-        logger.error(`[RiskScheduler] Failed for tenant "${tenant.name}":`, err);
+        logger.error({ err }, `[RiskScheduler] Failed for tenant "${tenant.name}"`);
       }
     }
 

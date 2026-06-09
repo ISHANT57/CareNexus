@@ -8,6 +8,7 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../lib/jw
 import { authenticate } from "../middlewares/auth.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, AppError } from "../lib/errors.js";
+import { EmailService } from "../services/EmailService.js";
 
 const router = Router();
 
@@ -249,15 +250,15 @@ router.post("/register", authLimiter, validateBody(RegisterSchema), async (req, 
     const existing = await prisma.user.findUnique({ where: { email: data.email } });
     if (existing) throw Errors.conflict("Email already in use");
 
-    let superAdminRole = await prisma.role.findFirst({
-      where: { name: "SUPER_ADMIN", isSystem: true },
+    let tenantAdminRole = await prisma.role.findFirst({
+      where: { name: "CLINIC_ADMIN", isSystem: true },
     });
 
-    if (!superAdminRole) {
-      superAdminRole = await prisma.role.create({
+    if (!tenantAdminRole) {
+      tenantAdminRole = await prisma.role.create({
         data: {
-          name: "SUPER_ADMIN",
-          description: "Platform super administrator",
+          name: "CLINIC_ADMIN",
+          description: "Tenant default administrator",
           isSystem: true,
         },
       });
@@ -272,7 +273,7 @@ router.post("/register", authLimiter, validateBody(RegisterSchema), async (req, 
     const user = await prisma.user.create({
       data: {
         tenantId: tenant.id,
-        roleId: superAdminRole.id,
+        roleId: tenantAdminRole.id,
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
@@ -283,34 +284,17 @@ router.post("/register", authLimiter, validateBody(RegisterSchema), async (req, 
       },
     });
 
-    const accessToken = signAccessToken({
-      userId: user.id,
-      tenantId: tenant.id,
-      email: user.email,
-      role: "SUPER_ADMIN",
-    });
-
-    const rawRefresh = signRefreshToken(user.id);
-    await prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        token: rawRefresh,
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      },
-    });
-
-    const verificationLink = `http://localhost:5000/api/auth/verify-email?token=${user.verificationToken}`;
-    console.log(`\n=== EMAIL VERIFICATION LINK ===\nTo: ${user.email}\nLink: ${verificationLink}\n================================\n`);
+    // Send the verification email using the new EmailService
+    await EmailService.sendVerificationEmail(user.email, user.verificationToken!);
 
     res.status(201).json({
-      accessToken,
-      refreshToken: rawRefresh,
+      message: "Registration successful. Please verify your email.",
       user: {
         id: user.id,
         email: user.email,
         firstName: data.firstName,
         lastName: data.lastName,
-        role: "SUPER_ADMIN",
+        role: "CLINIC_ADMIN",
         tenantId: tenant.id,
         tenantName: data.tenantName,
         avatarUrl: null,

@@ -21,8 +21,8 @@ export async function getRoleScope(req: Request, module: "patient" | "appointmen
   const role = req.user.role;
   const userId = req.user.userId;
 
-  // SUPER_ADMIN sees everything within the tenant (tenant scope is applied globally elsewhere)
-  if (role === "SUPER_ADMIN") return {};
+  // SUPER_ADMIN, CLINIC_ADMIN, and AREA_ADMIN see everything within their tenant (tenant scope is applied globally elsewhere)
+  if (role === "SUPER_ADMIN" || role === "CLINIC_ADMIN" || role === "AREA_ADMIN") return {};
 
   // Find clinics this user is assigned to
   const assignments = await prisma.userClinicAssignment.findMany({

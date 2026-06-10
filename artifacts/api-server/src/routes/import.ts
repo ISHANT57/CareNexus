@@ -5,14 +5,14 @@ import fs from "fs/promises";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { CLINICAL_ROLES } from "../middlewares/rbac.js";
+import { CLINICAL_ROLES , authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant } from "../middlewares/tenantScope.js";
 import { Errors } from "../lib/errors.js";
 
 const router = Router();
 const upload = multer({ dest: "uploads/" });
 
-router.post("/patients", authenticate, requireTenant, CLINICAL_ROLES, upload.single("file"), async (req, res, next) => {
+router.post("/patients", authorizePermission("patients", "write"), upload.single("file"), async (req, res, next) => {
   try {
     if (!req.file) throw Errors.validation("No CSV file uploaded");
 

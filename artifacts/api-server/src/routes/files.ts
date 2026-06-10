@@ -15,7 +15,7 @@ import multer from "multer";
 import path from "path";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { CLINICAL_ROLES } from "../middlewares/rbac.js";
+import { authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant } from "../middlewares/tenantScope.js";
 import { Errors } from "../lib/errors.js";
 import { storage } from "../lib/storage.js";
@@ -49,7 +49,7 @@ const upload = multer({
 });
 
 // ── Upload ────────────────────────────────────────────────────────────────────
-router.post("/", authenticate, requireTenant, CLINICAL_ROLES, upload.single("file"), async (req, res, next) => {
+router.post("/", authenticate, requireTenant, authorizePermission("files", "write"), upload.single("file"), async (req, res, next) => {
   try {
     if (!req.file) throw Errors.validation("No file uploaded");
 
@@ -88,7 +88,7 @@ router.post("/", authenticate, requireTenant, CLINICAL_ROLES, upload.single("fil
 });
 
 // ── List files ────────────────────────────────────────────────────────────────
-router.get("/", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, next) => {
+router.get("/", authenticate, requireTenant, authorizePermission("files", "read"), async (req, res, next) => {
   try {
     const patientId = req.query["patientId"] as string;
     const where: any = { tenantId: req.tenantId!, deletedAt: null };
@@ -117,7 +117,7 @@ router.get("/", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, ne
 
 // ── Download ──────────────────────────────────────────────────────────────────
 // MUST be before /:id to prevent routing ambiguity
-router.get("/:id/download", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, next) => {
+router.get("/:id/download", authenticate, requireTenant, authorizePermission("files", "read"), async (req, res, next) => {
   try {
     const id = req.params["id"] as string;
     const fileRecord = await prisma.fileUpload.findFirst({
@@ -141,7 +141,7 @@ router.get("/:id/download", authenticate, requireTenant, CLINICAL_ROLES, async (
 });
 
 // ── Get single file metadata ──────────────────────────────────────────────────
-router.get("/:id", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, next) => {
+router.get("/:id", authenticate, requireTenant, authorizePermission("files", "read"), async (req, res, next) => {
   try {
     const id = req.params["id"] as string;
     const fileRecord = await prisma.fileUpload.findFirst({
@@ -159,7 +159,7 @@ router.get("/:id", authenticate, requireTenant, CLINICAL_ROLES, async (req, res,
 });
 
 // ── Soft-delete + physical file cleanup ───────────────────────────────────────
-router.delete("/:id", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, next) => {
+router.delete("/:id", authenticate, requireTenant, authorizePermission("files", "write"), async (req, res, next) => {
   try {
     const id = req.params["id"] as string;
     const fileRecord = await prisma.fileUpload.findFirst({

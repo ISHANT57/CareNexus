@@ -12,21 +12,21 @@ datasource db {
 // ─────────────────────────────────────────
 
 model Tenant {
-  id                    String   @id @default(uuid())
+  id                    String    @id @default(uuid())
   name                  String
-  domain                String   @unique
+  domain                String    @unique
   logoUrl               String?
   onboardingSmsTemplate String?
-  isActive              Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
   deletedAt             DateTime?
 
-  areas         Area[]
-  programs      Program[]
-  users         User[]
-  patients      Patient[]
-  smsComs       SmsCommunication[]
+  areas              Area[]
+  programs           Program[]
+  users              User[]
+  patients           Patient[]
+  smsComs            SmsCommunication[]
   auditLogs          AuditLog[]
   notifications      Notification[]
   programEnrollments ProgramEnrollment[]
@@ -54,6 +54,7 @@ model Area {
   tenant                   Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   clinics                  Clinic[]
   patients                 Patient[]
+  programs                 Program[]
   doctorPatientAssignments DoctorPatientAssignment[]
 
   @@unique([tenantId, name])
@@ -77,6 +78,7 @@ model Clinic {
 
   area                     Area                      @relation(fields: [areaId], references: [id])
   patients                 Patient[]
+  programs                 Program[]
   userClinicAssignments    UserClinicAssignment[]
   doctorPatientAssignments DoctorPatientAssignment[]
   appointments             Appointment[]
@@ -93,13 +95,13 @@ model Clinic {
 // ─────────────────────────────────────────
 
 model Role {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   tenantId    String?
   name        String
   description String?
-  isSystem    Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   rolePermissions RolePermission[]
   users           User[]
@@ -139,43 +141,43 @@ model RolePermission {
 // ─────────────────────────────────────────
 
 model User {
-  id                   String     @id @default(uuid())
-  tenantId             String
-  roleId               String
-  firstName            String
-  lastName             String
-  email                String     @unique
-  password             String
-  mobile               String?
-  avatarUrl            String?
-  status               UserStatus @default(ACTIVE)
-  lastLoginAt          DateTime?
-  resetToken           String?
-  resetTokenExpiresAt  DateTime?
-  emailVerified        Boolean    @default(false)
-  verificationToken    String?
-  createdAt            DateTime   @default(now())
-  updatedAt            DateTime   @updatedAt
-  deletedAt            DateTime?
-  createdBy            String?
-  updatedBy            String?
+  id                  String     @id @default(uuid())
+  tenantId            String
+  roleId              String
+  firstName           String
+  lastName            String
+  email               String     @unique
+  password            String
+  mobile              String?
+  avatarUrl           String?
+  status              UserStatus @default(ACTIVE)
+  lastLoginAt         DateTime?
+  resetToken          String?
+  resetTokenExpiresAt DateTime?
+  emailVerified       Boolean    @default(false)
+  verificationToken   String?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  deletedAt           DateTime?
+  createdBy           String?
+  updatedBy           String?
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   role   Role   @relation(fields: [roleId], references: [id])
 
-  clinicAssignments    UserClinicAssignment[]
-  programAssignments   UserProgramAssignment[]
-  doctorAssignments    DoctorPatientAssignment[]
-  journeyEvents        PatientJourneyEvent[]
-  auditLogs            AuditLog[]
-  notifications        Notification[]
-  uploadedFiles        FileUpload[]
-  refreshTokens        RefreshToken[]
-  appointments         Appointment[]
-  consultations        Consultation[]
-  recordedOutcomes     PatientOutcome[] @relation("OutcomeDoctor")
-  assignedTasks        CareTask[]       @relation("TaskAssignee")
-  createdTasks         CareTask[]       @relation("TaskCreator")
+  clinicAssignments  UserClinicAssignment[]
+  programAssignments UserProgramAssignment[]
+  doctorAssignments  DoctorPatientAssignment[]
+  journeyEvents      PatientJourneyEvent[]
+  auditLogs          AuditLog[]
+  notifications      Notification[]
+  uploadedFiles      FileUpload[]
+  refreshTokens      RefreshToken[]
+  appointments       Appointment[]
+  consultations      Consultation[]
+  recordedOutcomes   PatientOutcome[]          @relation("OutcomeDoctor")
+  assignedTasks      CareTask[]                @relation("TaskAssignee")
+  createdTasks       CareTask[]                @relation("TaskCreator")
 
   @@index([tenantId])
   @@index([email])
@@ -236,6 +238,10 @@ model Program {
   deletedAt      DateTime?
 
   tenant                 Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  areaId                 String?
+  area                   Area?                   @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  clinicId               String?
+  clinic                 Clinic?                 @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   patients               Patient[]
   userProgramAssignments UserProgramAssignment[]
   programEnrollments     ProgramEnrollment[]
@@ -243,6 +249,8 @@ model Program {
 
   @@unique([tenantId, activationCode])
   @@index([tenantId])
+  @@index([areaId])
+  @@index([clinicId])
   @@map("programs")
 }
 
@@ -301,18 +309,18 @@ model Patient {
   clinic  Clinic  @relation(fields: [clinicId], references: [id])
   area    Area    @relation(fields: [areaId], references: [id])
 
-  gpDetails             PatientGpDetails?
-  referrals             PatientReferral[]
-  journeyEvents         PatientJourneyEvent[]
-  doctorAssignments     DoctorPatientAssignment[]
-  smsCommunications     SmsCommunication[]
-  fileUploads           FileUpload[]
-  onboardingLogs        AccountOnboardingLog[]
-  programEnrollments    ProgramEnrollment[]
-  appointments          Appointment[]
-  consultations         Consultation[]
-  outcomes              PatientOutcome[]
-  careTasks             CareTask[]
+  gpDetails          PatientGpDetails?
+  referrals          PatientReferral[]
+  journeyEvents      PatientJourneyEvent[]
+  doctorAssignments  DoctorPatientAssignment[]
+  smsCommunications  SmsCommunication[]
+  fileUploads        FileUpload[]
+  onboardingLogs     AccountOnboardingLog[]
+  programEnrollments ProgramEnrollment[]
+  appointments       Appointment[]
+  consultations      Consultation[]
+  outcomes           PatientOutcome[]
+  careTasks          CareTask[]
 
   @@unique([tenantId, nhsNumber])
   @@index([tenantId])
@@ -407,7 +415,7 @@ model PatientJourneyEvent {
   createdAt DateTime      @default(now())
 
   patient     Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  actedByUser User?    @relation(fields: [actedBy], references: [id], onDelete: SetNull)
+  actedByUser User?   @relation(fields: [actedBy], references: [id], onDelete: SetNull)
 
   @@index([patientId])
   @@map("patient_journey_events")
@@ -502,7 +510,7 @@ model FileUpload {
   deletedAt  DateTime?
 
   patient  Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  uploader User?    @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+  uploader User?   @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([patientId])
@@ -625,16 +633,16 @@ model RefreshToken {
 // ─────────────────────────────────────────
 
 model SyncQueueItem {
-  id        String   @id @default(uuid())
+  id         String          @id @default(uuid())
   entityType String
   entityId   String
   operation  String
   payload    Json
-  retryCount Int      @default(0)
+  retryCount Int             @default(0)
   status     SyncQueueStatus @default(PENDING)
   error      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
   @@index([status])
   @@index([entityType, entityId])
@@ -642,7 +650,7 @@ model SyncQueueItem {
 }
 
 model DeadLetterQueueItem {
-  id        String   @id @default(uuid())
+  id         String   @id @default(uuid())
   entityType String
   entityId   String
   operation  String
@@ -666,14 +674,14 @@ enum SyncQueueStatus {
 // ─────────────────────────────────────────
 
 model DatabaseSyncAudit {
-  id              String   @id @default(uuid())
-  entityType      String
-  entityId        String
-  operation       String
-  postgresStatus  String
-  mysqlStatus     String
-  errorMessage    String?
-  createdAt       DateTime @default(now())
+  id             String   @id @default(uuid())
+  entityType     String
+  entityId       String
+  operation      String
+  postgresStatus String
+  mysqlStatus    String
+  errorMessage   String?
+  createdAt      DateTime @default(now())
 
   @@index([entityType, entityId])
   @@map("database_sync_audit")
@@ -730,7 +738,7 @@ model Appointment {
   updatedAt       DateTime          @updatedAt
   deletedAt       DateTime?
 
-  consultation    Consultation?
+  consultation Consultation?
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
@@ -791,16 +799,16 @@ model Consultation {
 // ─────────────────────────────────────────
 
 model OutcomeMetric {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   tenantId    String
   code        String
   name        String
   category    String
   unit        String
   description String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   outcomes PatientOutcome[]
@@ -879,8 +887,8 @@ model CareTask {
 
   tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   patient  Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  creator  User?    @relation("TaskCreator",  fields: [assignedBy], references: [id], onDelete: SetNull)
-  assignee User?    @relation("TaskAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
+  creator  User?   @relation("TaskCreator", fields: [assignedBy], references: [id], onDelete: SetNull)
+  assignee User?   @relation("TaskAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([patientId])

@@ -13,13 +13,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Loader2, ChevronLeft, ChevronRight, Upload, Filter, X, User } from "lucide-react";
+import { Search, Plus, Loader2, ChevronLeft, ChevronRight, Upload, Filter, X, User, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { cn } from "@/lib/utils";
+import { cn, exportToCSV } from "@/lib/utils";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 
 const PAGE_SIZE = 20;
 
@@ -58,22 +59,31 @@ export default function PatientsPage() {
   const [page, setPage] = useState(1);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [filterStatus, setFilterStatus] = useState("");
-  const [filterProgram, setFilterProgram] = useState("");
-  const [filterArea, setFilterArea] = useState("");
-  const [filterClinic, setFilterClinic] = useState("");
+  const { filters, setFilter, clearFilters } = useUrlFilters<{
+    status: string;
+    programId: string;
+    areaId: string;
+    clinicId: string;
+  }>();
+  
+  const filterStatus = filters.status || "";
+  const filterProgram = filters.programId || "";
+  const filterArea = filters.areaId || "";
+  const filterClinic = filters.clinicId || "";
   const [showFilters, setShowFilters] = useState(false);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const importPatients = useImportPatients();
 
-  const { data: programsData } = useListPrograms({ limit: 100 });
-  // Fetch all areas for the filter panel
-  const { data: areasData } = useListAreas({ limit: 500 });
-  // Fetch clinics scoped to the selected area (cascade)
+  const [programQuery, setProgramQuery] = useState("");
+  const [areaQuery, setAreaQuery] = useState("");
+  const [clinicQuery, setClinicQuery] = useState("");
+
+  const { data: programsData } = useListPrograms({ limit: 100, q: programQuery || undefined });
+  const { data: areasData } = useListAreas({ limit: 500, q: areaQuery || undefined });
   const { data: clinicsData } = useListClinics(
-    { areaId: filterArea || undefined, limit: 500 },
+    { areaId: filterArea || undefined, limit: 500, q: clinicQuery || undefined },
     { query: { enabled: true } as any }
   );
 
@@ -105,27 +115,22 @@ export default function PatientsPage() {
     setPage(1);
   }, [filterStatus, filterProgram, filterArea, filterClinic]);
 
-  // When area changes, reset clinic filter (cascade)
   useEffect(() => {
-    setFilterClinic("");
+    setFilter("clinicId", "");
   }, [filterArea]);
 
   const { data, isLoading } = useListPatients({
     q: debouncedSearch || undefined,
+    status: filterStatus || undefined,
+    programId: filterProgram || undefined,
+    areaId: filterArea || undefined,
+    clinicId: filterClinic || undefined,
     page,
     limit: PAGE_SIZE,
   });
 
   const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;
-
   const activeFilterCount = [filterStatus, filterProgram, filterArea, filterClinic].filter(Boolean).length;
-
-  const clearFilters = () => {
-    setFilterStatus("");
-    setFilterProgram("");
-    setFilterArea("");
-    setFilterClinic("");
-  };
 
   const handleImport = async () => {
     if (!importFile) return;
@@ -145,65 +150,87 @@ export default function PatientsPage() {
     }
   };
 
-  return (
-    <div className="flex-1 overflow-y-auto bg-background">
-      {/* Header */}
-      <div className="bg-card border-b border-border px-8 py-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Patients</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Manage patient records, demographics, and care assignments.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import CSV
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Bulk Import Patients</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label>CSV File</Label>
-                    <input
-                      type="file"
-                      accept=".csv"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
-                      onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Required columns: firstName, lastName. Optional: email, mobile, dateOfBirth, nhsNumber.
-                    </p>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => { setIsImportOpen(false); setImportFile(null); }}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleImport} disabled={!importFile || importPatients.isPending}>
-                    {importPatients.isPending ? "Importing..." : "Import"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+  const handleExport = () => {
+    if (!data?.data?.length) {
+      toast({ title: "No data", description: "There is no data to export." });
+      return;
+    }
+    const exportData = data.data.map(p => ({
+      ID: p.id,
+      "NHS Number": p.nhsNumber || "N/A",
+      "First Name": p.firstName,
+      "Last Name": p.lastName,
+      Status: p.status,
+      "Date of Birth": (p as any).dateOfBirth,
+      Email: p.email,
+      Mobile: p.mobile,
+      "Program Name": (p as any).program?.name || "N/A",
+      "Clinic Name": p.clinic?.name || "N/A"
+    }));
+    exportToCSV(exportData, `patients_export_${new Date().toISOString().split('T')[0]}.csv`);
+  };
 
-            <Link href="/patients/new">
-              <Button data-testid="button-new-patient" size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                New Patient
+  return (
+    <div className="page-container animate-in-up">
+      <div className="page-header">
+        <div>
+          <h1 className="text-h2">Patients</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Manage patient records, demographics, and care assignments.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !data?.data?.length}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+
+          <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Upload className="w-4 h-4 mr-2" />
+                Import CSV
               </Button>
-            </Link>
-          </div>
+            </DialogTrigger>
+            <DialogContent aria-describedby={undefined}>
+              <DialogHeader>
+                <DialogTitle>Bulk Import Patients</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label>CSV File</Label>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
+                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Required columns: firstName, lastName. Optional: email, mobile, dateOfBirth, nhsNumber.
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setIsImportOpen(false); setImportFile(null); }}>
+                  Cancel
+                </Button>
+                <Button onClick={handleImport} disabled={!importFile || importPatients.isPending}>
+                  {importPatients.isPending ? "Importing..." : "Import"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Link href="/patients/new">
+            <Button data-testid="button-new-patient" size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
+              <Plus className="w-4 h-4 mr-2" />
+              New Patient
+            </Button>
+          </Link>
         </div>
       </div>
 
-      <div className="p-8 space-y-4">
+      <div className="space-y-4">
         {/* Search + Filter bar */}
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-md">
@@ -256,7 +283,7 @@ export default function PatientsPage() {
               <SearchableSelect
                 options={STATUS_OPTIONS}
                 value={filterStatus}
-                onValueChange={setFilterStatus}
+                onValueChange={(v) => setFilter("status", v)}
                 placeholder="All statuses"
                 searchPlaceholder="Search status..."
                 clearable
@@ -269,7 +296,8 @@ export default function PatientsPage() {
               <SearchableSelect
                 options={programOptions}
                 value={filterProgram}
-                onValueChange={setFilterProgram}
+                onValueChange={(v) => setFilter("programId", v)}
+                onSearch={setProgramQuery}
                 placeholder="All programs"
                 searchPlaceholder="Search programs..."
                 clearable
@@ -282,7 +310,8 @@ export default function PatientsPage() {
               <SearchableSelect
                 options={areaOptions}
                 value={filterArea}
-                onValueChange={setFilterArea}
+                onValueChange={(v) => setFilter("areaId", v)}
+                onSearch={setAreaQuery}
                 placeholder="All areas"
                 searchPlaceholder="Search areas..."
                 clearable
@@ -291,19 +320,17 @@ export default function PatientsPage() {
             <div className="space-y-2">
               <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center justify-between">
                 <span>Clinic</span>
-                {filterArea && (
-                  <span className="text-[10px] normal-case font-normal text-primary">
-                    {clinicsData?.data?.length ?? 0} in area
-                  </span>
-                )}
+                {filterArea && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-sm">Filtered</span>}
               </Label>
               <SearchableSelect
                 options={clinicOptions}
                 value={filterClinic}
-                onValueChange={setFilterClinic}
-                placeholder={filterArea ? "Select clinic" : "Select area first"}
+                onValueChange={(v) => setFilter("clinicId", v)}
+                onSearch={setClinicQuery}
+                placeholder="All clinics"
                 searchPlaceholder="Search clinics..."
                 clearable
+                disabled={!filterArea && clinicOptions.length > 50}
               />
             </div>
           </div>
@@ -342,7 +369,8 @@ export default function PatientsPage() {
                       <TableRow className="bg-muted/30 hover:bg-muted/30">
                         <TableHead className="font-semibold text-xs uppercase tracking-wide">NHS Number</TableHead>
                         <TableHead className="font-semibold text-xs uppercase tracking-wide">Name</TableHead>
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Status</TableHead>
+                         <TableHead className="font-semibold text-xs uppercase tracking-wide">Status</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Risk</TableHead>
                         <TableHead className="font-semibold text-xs uppercase tracking-wide">Program</TableHead>
                         <TableHead className="font-semibold text-xs uppercase tracking-wide">Clinic</TableHead>
                         <TableHead className="font-semibold text-xs uppercase tracking-wide text-right">
@@ -374,6 +402,15 @@ export default function PatientsPage() {
                           </TableCell>
                           <TableCell>
                             <StatusBadge status={patient.status ?? "INACTIVE"} />
+                          </TableCell>
+                          <TableCell>
+                            {(patient as any).riskLevel ? (
+                              <Badge variant={(patient as any).riskLevel === 'HIGH' || (patient as any).riskLevel === 'CRITICAL' ? 'destructive' : (patient as any).riskLevel === 'MEDIUM' ? 'default' : 'secondary'} className="uppercase font-medium text-[10px]">
+                                {(patient as any).riskLevel} ({(patient as any).riskScore ?? 0})
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {(patient as any).program?.name ?? "—"}

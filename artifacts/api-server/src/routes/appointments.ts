@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { CLINICAL_ROLES } from "../middlewares/rbac.js";
+import { authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
@@ -27,7 +27,7 @@ const UpdateAppointmentSchema = z.object({
   notes: z.string().optional(),
 });
 
-router.get("/", CLINICAL_ROLES, async (req, res, next) => {
+router.get("/", authorizePermission("appointments", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const patientId = req.query["patientId"] as string | undefined;
@@ -56,7 +56,7 @@ router.get("/", CLINICAL_ROLES, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post("/", CLINICAL_ROLES, validateBody(AppointmentSchema), async (req, res, next) => {
+router.post("/", authorizePermission("appointments", "write"), validateBody(AppointmentSchema), async (req, res, next) => {
   try {
     const { patientId, doctorId, clinicId, appointmentDate, durationMinutes, notes } = req.body;
 
@@ -89,7 +89,7 @@ router.post("/", CLINICAL_ROLES, validateBody(AppointmentSchema), async (req, re
   } catch (err) { next(err); }
 });
 
-router.get("/:id", CLINICAL_ROLES, async (req, res, next) => {
+router.get("/:id", authorizePermission("appointments", "read"), async (req, res, next) => {
   try {
     const roleScope = await getRoleScope(req, "appointment");
     const appointment = await prisma.appointment.findFirst({
@@ -105,7 +105,7 @@ router.get("/:id", CLINICAL_ROLES, async (req, res, next) => {
   }
 });
 
-router.patch("/:id", CLINICAL_ROLES, validateBody(UpdateAppointmentSchema), async (req, res, next) => {
+router.patch("/:id", authorizePermission("appointments", "write"), validateBody(UpdateAppointmentSchema), async (req, res, next) => {
   try {
     const roleScope = await getRoleScope(req, "appointment");
     const appointment = await prisma.appointment.findFirst({ 
@@ -129,7 +129,7 @@ router.patch("/:id", CLINICAL_ROLES, validateBody(UpdateAppointmentSchema), asyn
   } catch (err) { next(err); }
 });
 
-router.post("/:id/complete", CLINICAL_ROLES, async (req, res, next) => {
+router.post("/:id/complete", authorizePermission("appointments", "write"), async (req, res, next) => {
   try {
     const roleScope = await getRoleScope(req, "appointment");
     const appointment = await prisma.appointment.findFirst({ 
@@ -161,7 +161,7 @@ router.post("/:id/complete", CLINICAL_ROLES, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post("/:id/cancel", CLINICAL_ROLES, async (req, res, next) => {
+router.post("/:id/cancel", authorizePermission("appointments", "write"), async (req, res, next) => {
   try {
     const roleScope = await getRoleScope(req, "appointment");
     const appointment = await prisma.appointment.findFirst({ 
@@ -182,7 +182,7 @@ router.post("/:id/cancel", CLINICAL_ROLES, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post("/:id/no-show", CLINICAL_ROLES, async (req, res, next) => {
+router.post("/:id/no-show", authorizePermission("appointments", "write"), async (req, res, next) => {
   try {
     const roleScope = await getRoleScope(req, "appointment");
     const appointment = await prisma.appointment.findFirst({ 

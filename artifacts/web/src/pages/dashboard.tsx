@@ -9,6 +9,7 @@ import {
   useGetAppointmentStats,
   useGetConsultationStats,
   useListProgramEnrollments,
+  useListRiskScores,
   useGetMe,
 } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
@@ -80,7 +81,12 @@ export default function DashboardPage() {
 
 function TenantDashboard() {
   const [, navigate] = useLocation();
+  const { data: user } = useGetMe();
   const [programDrillId, setProgramDrillId] = useState<string | null>(null);
+
+  const isAreaAdmin = user?.role === "AREA_ADMIN";
+  const isClinicAdmin = user?.role === "CLINIC_ADMIN";
+  const isDoctor = user?.role === "DOCTOR";
 
   // ── Data queries (all with 5-min staleTime) ──────────────────────────────────
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats({
@@ -115,6 +121,13 @@ function TenantDashboard() {
     staleTime: 5 * 60 * 1000,
   });
   const clinicStats = useMemo(() => Array.isArray(clinicStatsData) ? clinicStatsData : [], [clinicStatsData]);
+
+  // High Risk Patients
+  const { data: riskScoresData, isLoading: riskScoresLoading } = useListRiskScores(
+    { limit: 5 } as any,
+    { query: { staleTime: 5 * 60 * 1000 } as any }
+  );
+  const highRiskPatients = riskScoresData?.data ?? [];
 
   // Program drill-down (lazy) — load enrollments for the selected program
   const { data: programEnrollmentsData, isLoading: programDetailsLoading } = useListProgramEnrollments(
@@ -164,80 +177,118 @@ function TenantDashboard() {
     : 0;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-background">
+    <div className="flex-1 overflow-y-auto bg-background transition-colors duration-200">
       {/* ── Header banner ──────────────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-r from-[hsl(213,100%,31%)] to-[hsl(213,100%,42%)] px-8 py-8 text-white">
-        <div className="max-w-7xl">
-          <div className="text-sm font-medium opacity-80 mb-1">
+      <div className="bg-primary/5 border-b border-border px-8 py-8 relative overflow-hidden">
+        {/* Subtle background decoration */}
+        <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl" />
+        <div className="max-w-7xl relative z-10">
+          <div className="text-sm font-medium text-muted-foreground mb-1">
             {now.toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">{greeting} 👋</h1>
-          <p className="mt-1 text-white/70 text-sm">Clinical operations command centre — click any card to navigate</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{greeting} 👋</h1>
+          <p className="mt-1 text-muted-foreground text-sm">Clinical operations command centre — click any card to navigate</p>
         </div>
       </div>
 
-      <div className="p-6 md:p-8 space-y-8 max-w-[1400px] animate-in-up">
+      <div className="page-container animate-in-up">
 
         {/* ── PRIMARY KPI ROW — all clickable ────────────────────────────────── */}
         {isLoadingPrimary ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
+          <div className="bento-grid">
+            {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-40 rounded-2xl" />)}
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <StatCard title="Total Patients" value={stats?.totalPatients ?? 0} subtitle={`${stats?.activePatients ?? 0} active`} icon={Users} variant="default" href="/patients" />
-            <StatCard title="Active Enrollments" value={enrollmentStats?.activeEnrollments ?? 0} subtitle={`${enrollmentStats?.totalEnrollments ?? 0} total`} icon={FolderGit2} variant="primary" href="/programs" />
-            <StatCard title="Scheduled Appts" value={appointmentStats?.scheduledAppointments ?? 0} subtitle="Upcoming" icon={Calendar} variant="warning" href="/appointments" />
-            <StatCard title="Consultations" value={consultationStats?.consultationsThisMonth ?? 0} subtitle="This month" icon={Stethoscope} variant="success" href="/patients" />
-            <StatCard title="Clinics" value={stats?.totalClinics ?? 0} subtitle={`${stats?.totalPrograms ?? 0} programs`} icon={Building2} variant="default" href="/clinics" />
-            <StatCard title="Pending Comms" value={stats?.pendingCommunications ?? 0} subtitle="Requires action" icon={MessageSquare} variant={stats?.pendingCommunications ? "destructive" : "default"} href="/notifications" />
+          <div className="bento-grid">
+            {isDoctor ? (
+              <>
+                <StatCard title="Today's Appointments" value={appointmentStats?.scheduledAppointments ?? 0} subtitle="Upcoming" icon={Calendar} variant="warning" href="/appointments" className="interactive-card glass-card" />
+                <StatCard title="Assigned Patients" value={stats?.totalPatients ?? 0} subtitle={`${stats?.activePatients ?? 0} active`} icon={Users} variant="default" href="/patients" className="interactive-card glass-card" />
+                <StatCard title="Pending Consultations" value={consultationStats?.consultationsThisMonth ?? 0} subtitle="This month" icon={Stethoscope} variant="success" href="/patients" className="interactive-card glass-card" />
+                <StatCard title="Outcomes Pending" value={stats?.outcomesRecorded ?? 0} subtitle="Recorded outcomes" icon={Activity} variant="primary" href="/patients" className="interactive-card glass-card" />
+              </>
+            ) : isClinicAdmin ? (
+              <>
+                <StatCard title="Clinic Patients" value={stats?.totalPatients ?? 0} subtitle="Assigned to clinic" icon={Users} variant="default" href="/patients" className="interactive-card glass-card" />
+                <StatCard title="Clinic Doctors" value={stats?.totalUsers ?? 0} subtitle="Staff members" icon={Stethoscope} variant="primary" href="/users" className="interactive-card glass-card" />
+                <StatCard title="Programs" value={stats?.totalPrograms ?? 0} subtitle="Active programs" icon={FolderGit2} variant="warning" href="/programs" className="interactive-card glass-card" />
+                <StatCard title="Appointments" value={appointmentStats?.scheduledAppointments ?? 0} subtitle="Upcoming" icon={Calendar} variant="warning" href="/appointments" className="interactive-card glass-card" />
+                <StatCard title="Consultations" value={consultationStats?.consultationsThisMonth ?? 0} subtitle="This month" icon={Stethoscope} variant="success" href="/patients" className="interactive-card glass-card" />
+              </>
+            ) : isAreaAdmin ? (
+              <>
+                <StatCard title="Clinics" value={stats?.totalClinics ?? 0} subtitle="In your area" icon={Building2} variant="default" href="/clinics" className="interactive-card glass-card" />
+                <StatCard title="Patients" value={stats?.totalPatients ?? 0} subtitle={`${stats?.activePatients ?? 0} active`} icon={Users} variant="primary" href="/patients" className="interactive-card glass-card" />
+                <StatCard title="Programs" value={stats?.totalPrograms ?? 0} subtitle="Running programs" icon={FolderGit2} variant="warning" href="/programs" className="interactive-card glass-card" />
+                <StatCard title="Appointments" value={appointmentStats?.scheduledAppointments ?? 0} subtitle="Upcoming" icon={Calendar} variant="warning" href="/appointments" className="interactive-card glass-card" />
+              </>
+            ) : (
+              <>
+                <StatCard title="Total Patients" value={stats?.totalPatients ?? 0} subtitle={`${stats?.activePatients ?? 0} active`} icon={Users} variant="default" href="/patients" className="interactive-card glass-card" />
+                <StatCard title="Active Enrollments" value={enrollmentStats?.activeEnrollments ?? 0} subtitle={`${enrollmentStats?.totalEnrollments ?? 0} total`} icon={FolderGit2} variant="primary" href="/programs" className="interactive-card glass-card" />
+                <StatCard title="Scheduled Appts" value={appointmentStats?.scheduledAppointments ?? 0} subtitle="Upcoming" icon={Calendar} variant="warning" href="/appointments" className="interactive-card glass-card" />
+                <StatCard title="Consultations" value={consultationStats?.consultationsThisMonth ?? 0} subtitle="This month" icon={Stethoscope} variant="success" href="/patients" className="interactive-card glass-card" />
+                <StatCard title="Clinics" value={stats?.totalClinics ?? 0} subtitle={`${stats?.totalPrograms ?? 0} programs`} icon={Building2} variant="default" href="/clinics" className="interactive-card glass-card" />
+                <StatCard title="Pending Comms" value={stats?.pendingCommunications ?? 0} subtitle="Requires action" icon={MessageSquare} variant={stats?.pendingCommunications ? "destructive" : "default"} href="/notifications" className="interactive-card glass-card" />
+              </>
+            )}
           </div>
         )}
 
         {/* ── SECONDARY STATS ROW ─────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 mt-6">
           {appointmentLoading || statsLoading ? (
-            [...Array(6)].map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
+            [...Array(6)].map((_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />)
           ) : (
             <>
-              <Link href="/appointments">
-                <div className="bg-card border border-border rounded-xl p-4 cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all group">
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Completed Appts</p>
-                  <p className="text-2xl font-bold mt-1">{appointmentStats?.completedAppointments ?? 0}</p>
-                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Link href="/appointments?status=COMPLETED">
+                <div className="glass-card rounded-xl p-5 cursor-pointer interactive-card group">
+                  <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Completed Appts</p>
+                  <div className="flex items-end justify-between mt-2">
+                    <p className="text-3xl font-bold">{appointmentStats?.completedAppointments ?? 0}</p>
+                    <ChevronRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity mb-1 transform group-hover:translate-x-1" />
+                  </div>
                 </div>
               </Link>
-              <Link href="/appointments">
-                <div className="bg-card border border-border rounded-xl p-4 cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all group">
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Cancelled Appts</p>
-                  <p className="text-2xl font-bold mt-1 text-destructive">{appointmentStats?.cancelledAppointments ?? 0}</p>
-                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Link href="/appointments?status=CANCELLED">
+                <div className="glass-card rounded-xl p-5 cursor-pointer interactive-card group">
+                  <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Cancelled Appts</p>
+                  <div className="flex items-end justify-between mt-2">
+                    <p className="text-3xl font-bold text-destructive">{appointmentStats?.cancelledAppointments ?? 0}</p>
+                    <ChevronRight className="w-4 h-4 text-destructive opacity-0 group-hover:opacity-100 transition-opacity mb-1 transform group-hover:translate-x-1" />
+                  </div>
                 </div>
               </Link>
               <Link href="/programs">
-                <div className="bg-card border border-border rounded-xl p-4 cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all group">
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Completed Enrollments</p>
-                  <p className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">{enrollmentStats?.completedEnrollments ?? 0}</p>
-                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="glass-card rounded-xl p-5 cursor-pointer interactive-card group">
+                  <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Completed Programs</p>
+                  <div className="flex items-end justify-between mt-2">
+                    <p className="text-3xl font-bold text-success">{enrollmentStats?.completedEnrollments ?? 0}</p>
+                    <ChevronRight className="w-4 h-4 text-success opacity-0 group-hover:opacity-100 transition-opacity mb-1 transform group-hover:translate-x-1" />
+                  </div>
                 </div>
               </Link>
               <Link href="/patients">
-                <div className="bg-card border border-border rounded-xl p-4 cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all group">
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">New This Month</p>
-                  <p className="text-2xl font-bold mt-1">{stats?.newPatientsThisMonth ?? 0}</p>
-                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="glass-card rounded-xl p-5 cursor-pointer interactive-card group">
+                  <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">New This Month</p>
+                  <div className="flex items-end justify-between mt-2">
+                    <p className="text-3xl font-bold">{stats?.newPatientsThisMonth ?? 0}</p>
+                    <ChevronRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity mb-1 transform group-hover:translate-x-1" />
+                  </div>
                 </div>
               </Link>
-              <div className="bg-card border border-border rounded-xl p-4">
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Outcomes Recorded</p>
-                <p className="text-2xl font-bold mt-1 text-blue-600 dark:text-blue-400">{stats?.outcomesRecorded ?? 0}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{stats?.improvingPatients ?? 0} improving</p>
+              <div className="glass-card rounded-xl p-5 border border-border/50">
+                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Outcomes Recorded</p>
+                <div className="flex flex-col mt-2">
+                  <p className="text-3xl font-bold text-primary">{stats?.outcomesRecorded ?? 0}</p>
+                  <p className="text-xs text-muted-foreground mt-1 font-medium">{stats?.improvingPatients ?? 0} showing improvement</p>
+                </div>
               </div>
-              <div className="bg-card border border-border rounded-xl p-4">
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Success Rate</p>
-                <p className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">{stats?.successRate ?? 0}%</p>
-                <div className="mt-1.5 h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${Math.min(100, stats?.successRate ?? 0)}%` }} />
+              <div className="glass-card rounded-xl p-5 border border-border/50">
+                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Success Rate</p>
+                <p className="text-3xl font-bold mt-2 text-success">{stats?.successRate ?? 0}%</p>
+                <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-success rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, stats?.successRate ?? 0)}%` }} />
                 </div>
               </div>
             </>
@@ -517,54 +568,101 @@ function TenantDashboard() {
           </Card>
         </div>
 
-        {/* ── RECENT ACTIVITY ──────────────────────────────────────────────────── */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Activity className="w-4 h-4 text-primary" />
-              Recent Activity
-            </CardTitle>
-            <CardDescription>Latest audit events across the trust</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {activityLoading ? (
-              <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}</div>
-            ) : activityData && activityData.length > 0 ? (
-              <div className="space-y-1">
-                {activityData.map((activity: any) => {
-                  const actionLabel = ACTION_LABELS[activity.action] ?? activity.action;
-                  const actionColor = ACTION_COLORS[activity.action] ?? "bg-muted text-muted-foreground";
-                  return (
-                    <div key={activity.id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <span className="text-xs font-bold text-primary">{(activity.actor?.firstName?.[0] ?? "S")}</span>
+        {/* ── RECENT ACTIVITY & HIGH RISK PATIENTS ─────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Activity className="w-4 h-4 text-primary" />
+                Recent Activity
+              </CardTitle>
+              <CardDescription>Latest audit events across the trust</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {activityLoading ? (
+                <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}</div>
+              ) : activityData && activityData.length > 0 ? (
+                <div className="space-y-1">
+                  {activityData.map((activity: any) => {
+                    const actionLabel = ACTION_LABELS[activity.action] ?? activity.action;
+                    const actionColor = ACTION_COLORS[activity.action] ?? "bg-muted text-muted-foreground";
+                    return (
+                      <div key={activity.id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-primary">{(activity.actor?.firstName?.[0] ?? "S")}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">
+                            <span className="text-foreground">{activity.actor ? `${activity.actor.firstName} ${activity.actor.lastName}` : "System"}</span>
+                            <span className="text-muted-foreground"> {actionLabel} </span>
+                            <span className="text-foreground capitalize">{activity.entityType?.toLowerCase()?.replace(/_/g, " ")}</span>
+                          </p>
+                          <p className="text-xs text-muted-foreground">{new Date(activity.createdAt).toLocaleString("en-GB")}</p>
+                        </div>
+                        <Badge variant="outline" className={`text-[10px] uppercase font-mono shrink-0 ${actionColor}`}>{actionLabel}</Badge>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">
-                          <span className="text-foreground">{activity.actor ? `${activity.actor.firstName} ${activity.actor.lastName}` : "System"}</span>
-                          <span className="text-muted-foreground"> {actionLabel} </span>
-                          <span className="text-foreground capitalize">{activity.entityType?.toLowerCase()?.replace(/_/g, " ")}</span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">{new Date(activity.createdAt).toLocaleString("en-GB")}</p>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-12 text-center text-muted-foreground">
+                  <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No recent activity found</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-destructive" />
+                High Risk Patients
+              </CardTitle>
+              <CardDescription>Patients requiring immediate clinical attention</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {riskScoresLoading ? (
+                <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}</div>
+              ) : highRiskPatients.length > 0 ? (
+                <div className="space-y-2">
+                  {highRiskPatients.map((rs: any) => (
+                    <Link key={rs.id} href={`/patients/${rs.id}`}>
+                      <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center text-destructive shrink-0">
+                            <span className="font-bold text-sm">{rs.riskScore ?? 0}</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">
+                              {rs.firstName} {rs.lastName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {rs.nhsNumber || "No NHS number"}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant={rs.riskLevel === 'HIGH' || rs.riskLevel === 'CRITICAL' ? 'destructive' : rs.riskLevel === 'MEDIUM' ? 'default' : 'secondary'} className="uppercase text-[10px]">
+                          {rs.riskLevel || "LOW"}
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className={`text-[10px] uppercase font-mono shrink-0 ${actionColor}`}>{actionLabel}</Badge>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="py-12 text-center text-muted-foreground">
-                <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No recent activity found</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center text-muted-foreground">
+                  <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No high risk patients identified</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* ── PROGRAM DRILL-DOWN MODAL ─────────────────────────────────────────── */}
       <Dialog open={!!programDrillId} onOpenChange={(open) => !open && setProgramDrillId(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent aria-describedby={undefined} className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FolderGit2 className="w-5 h-5 text-primary" />

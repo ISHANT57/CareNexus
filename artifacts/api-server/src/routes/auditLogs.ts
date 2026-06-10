@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { authorize } from "../middlewares/rbac.js";
+import { authorize, authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant } from "../middlewares/tenantScope.js";
 import { ok, paginate, paginationMeta } from "../types/index.js";
 
 const router = Router();
-router.use(authenticate, requireTenant, authorize("SUPER_ADMIN", "AREA_ADMIN"));
+router.use(authenticate, requireTenant, authorize("SUPER_ADMIN", "AREA_ADMIN"), authorizePermission("audit_logs", "read"));
 
 router.get("/", async (req, res, next) => {
   try {

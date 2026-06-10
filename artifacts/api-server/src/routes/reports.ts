@@ -3,9 +3,10 @@ import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
 import { requireTenant } from "../middlewares/tenantScope.js";
 import { getRoleScope } from "../middlewares/roleScope.js";
+import { authorizePermission } from "../middlewares/rbac.js";
 
 const router = Router();
-router.use(authenticate, requireTenant);
+router.use(authenticate, requireTenant, authorizePermission("reports", "read"));
 
 // GET /api/reports/dashboard
 router.get("/dashboard", async (req, res, next) => {

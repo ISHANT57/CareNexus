@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { CLINICAL_ROLES, ADMIN_ROLES } from "../middlewares/rbac.js";
+import { authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
@@ -21,7 +21,7 @@ const MetricSchema = z.object({
 });
 
 // GET /api/outcome-metrics
-router.get("/", CLINICAL_ROLES, async (req, res, next) => {
+router.get("/", authorizePermission("outcomes", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const where = { tenantId: req.tenantId!, ...(req.query["inactive"] !== "true" ? { isActive: true } : {}) };
@@ -34,7 +34,7 @@ router.get("/", CLINICAL_ROLES, async (req, res, next) => {
 });
 
 // GET /api/outcome-metrics/:id
-router.get("/:id", CLINICAL_ROLES, async (req, res, next) => {
+router.get("/:id", authorizePermission("outcomes", "read"), async (req, res, next) => {
   try {
     const metric = await prisma.outcomeMetric.findFirst({
       where: { id: req.params["id"] as string, tenantId: req.tenantId! },
@@ -45,7 +45,7 @@ router.get("/:id", CLINICAL_ROLES, async (req, res, next) => {
 });
 
 // POST /api/outcome-metrics
-router.post("/", ADMIN_ROLES, validateBody(MetricSchema), async (req, res, next) => {
+router.post("/", authorizePermission("outcomes", "write"), validateBody(MetricSchema), async (req, res, next) => {
   try {
     const data = req.body as z.infer<typeof MetricSchema>;
     const existing = await prisma.outcomeMetric.findUnique({
@@ -61,7 +61,7 @@ router.post("/", ADMIN_ROLES, validateBody(MetricSchema), async (req, res, next)
 });
 
 // PATCH /api/outcome-metrics/:id
-router.patch("/:id", ADMIN_ROLES, validateBody(MetricSchema.partial()), async (req, res, next) => {
+router.patch("/:id", authorizePermission("outcomes", "write"), validateBody(MetricSchema.partial()), async (req, res, next) => {
   try {
     const metric = await prisma.outcomeMetric.findFirst({ where: { id: req.params["id"] as string } });
     if (!metric) throw Errors.notFound("OutcomeMetric");
@@ -73,7 +73,7 @@ router.patch("/:id", ADMIN_ROLES, validateBody(MetricSchema.partial()), async (r
 });
 
 // DELETE /api/outcome-metrics/:id (soft deactivate)
-router.delete("/:id", ADMIN_ROLES, async (req, res, next) => {
+router.delete("/:id", authorizePermission("outcomes", "write"), async (req, res, next) => {
   try {
     const metric = await prisma.outcomeMetric.findFirst({ where: { id: req.params["id"] as string } });
     if (!metric) throw Errors.notFound("OutcomeMetric");

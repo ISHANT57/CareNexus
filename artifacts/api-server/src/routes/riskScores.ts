@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { CLINICAL_ROLES, ADMIN_ROLES } from "../middlewares/rbac.js";
+import { authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 import { createAuditLog } from "../lib/audit.js";
@@ -11,7 +11,7 @@ const router = Router();
 router.use(authenticate, requireTenant);
 
 // GET /api/risk-scores — list patients with their risk scores
-router.get("/", CLINICAL_ROLES, async (req, res, next) => {
+router.get("/", authorizePermission("patients", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const { riskLevel } = req.query as Record<string, string>;
@@ -36,7 +36,7 @@ router.get("/", CLINICAL_ROLES, async (req, res, next) => {
 });
 
 // GET /api/risk-scores/:patientId — get risk details for a patient
-router.get("/:patientId", CLINICAL_ROLES, async (req, res, next) => {
+router.get("/:patientId", authorizePermission("patients", "read"), async (req, res, next) => {
   try {
     const patient = await prisma.patient.findFirst({
       where: { id: req.params["patientId"] as string, tenantId: req.tenantId!, deletedAt: null },
@@ -49,7 +49,7 @@ router.get("/:patientId", CLINICAL_ROLES, async (req, res, next) => {
 });
 
 // POST /api/risk-scores/:patientId/calculate — recalculate one patient
-router.post("/:patientId/calculate", CLINICAL_ROLES, async (req, res, next) => {
+router.post("/:patientId/calculate", authorizePermission("patients", "write"), async (req, res, next) => {
   try {
     const patient = await prisma.patient.findFirst({
       where: { id: req.params["patientId"] as string, tenantId: req.tenantId!, deletedAt: null },
@@ -68,7 +68,7 @@ router.post("/:patientId/calculate", CLINICAL_ROLES, async (req, res, next) => {
 });
 
 // POST /api/risk-scores/recalculate-all — bulk recalculate for entire tenant
-router.post("/recalculate-all", ADMIN_ROLES, async (req, res, next) => {
+router.post("/recalculate-all", authorizePermission("patients", "write"), async (req, res, next) => {
   try {
     const result = await calculateAllPatientRisks(req.tenantId!);
     await createAuditLog({ req, entityType: "System", entityId: req.tenantId!, action: "UPDATE", after: { action: "bulk-risk-recalculation", ...result } });

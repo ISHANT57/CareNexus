@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { CLINICAL_ROLES, ADMIN_ROLES } from "../middlewares/rbac.js";
+import { authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
@@ -36,7 +36,7 @@ function computeImprovements(baselineValue: number, currentValue: number, target
 }
 
 // GET /api/outcomes
-router.get("/", CLINICAL_ROLES, async (req, res, next) => {
+router.get("/", authorizePermission("outcomes", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const { patientId, programId, outcomeMetricId } = req.query as Record<string, string>;
@@ -70,7 +70,7 @@ router.get("/", CLINICAL_ROLES, async (req, res, next) => {
 });
 
 // GET /api/outcomes/:id
-router.get("/:id", CLINICAL_ROLES, async (req, res, next) => {
+router.get("/:id", authorizePermission("outcomes", "read"), async (req, res, next) => {
   try {
     const outcome = await prisma.patientOutcome.findFirst({
       where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null },
@@ -87,7 +87,7 @@ router.get("/:id", CLINICAL_ROLES, async (req, res, next) => {
 });
 
 // POST /api/outcomes
-router.post("/", CLINICAL_ROLES, validateBody(OutcomeSchema), async (req, res, next) => {
+router.post("/", authorizePermission("outcomes", "write"), validateBody(OutcomeSchema), async (req, res, next) => {
   try {
     const data = req.body as z.infer<typeof OutcomeSchema>;
     const outcome = await prisma.patientOutcome.create({
@@ -131,7 +131,7 @@ router.post("/", CLINICAL_ROLES, validateBody(OutcomeSchema), async (req, res, n
 });
 
 // PATCH /api/outcomes/:id
-router.patch("/:id", CLINICAL_ROLES, validateBody(OutcomeSchema.partial()), async (req, res, next) => {
+router.patch("/:id", authorizePermission("outcomes", "write"), validateBody(OutcomeSchema.partial()), async (req, res, next) => {
   try {
     const outcome = await prisma.patientOutcome.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!outcome) throw Errors.notFound("Outcome");
@@ -162,7 +162,7 @@ router.patch("/:id", CLINICAL_ROLES, validateBody(OutcomeSchema.partial()), asyn
 });
 
 // DELETE /api/outcomes/:id (soft-delete)
-router.delete("/:id", ADMIN_ROLES, async (req, res, next) => {
+router.delete("/:id", authorizePermission("outcomes", "write"), async (req, res, next) => {
   try {
     const outcome = await prisma.patientOutcome.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!outcome) throw Errors.notFound("Outcome");

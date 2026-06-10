@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,19 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, MapPin, Building2, Loader2, AlertTriangle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAreaClinicCascade } from "@/hooks/use-area-clinic-cascade";
 
 const patientSchema = z.object({
-  nhsNumber: z.string().min(10, "NHS Number must be at least 10 characters").max(10),
+  nhsNumber: z.string().regex(/^\d{10}$/, "NHS Number must be exactly 10 digits"),
   title: z.string().optional(),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email").optional().or(z.literal('')),
-  mobile: z.string().min(10, "Mobile number is required"),
+  mobile: z.string().regex(/^\+?[0-9\s\-()]{10,20}$/, "Please enter a valid mobile number"),
   gender: z.string().optional(),
   dob: z.string().optional(),
   programId: z.string().min(1, "Program is required"),
@@ -36,10 +36,12 @@ export default function NewPatientPage() {
   const queryClient = useQueryClient();
   const createPatient = useCreatePatient();
 
-  const { data: programs } = useListPrograms({ limit: 100 });
+  const [programQuery, setProgramQuery] = useState("");
+  const { data: programsData } = useListPrograms({ limit: 100, q: programQuery || undefined });
+  const programs = programsData?.data ?? [];
 
   // ── Area → Clinic cascade (tenant-aware) ─────────────────────────────────────
-  const { areaId, clinicId, setAreaId, setClinicId, areas, clinics, areasLoading, clinicsLoading, isTenantRequired } =
+  const { areaId, clinicId, setAreaId, setClinicId, setAreaQuery, setClinicQuery, areas, clinics, areasLoading, clinicsLoading, isTenantRequired } =
     useAreaClinicCascade();
 
   const form = useForm<PatientForm>({
@@ -108,7 +110,7 @@ export default function NewPatientPage() {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <Card>
+            <Card className="glass-card">
               <CardHeader>
                 <CardTitle>Demographics</CardTitle>
                 <CardDescription>Basic patient identification</CardDescription>
@@ -190,19 +192,17 @@ export default function NewPatientPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Gender</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select gender" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="MALE">Male</SelectItem>
-                          <SelectItem value="FEMALE">Female</SelectItem>
-                          <SelectItem value="OTHER">Other</SelectItem>
-                          <SelectItem value="NOT_SPECIFIED">Prefer not to say</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="Select gender"
+                        options={[
+                          { label: "Male", value: "MALE" },
+                          { label: "Female", value: "FEMALE" },
+                          { label: "Other", value: "OTHER" },
+                          { label: "Prefer not to say", value: "NOT_SPECIFIED" },
+                        ]}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -210,7 +210,7 @@ export default function NewPatientPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="glass-card">
               <CardHeader>
                 <CardTitle>Contact</CardTitle>
               </CardHeader>
@@ -244,7 +244,7 @@ export default function NewPatientPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="glass-card">
               <CardHeader>
                 <CardTitle>Clinical Assignments</CardTitle>
                 <CardDescription>
@@ -264,29 +264,6 @@ export default function NewPatientPage() {
                     </div>
                   </div>
                 )}
-                <FormField
-                  control={form.control}
-                  name="programId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Program</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select program" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {programs?.data.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 {/* STEP 1: Area selector */}
                 <FormField
                   control={form.control}
@@ -297,28 +274,20 @@ export default function NewPatientPage() {
                         <MapPin className="w-3.5 h-3.5" />
                         Area
                       </FormLabel>
-                      <Select
+                      <SearchableSelect
                         value={areaId}
                         onValueChange={(val) => {
                           setAreaId(val);
                           field.onChange(val);
+                          form.setValue("clinicId", "");
+                          form.setValue("programId", "");
                         }}
+                        onSearch={setAreaQuery}
                         disabled={areasLoading}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            {areasLoading
-                              ? <span className="flex items-center gap-2 text-muted-foreground"><Loader2 className="w-3 h-3 animate-spin" />Loading...</span>
-                              : <SelectValue placeholder="Select area" />
-                            }
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="max-h-64">
-                          {areas.map((a) => (
-                            <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        isLoading={areasLoading}
+                        placeholder="Select area"
+                        options={areas.map(a => ({ label: a.name, value: a.id }))}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -335,34 +304,40 @@ export default function NewPatientPage() {
                         Clinic
                         {areaId && <span className="text-xs text-muted-foreground font-normal ml-1">({clinics.length} available)</span>}
                       </FormLabel>
-                      <Select
+                      <SearchableSelect
                         value={clinicId}
                         onValueChange={(val) => {
                           setClinicId(val);
                           field.onChange(val);
+                          form.setValue("programId", "", { shouldValidate: true });
                         }}
+                        onSearch={setClinicQuery}
                         disabled={!areaId || clinicsLoading}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            {clinicsLoading
-                              ? <span className="flex items-center gap-2 text-muted-foreground"><Loader2 className="w-3 h-3 animate-spin" />Loading...</span>
-                              : !areaId
-                              ? <span className="text-muted-foreground">Select area first</span>
-                              : <SelectValue placeholder={clinics.length === 0 ? "No clinics in this area" : "Select clinic"} />
-                            }
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="max-h-64">
-                          {clinics.length === 0 && areaId && !clinicsLoading ? (
-                            <div className="py-4 text-center text-sm text-muted-foreground">No clinics found in this area</div>
-                          ) : (
-                            clinics.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                        isLoading={clinicsLoading}
+                        placeholder={!areaId ? "Select area first" : clinics.length === 0 ? "No clinics in this area" : "Select clinic"}
+                        emptyMessage="No clinics found in this area"
+                        options={clinics.map(c => ({ label: c.name, value: c.id }))}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* STEP 3: Program selector — disabled until clinic selected */}
+                <FormField
+                  control={form.control}
+                  name="programId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Program</FormLabel>
+                      <SearchableSelect
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder={!clinicId ? "Select clinic first" : "Select program"}
+                        disabled={!clinicId}
+                        options={programs.map(p => ({ label: p.name, value: p.id }))}
+                        onSearch={setProgramQuery}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}

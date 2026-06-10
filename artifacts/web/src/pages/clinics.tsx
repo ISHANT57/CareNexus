@@ -6,11 +6,12 @@ import {
   useDeleteClinic,
   getListClinicsQueryKey,
   useListAreas,
+  useListTenants,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Building2, Plus, ChevronLeft, ChevronRight, Pencil, Trash2, Search, X, Phone, Mail, MapPin } from "lucide-react";
+import { Building2, Plus, ChevronLeft, ChevronRight, Pencil, Trash2, Search, X, Phone, Mail, MapPin, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,10 +37,11 @@ import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-
+import { exportToCSV } from "@/lib/utils";
 const PAGE_SIZE = 20;
 
 interface ClinicFormState {
+  tenantId: string;
   name: string;
   areaId: string;
   address: string;
@@ -48,12 +50,13 @@ interface ClinicFormState {
   email: string;
 }
 
-const EMPTY_FORM: ClinicFormState = { name: "", areaId: "", address: "", city: "", phone: "", email: "" };
+const EMPTY_FORM: ClinicFormState = { tenantId: "", name: "", areaId: "", address: "", city: "", phone: "", email: "" };
 
 export default function ClinicsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filterTenant, setFilterTenant] = useState("");
   const [filterArea, setFilterArea] = useState("");
 
   useEffect(() => {
@@ -61,22 +64,34 @@ export default function ClinicsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  useEffect(() => { setPage(1); }, [filterArea]);
+  useEffect(() => { setPage(1); }, [filterArea, filterTenant]);
 
-  const { data, isLoading } = useListClinics({
-    page,
-    limit: PAGE_SIZE,
-    areaId: filterArea || undefined,
-  } as any);
-  // Fetch ALL areas (no page limit) — FIX for BUG-002
-  const { data: areasData, isLoading: areasLoading } = useListAreas({ limit: 500 });
+  const { data: tenantsData, isLoading: tenantsLoading } = useListTenants(
+    { limit: 500 },
+    { request: { headers: { "x-tenant-id": "ALL" } } }
+  );
+
+  const { data: areasData, isLoading: areasLoading } = useListAreas(
+    { limit: 500, tenantId: filterTenant || undefined } as any,
+    { request: { headers: { "x-tenant-id": "ALL" } } }
+  );
+
+  const { data, isLoading } = useListClinics(
+    {
+      page,
+      limit: PAGE_SIZE,
+      tenantId: filterTenant || undefined,
+      areaId: filterArea || undefined,
+    } as any,
+    { request: { headers: { "x-tenant-id": "ALL" } } }
+  );
   const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const createClinic = useCreateClinic();
-  const updateClinic = useUpdateClinic();
-  const deleteClinic = useDeleteClinic();
+  const createClinic = useCreateClinic({ request: { headers: { "x-tenant-id": "ALL" } } });
+  const updateClinic = useUpdateClinic({ request: { headers: { "x-tenant-id": "ALL" } } });
+  const deleteClinic = useDeleteClinic({ request: { headers: { "x-tenant-id": "ALL" } } });
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState<ClinicFormState>(EMPTY_FORM);
@@ -84,10 +99,45 @@ export default function ClinicsPage() {
   const [editId, setEditId] = useState("");
   const [editForm, setEditForm] = useState<ClinicFormState>(EMPTY_FORM);
 
-  const areaOptions = useMemo(
-    () => (areasData?.data ?? []).map((a: any) => ({ value: a.id, label: a.name })),
-    [areasData]
+  const { data: allAreasData, isLoading: allAreasLoading } = useListAreas(
+    { limit: 1000 },
+    { request: { headers: { "x-tenant-id": "ALL" } } }
   );
+
+  const { data: allClinicsData, isLoading: allClinicsLoading } = useListClinics(
+    { limit: 1000 },
+    { request: { headers: { "x-tenant-id": "ALL" } } }
+  );
+
+  const tenantOptions = useMemo(() => (tenantsData?.data ?? []).map((t: any) => ({ label: t.name, value: t.id })), [tenantsData]);
+  const areaOptions = useMemo(() => (areasData?.data ?? []).map((a: any) => ({ label: a.name, value: a.id })), [areasData]);
+
+  // Options for Area dropdown in Create/Edit forms (only areas belonging to selected tenant)
+  const createFormAreaOptions = useMemo(() => {
+    if (!createForm.tenantId || !allAreasData?.data) return [];
+    const tenantAreas = allAreasData.data.filter((a: any) => a.tenantId === createForm.tenantId);
+    return tenantAreas.map((a: any) => ({ label: a.name, value: a.id }));
+  }, [allAreasData, createForm.tenantId]);
+
+  const editFormAreaOptions = useMemo(() => {
+    if (!editForm.tenantId || !allAreasData?.data) return [];
+    const tenantAreas = allAreasData.data.filter((a: any) => a.tenantId === editForm.tenantId);
+    return tenantAreas.map((a: any) => ({ label: a.name, value: a.id }));
+  }, [allAreasData, editForm.tenantId]);
+
+  // Options for Clinic Name dropdown in Create/Edit forms (filtered by selected area name)
+  const getClinicOptionsForAreaId = (areaId: string) => {
+    if (!areaId || !allAreasData?.data) return [];
+    const area = allAreasData.data.find((a: any) => a.id === areaId);
+    if (!area) return [];
+    const clinicsForArea = allClinicsData?.data?.filter((c: any) => c.area?.name === area.name) ?? [];
+    const uniqueClinicNames = Array.from(new Set(clinicsForArea.map((c: any) => c.name)));
+    return uniqueClinicNames.map((name) => ({ label: name as string, value: name as string })).sort((a, b) => a.label.localeCompare(b.label));
+  };
+
+  const createFormClinicOptions = useMemo(() => getClinicOptionsForAreaId(createForm.areaId), [allAreasData, allClinicsData, createForm.areaId]);
+  const editFormClinicOptions = useMemo(() => getClinicOptionsForAreaId(editForm.areaId), [allAreasData, allClinicsData, editForm.areaId]);
+
 
   // Client-side filter for name search + area (API search not always available for clinics)
   const filteredClinics = useMemo(() => {
@@ -129,6 +179,7 @@ export default function ClinicsPage() {
   const openEdit = (clinic: any) => {
     setEditId(clinic.id);
     setEditForm({
+      tenantId: clinic.tenantId ?? clinic.area?.tenantId ?? "",
       name: clinic.name ?? "",
       areaId: clinic.area?.id ?? "",
       address: clinic.address ?? "",
@@ -157,17 +208,18 @@ export default function ClinicsPage() {
       });
       queryClient.invalidateQueries({ queryKey: getListClinicsQueryKey() });
       setIsEditOpen(false);
+      setEditForm(EMPTY_FORM);
       toast({ title: "Clinic updated successfully" });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Failed to update clinic", description: err.message });
     }
   };
 
-  const handleDeleteClinic = async (id: string) => {
+  const confirmDelete = async (id: string) => {
     try {
       await deleteClinic.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: getListClinicsQueryKey() });
-      toast({ title: "Clinic deleted" });
+      toast({ title: "Clinic deleted successfully" });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Failed to delete clinic", description: err.message });
     }
@@ -177,97 +229,159 @@ export default function ClinicsPage() {
     form,
     onChange,
     showArea = true,
+    areaOptions,
+    areasLoading,
+    clinicOptions,
+    clinicsLoading,
   }: {
     form: ClinicFormState;
     onChange: (f: ClinicFormState) => void;
     showArea?: boolean;
+    areaOptions: { label: string; value: string }[];
+    areasLoading: boolean;
+    clinicOptions: { label: string; value: string }[];
+    clinicsLoading: boolean;
   }) => (
-    <div className="grid gap-4 py-4 max-h-[65vh] overflow-y-auto pr-1">
-      <div className="grid gap-2">
-        <Label className="text-sm font-medium">Clinic Name <span className="text-destructive">*</span></Label>
-        <Input
-          value={form.name}
-          onChange={(e) => onChange({ ...form, name: e.target.value })}
-          placeholder="e.g. City General Clinic"
-        />
-      </div>
-      {showArea && (
+    <div className="grid gap-6 py-4 max-h-[65vh] overflow-y-auto pr-1">
+      {/* Location Hierarchy Section */}
+      <div className="space-y-4 p-4 border border-border/50 bg-muted/30 rounded-lg">
+        <h3 className="font-semibold text-sm text-primary mb-2 flex items-center gap-2">
+          <Building2 className="w-4 h-4" /> Location Hierarchy
+        </h3>
         <div className="grid gap-2">
-          <Label className="text-sm font-medium">Area <span className="text-destructive">*</span></Label>
+          <Label className="text-sm font-medium">Hospital / Tenant <span className="text-destructive">*</span></Label>
           <SearchableSelect
-            options={areaOptions}
-            value={form.areaId}
-            onValueChange={(v) => onChange({ ...form, areaId: v })}
-            placeholder="Select an area..."
-            searchPlaceholder="Search 195 areas..."
-            isLoading={areasLoading}
+            options={tenantOptions}
+            value={form.tenantId}
+            onValueChange={(v) => onChange({ ...form, tenantId: v, areaId: "", name: "" })}
+            placeholder="Select hospital..."
+            searchPlaceholder="Search hospitals..."
+            isLoading={tenantsLoading}
           />
-          <p className="text-xs text-muted-foreground">
-            All {areasData?.meta?.total ?? areaOptions.length} areas available
-          </p>
         </div>
-      )}
-      <div className="grid gap-2">
-        <Label className="text-sm font-medium">Address</Label>
-        <Input
-          value={form.address}
-          onChange={(e) => onChange({ ...form, address: e.target.value })}
-          placeholder="Street address"
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
+        {showArea && (
+          <div className="grid gap-2">
+            <Label className="text-sm font-medium">Area <span className="text-destructive">*</span></Label>
+            <SearchableSelect
+              options={areaOptions}
+              value={form.areaId}
+              onValueChange={(v) => onChange({ ...form, areaId: v, name: "" })}
+              placeholder={form.tenantId ? "Select an area..." : "Select hospital first..."}
+              searchPlaceholder="Search areas..."
+              isLoading={areasLoading}
+              disabled={!form.tenantId}
+            />
+            <p className="text-xs text-muted-foreground">
+              {areaOptions.length} areas available
+            </p>
+          </div>
+        )}
         <div className="grid gap-2">
-          <Label className="text-sm font-medium">City</Label>
-          <Input
-            value={form.city}
-            onChange={(e) => onChange({ ...form, city: e.target.value })}
-            placeholder="City"
-          />
-        </div>
-        <div className="grid gap-2">
-          <Label className="text-sm font-medium">Phone</Label>
-          <Input
-            value={form.phone}
-            onChange={(e) => onChange({ ...form, phone: e.target.value })}
-            placeholder="+44 000 000 0000"
+          <Label className="text-sm font-medium">Clinic Name <span className="text-destructive">*</span></Label>
+          <SearchableSelect
+            options={clinicOptions}
+            value={form.name}
+            onValueChange={(v) => onChange({ ...form, name: v })}
+            placeholder={form.areaId ? "Select a clinic..." : "Select area first..."}
+            searchPlaceholder="Search master clinics..."
+            isLoading={clinicsLoading}
+            disabled={!form.areaId}
           />
         </div>
       </div>
-      <div className="grid gap-2">
-        <Label className="text-sm font-medium">Email</Label>
-        <Input
-          value={form.email}
-          onChange={(e) => onChange({ ...form, email: e.target.value })}
-          type="email"
-          placeholder="contact@clinic.nhs.uk"
-        />
+
+      {/* Contact Details Section */}
+      <div className="space-y-4 p-4 border border-border/50 bg-muted/30 rounded-lg">
+        <h3 className="font-semibold text-sm text-primary mb-2">Contact Information</h3>
+        <div className="grid gap-2">
+          <Label className="text-sm font-medium">Address</Label>
+          <Input
+            value={form.address}
+            onChange={(e) => onChange({ ...form, address: e.target.value })}
+            placeholder="Street address"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-2">
+            <Label className="text-sm font-medium">City</Label>
+            <Input
+              value={form.city}
+              onChange={(e) => onChange({ ...form, city: e.target.value })}
+              placeholder="City"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label className="text-sm font-medium">Phone</Label>
+            <Input
+              value={form.phone}
+              onChange={(e) => onChange({ ...form, phone: e.target.value })}
+              placeholder="+44 000 000 0000"
+            />
+          </div>
+        </div>
+        <div className="grid gap-2">
+          <Label className="text-sm font-medium">Email</Label>
+          <Input
+            value={form.email}
+            onChange={(e) => onChange({ ...form, email: e.target.value })}
+            type="email"
+            placeholder="contact@clinic.nhs.uk"
+          />
+        </div>
       </div>
     </div>
   );
 
+  const handleExport = () => {
+    if (!filteredClinics.length) {
+      toast({ title: "No data", description: "There are no clinics to export." });
+      return;
+    }
+    const exportData = filteredClinics.map((c: any) => ({
+      ID: c.id,
+      "Clinic Name": c.name,
+      "Area Name": c.area?.name || "N/A",
+      Address: c.address || "N/A",
+      City: c.city || "N/A",
+      Phone: c.phone || "N/A",
+      Email: c.email || "N/A"
+    }));
+    exportToCSV(exportData, `clinics_export_${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
   return (
-    <div className="flex-1 overflow-y-auto bg-background">
-      {/* Header */}
-      <div className="bg-card border-b border-border px-8 py-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Clinics</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              {data?.meta?.total?.toLocaleString() ?? "—"} clinic locations across all areas.
-            </p>
-          </div>
+    <div className="page-container animate-in-up">
+      <div className="page-header">
+        <div>
+          <h1 className="text-h2">Clinics</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            {data?.meta?.total?.toLocaleString() ?? "—"} clinic locations across all areas.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !filteredClinics.length}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
-              <Button size="sm">
+              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Clinic
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent aria-describedby={undefined} className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Create New Clinic</DialogTitle>
               </DialogHeader>
-              <ClinicFormFields form={createForm} onChange={setCreateForm} />
+              <ClinicFormFields
+                form={createForm}
+                onChange={setCreateForm}
+                areaOptions={createFormAreaOptions}
+                areasLoading={allAreasLoading}
+                clinicOptions={createFormClinicOptions}
+                clinicsLoading={allClinicsLoading}
+              />
               <DialogFooter>
                 <Button variant="outline" onClick={() => { setIsCreateOpen(false); setCreateForm(EMPTY_FORM); }}>
                   Cancel
@@ -283,14 +397,21 @@ export default function ClinicsPage() {
           </Dialog>
         </div>
       </div>
-
       {/* Edit dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent aria-describedby={undefined} className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Clinic</DialogTitle>
           </DialogHeader>
-          <ClinicFormFields form={editForm} onChange={setEditForm} showArea={false} />
+          <ClinicFormFields
+            form={editForm}
+            onChange={setEditForm}
+            showArea={false}
+            areaOptions={editFormAreaOptions}
+            areasLoading={allAreasLoading}
+            clinicOptions={editFormClinicOptions}
+            clinicsLoading={allClinicsLoading}
+          />
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
             <Button onClick={handleEditClinic} disabled={updateClinic.isPending || !editForm.name.trim()}>
@@ -434,16 +555,16 @@ export default function ClinicsPage() {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Clinic</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete "{clinic.name}"? This action cannot be undone and will affect all associated patients and appointments.
+                                      Are you sure you want to delete "{clinic.name}"? This action cannot be undone and will affect all users assigned to this clinic.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                     <AlertDialogAction
-                                      onClick={() => handleDeleteClinic(clinic.id)}
+                                      onClick={() => confirmDelete(clinic.id)}
                                       className="bg-destructive hover:bg-destructive/90"
                                     >
-                                      Delete Clinic
+                                      Delete
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>

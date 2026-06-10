@@ -2,6 +2,7 @@ import { useParams, Link } from "wouter";
 import {
   useGetPatient, getGetPatientQueryKey,
   useUpdatePatientStatus,
+  useGetPatientRiskScore, getGetPatientRiskScoreQueryKey,
   useGetPatientJourney, useCreatePatientJourney, getGetPatientJourneyQueryKey,
   useListAssignments, useCreateAssignment, useDeleteAssignment, getListAssignmentsQueryKey,
   useListUsers,
@@ -10,10 +11,10 @@ import {
   useListProgramEnrollments, useCreateProgramEnrollment, useCompleteProgramEnrollment, useCancelProgramEnrollment, getListProgramEnrollmentsQueryKey,
   useListPrograms,
   useListAppointments, useCreateAppointment, useCancelAppointment, useCompleteAppointment, useUpdateAppointment, getListAppointmentsQueryKey,
-  useListClinics,
   useListConsultations, useCreateConsultation, useUpdateConsultation, getListConsultationsQueryKey,
   useListOutcomes, useCreateOutcome, getListOutcomesQueryKey,
   useListOutcomeMetrics,
+  useListTasks, useCreateTask, useCompleteTask, useUpdateTask, useDeleteTask, getListTasksQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -22,15 +23,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, MapPin, Phone, Mail, Calendar, Building2, Activity, ArrowLeft, ChevronDown, Plus, Trash2, UserPlus, MessageSquare, Send, Upload, FileText, Download, CheckCircle, XCircle, Pencil, ClipboardList, Clock, TrendingUp, AlertCircle } from "lucide-react";
+import { User, MapPin, Phone, Mail, Calendar, Building2, Activity, ArrowLeft, ChevronDown, Plus, Trash2, UserPlus, MessageSquare, Send, Upload, FileText, Download, CheckCircle, XCircle, Pencil, ClipboardList, Clock, TrendingUp, AlertCircle, Stethoscope, Pill, LogOut, PlayCircle, StopCircle, UserCheck, CalendarCheck, FileEdit } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAreaClinicCascade } from "@/hooks/use-area-clinic-cascade";
+import { cn } from "@/lib/utils";
 
 const emptyConsultationForm = {
   chiefComplaint: "", symptoms: "", observations: "", diagnosis: "",
@@ -76,6 +80,32 @@ const ConsultationFormFields = ({ form, setForm }: { form: typeof emptyConsultat
     </div>
   </div>
 );
+
+const getJourneyEventConfig = (status: string) => {
+  switch (status) {
+    case "REGISTERED":
+    case "NEW":
+      return { icon: <UserPlus className="w-4 h-4" />, color: "text-blue-500", bg: "bg-blue-500/10 border-blue-500/20", label: "Registered" };
+    case "ONBOARDED":
+      return { icon: <UserCheck className="w-4 h-4" />, color: "text-emerald-500", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Onboarded" };
+    case "APPOINTMENT_COMPLETED":
+      return { icon: <CalendarCheck className="w-4 h-4" />, color: "text-indigo-500", bg: "bg-indigo-500/10 border-indigo-500/20", label: "Appointment" };
+    case "CONSULTATION_COMPLETED":
+      return { icon: <Stethoscope className="w-4 h-4" />, color: "text-purple-500", bg: "bg-purple-500/10 border-purple-500/20", label: "Consultation" };
+    case "MEDICATION_REQUIRED":
+      return { icon: <Pill className="w-4 h-4" />, color: "text-amber-500", bg: "bg-amber-500/10 border-amber-500/20", label: "Medication" };
+    case "DISCHARGE":
+      return { icon: <LogOut className="w-4 h-4" />, color: "text-rose-500", bg: "bg-rose-500/10 border-rose-500/20", label: "Discharged" };
+    case "ENROLLED":
+      return { icon: <PlayCircle className="w-4 h-4" />, color: "text-teal-500", bg: "bg-teal-500/10 border-teal-500/20", label: "Enrolled" };
+    case "UNENROLLED":
+      return { icon: <StopCircle className="w-4 h-4" />, color: "text-orange-500", bg: "bg-orange-500/10 border-orange-500/20", label: "Unenrolled" };
+    case "PSI":
+      return { icon: <FileEdit className="w-4 h-4" />, color: "text-cyan-500", bg: "bg-cyan-500/10 border-cyan-500/20", label: "PSI Logged" };
+    default:
+      return { icon: <Activity className="w-4 h-4" />, color: "text-primary", bg: "bg-primary/10 border-primary/20", label: status };
+  }
+};
 
 export default function PatientDetailPage() {
   const params = useParams();
@@ -125,7 +155,16 @@ export default function PatientDetailPage() {
   const updateAppointmentMutation = useUpdateAppointment();
   const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
   const [appointmentDoctorId, setAppointmentDoctorId] = useState("");
-  const [appointmentClinicId, setAppointmentClinicId] = useState("");
+  const {
+    areaId: appointmentAreaId,
+    clinicId: appointmentClinicId,
+    setAreaId: setAppointmentAreaId,
+    setClinicId: setAppointmentClinicId,
+    areas: appointmentAreas,
+    clinics: appointmentClinics,
+    areasLoading: appointmentAreasLoading,
+    clinicsLoading: appointmentClinicsLoading,
+  } = useAreaClinicCascade();
   const [appointmentDate, setAppointmentDate] = useState("");
   const [appointmentTime, setAppointmentTime] = useState("");
   const [isEditApptDialogOpen, setIsEditApptDialogOpen] = useState(false);
@@ -146,6 +185,9 @@ export default function PatientDetailPage() {
   const [editConsultationId, setEditConsultationId] = useState("");
   const [editConsultationForm, setEditConsultationForm] = useState(emptyConsultationForm);
 
+  const [filterConsDoctor, setFilterConsDoctor] = useState("");
+  const [filterConsDate, setFilterConsDate] = useState("");
+
   // ── Outcomes ───────────────────────────────────────────────────────────────────────
   const createOutcome = useCreateOutcome();
   const [isOutcomeDialogOpen, setIsOutcomeDialogOpen] = useState(false);
@@ -156,12 +198,28 @@ export default function PatientDetailPage() {
   const [outcomeProgramId, setOutcomeProgramId] = useState("");
   const [outcomeNotes, setOutcomeNotes] = useState("");
 
+  // ── Tasks ──────────────────────────────────────────────────────────────────────────
+  const createTask = useCreateTask();
+  const completeTaskMutation = useCompleteTask();
+  const updateTaskMutation = useUpdateTask();
+  const deleteTaskMutation = useDeleteTask();
+  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskDescription, setTaskDescription] = useState("");
+  const [taskPriority, setTaskPriority] = useState<"LOW" | "MEDIUM" | "HIGH" | "CRITICAL">("MEDIUM");
+  const [taskAssignedTo, setTaskAssignedTo] = useState("");
+  const [taskDueDate, setTaskDueDate] = useState("");
+  const [taskDueTime, setTaskDueTime] = useState("");
+
   // ── Communications ───────────────────────────────────────────────────────────
   const [commType, setCommType] = useState<"SMS" | "EMAIL">("SMS");
 
   // ── Queries ───────────────────────────────────────────────────────────────────
   const { data: patient, isLoading } = useGetPatient(id, {
     query: { enabled: !isNew && !!id, queryKey: getGetPatientQueryKey(id) }
+  });
+  const { data: riskScore, isLoading: isRiskLoading } = useGetPatientRiskScore(id, {
+    query: { enabled: !isNew && !!id, queryKey: getGetPatientRiskScoreQueryKey(id) }
   });
   const { data: journeyList, isLoading: isJourneyLoading } = useGetPatientJourney(id, {
     query: { enabled: !isNew && !!id, queryKey: getGetPatientJourneyQueryKey(id) }
@@ -171,7 +229,7 @@ export default function PatientDetailPage() {
     { patientId: id },
     { query: { enabled: !isNew && !!id, queryKey: assignmentsKey } }
   );
-  const { data: usersData } = useListUsers({ limit: 200 }, { query: { enabled: isAssignDialogOpen || isAppointmentDialogOpen, queryKey: ["users-all"] } });
+  const { data: usersData } = useListUsers({ limit: 200 }, { query: { enabled: isAssignDialogOpen || isAppointmentDialogOpen || isTaskDialogOpen, queryKey: ["users-all"] } });
   const smsKey = getListCommunicationsQueryKey({ patientId: id });
   const { data: smsHistory, isLoading: isSmsLoading } = useListCommunications(
     { patientId: id },
@@ -193,7 +251,6 @@ export default function PatientDetailPage() {
     { patientId: id },
     { query: { enabled: !isNew && !!id, queryKey: appointmentsKey } }
   );
-  const { data: clinicsData } = useListClinics({ limit: 100 }, { query: { enabled: isAppointmentDialogOpen, queryKey: ["clinics", "list"] } });
   const consultationsKey = getListConsultationsQueryKey({ patientId: id });
   const { data: consultationsData, isLoading: isConsultationsLoading } = useListConsultations(
     { patientId: id },
@@ -208,6 +265,11 @@ export default function PatientDetailPage() {
     { limit: 100 },
     { query: { enabled: isOutcomeDialogOpen, queryKey: ["outcome-metrics", "active"] } }
   );
+  const tasksKey = getListTasksQueryKey({ patientId: id });
+  const { data: tasksData, isLoading: isTasksLoading } = useListTasks(
+    { patientId: id },
+    { query: { enabled: !isNew && !!id, queryKey: tasksKey } }
+  );
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
 
@@ -217,9 +279,23 @@ export default function PatientDetailPage() {
       queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) });
       toast({ title: "Status updated", description: `Patient status changed to ${newStatus}` });
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Failed to update status", description: err.message });
+      toast({ variant: "destructive", title: "Update failed", description: err.message });
     }
   };
+
+  const filteredConsultations = (consultationsData?.data ?? []).filter((cons) => {
+    if (filterConsDoctor && cons.doctorId !== filterConsDoctor) return false;
+    if (filterConsDate && cons.consultationDate) {
+      const consDate = format(new Date(cons.consultationDate), "yyyy-MM-dd");
+      if (consDate !== filterConsDate) return false;
+    }
+    return true;
+  });
+
+  const consDoctorOptions = Array.from(new Set((consultationsData?.data ?? []).map(c => c.doctor?.id).filter(Boolean))).map(docId => {
+    const doc = consultationsData?.data?.find(c => c.doctor?.id === docId)?.doctor;
+    return { label: `Dr. ${doc?.firstName} ${doc?.lastName}`, value: docId! };
+  });
 
   const handleRecordJourney = async () => {
     try {
@@ -236,7 +312,6 @@ export default function PatientDetailPage() {
   const handleAssignDoctor = async () => {
     if (!selectedDoctorId) return;
     try {
-      // Use the patient's existing clinicId and areaId for context
       const clinicId = patient?.clinic?.id ?? "";
       const areaId = patient?.area?.id ?? "";
       if (!clinicId || !areaId) {
@@ -347,7 +422,7 @@ export default function PatientDetailPage() {
       });
       queryClient.invalidateQueries({ queryKey: appointmentsKey });
       setIsAppointmentDialogOpen(false);
-      setAppointmentDoctorId(""); setAppointmentClinicId(""); setAppointmentDate(""); setAppointmentTime("");
+      setAppointmentDoctorId(""); setAppointmentAreaId(""); setAppointmentClinicId(""); setAppointmentDate(""); setAppointmentTime("");
       toast({ title: "Appointment scheduled successfully" });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Failed to schedule", description: err.message });
@@ -392,7 +467,6 @@ export default function PatientDetailPage() {
     }
   };
 
-  // Opens Record Consultation dialog pre-selecting a specific appointment
   const openRecordConsultation = (appointmentId?: string) => {
     if (appointmentId) setSelectedAppointmentId(appointmentId);
     setConsultationForm(emptyConsultationForm);
@@ -467,24 +541,34 @@ export default function PatientDetailPage() {
   if (!patient) return <div className="p-8">Patient not found</div>;
 
   return (
-    <div className="p-8 flex-1 overflow-y-auto bg-muted/10">
+    <div className="page-container animate-in-up">
       {/* ── Patient Header (always visible) ──────────────────────────────────── */}
-      <div className="mb-6">
-        <Link href="/patients">
+      <div className="page-header border-b border-border/50 pb-6 mb-6">
+        <div className="flex w-full justify-between items-start">
+          <div className="space-y-4">
+            <Link href="/patients">
           <Button variant="ghost" size="sm" className="mb-4 -ml-3 text-muted-foreground">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Patients
           </Button>
         </Link>
-        <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
               <User className="w-8 h-8 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">
-                {patient.title ? `${patient.title} ` : ''}{patient.firstName} {patient.lastName}
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold tracking-tight">
+                  {patient.title ? `${patient.title} ` : ''}{patient.firstName} {patient.lastName}
+                </h1>
+                {isRiskLoading ? (
+                  <Skeleton className="h-6 w-16" />
+                ) : riskScore ? (
+                  <Badge variant={riskScore.riskLevel === 'HIGH' || riskScore.riskLevel === 'CRITICAL' ? 'destructive' : riskScore.riskLevel === 'MEDIUM' ? 'default' : 'secondary'} className="uppercase">
+                    {riskScore.riskLevel || "UNKNOWN"}
+                  </Badge>
+                ) : null}
+              </div>
               <div className="flex items-center gap-3 mt-2 text-muted-foreground text-sm">
                 <span className="font-mono bg-muted px-2 py-0.5 rounded">{patient.nhsNumber}</span>
                 <span>•</span>
@@ -493,27 +577,54 @@ export default function PatientDetailPage() {
                 <span>DOB: {patient.dob || 'Unknown'}</span>
               </div>
             </div>
+            </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 px-3" disabled={updatePatient.isPending}>
-                <Badge variant={patient.status === 'ACTIVE' ? 'default' : 'secondary'} className="pointer-events-none">
-                  {patient.status}
-                </Badge>
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleStatusChange('ACTIVE')}>Set to ACTIVE</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleStatusChange('INACTIVE')}>Set to INACTIVE</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          
+          <div className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2 px-3 shadow-sm" disabled={updatePatient.isPending}>
+                  <Badge variant={patient.status === 'ACTIVE' ? 'default' : 'secondary'} className="pointer-events-none">
+                    {patient.status}
+                  </Badge>
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleStatusChange('ACTIVE')}>Set to ACTIVE</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleStatusChange('INACTIVE')}>Set to INACTIVE</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Action Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
+                  Quick Actions <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setIsAppointmentDialogOpen(true)}>
+                  <Calendar className="w-4 h-4 mr-2" /> New Appointment
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsConsultationDialogOpen(true)}>
+                  <ClipboardList className="w-4 h-4 mr-2" /> Record Consultation
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsJourneyDialogOpen(true)}>
+                  <Activity className="w-4 h-4 mr-2" /> Log Journey Event
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsSmsDialogOpen(true)}>
+                  <MessageSquare className="w-4 h-4 mr-2" /> Send Message
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
       {/* ── Record Consultation Dialog ─────────────────────────────────────────── */}
       <Dialog open={isConsultationDialogOpen} onOpenChange={setIsConsultationDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent aria-describedby={undefined} className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Record Consultation</DialogTitle>
           </DialogHeader>
@@ -544,7 +655,7 @@ export default function PatientDetailPage() {
 
       {/* ── Edit Consultation Dialog ──────────────────────────────────────────── */}
       <Dialog open={isEditConsultationDialogOpen} onOpenChange={setIsEditConsultationDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent aria-describedby={undefined} className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Consultation Notes</DialogTitle>
           </DialogHeader>
@@ -562,7 +673,7 @@ export default function PatientDetailPage() {
 
       {/* ── Edit Appointment Dialog ───────────────────────────────────────────── */}
       <Dialog open={isEditApptDialogOpen} onOpenChange={setIsEditApptDialogOpen}>
-        <DialogContent>
+        <DialogContent aria-describedby={undefined}>
           <DialogHeader><DialogTitle>Edit Appointment</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
@@ -592,22 +703,27 @@ export default function PatientDetailPage() {
       </Dialog>
 
       {/* ── Tabs ─────────────────────────────────────────────────────────────── */}
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="w-full justify-start bg-muted/50 rounded-lg p-1 h-auto flex-wrap gap-1">
-          <TabsTrigger value="overview" className="gap-2"><User className="w-4 h-4" />Overview</TabsTrigger>
-          <TabsTrigger value="journey" className="gap-2"><Activity className="w-4 h-4" />Journey</TabsTrigger>
-          <TabsTrigger value="appointments" className="gap-2"><Calendar className="w-4 h-4" />Appointments</TabsTrigger>
-          <TabsTrigger value="consultations" className="gap-2"><ClipboardList className="w-4 h-4" />Consultations</TabsTrigger>
-          <TabsTrigger value="outcomes" className="gap-2"><Activity className="w-4 h-4" />Outcomes</TabsTrigger>
-          <TabsTrigger value="files" className="gap-2"><FileText className="w-4 h-4" />Files</TabsTrigger>
-          <TabsTrigger value="communications" className="gap-2"><MessageSquare className="w-4 h-4" />Communications</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="overview" className="flex flex-col md:flex-row gap-6 lg:gap-10 items-start">
+        <div className="w-full md:w-56 shrink-0 md:sticky md:top-6">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 px-2">Clinical Record</div>
+          <TabsList className="flex flex-row md:flex-col justify-start bg-transparent space-y-1 w-full h-auto p-0 border-r-0 md:border-r border-border/50 rounded-none pr-4 overflow-x-auto md:overflow-visible">
+            <TabsTrigger value="overview" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><User className="w-4 h-4 mr-2" />Overview</TabsTrigger>
+            <TabsTrigger value="journey" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><Activity className="w-4 h-4 mr-2" />Journey</TabsTrigger>
+            <TabsTrigger value="appointments" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><Calendar className="w-4 h-4 mr-2" />Appointments</TabsTrigger>
+            <TabsTrigger value="consultations" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><ClipboardList className="w-4 h-4 mr-2" />Consultations</TabsTrigger>
+            <TabsTrigger value="outcomes" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><Activity className="w-4 h-4 mr-2" />Outcomes</TabsTrigger>
+            <TabsTrigger value="tasks" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><ClipboardList className="w-4 h-4 mr-2" />Tasks</TabsTrigger>
+            <TabsTrigger value="files" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><FileText className="w-4 h-4 mr-2" />Files</TabsTrigger>
+            <TabsTrigger value="communications" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><MessageSquare className="w-4 h-4 mr-2" />Communications</TabsTrigger>
+          </TabsList>
+        </div>
+        <div className="flex-1 min-w-0 w-full">
 
         {/* ── OVERVIEW TAB ─────────────────────────────────────────────────── */}
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="space-y-6 animate-in-up">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              <Card>
+              <Card className="glass-card">
                 <CardHeader><CardTitle className="text-lg">Contact Information</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-2 gap-4">
                   <div className="flex items-start gap-3">
@@ -636,7 +752,7 @@ export default function PatientDetailPage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="glass-card">
                 <CardHeader><CardTitle className="text-lg">Care Details</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-6">
@@ -660,15 +776,67 @@ export default function PatientDetailPage() {
                 </CardContent>
               </Card>
 
+              {/* Risk Profile */}
+              <Card className="glass-card">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-primary" />
+                      Risk Profile
+                    </CardTitle>
+                    {isRiskLoading ? (
+                      <Skeleton className="h-6 w-16" />
+                    ) : riskScore ? (
+                      <Badge variant={riskScore.riskLevel === 'HIGH' || riskScore.riskLevel === 'CRITICAL' ? 'destructive' : riskScore.riskLevel === 'MEDIUM' ? 'default' : 'secondary'} className="uppercase">
+                        {riskScore.riskLevel || "UNKNOWN"}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline">Not Scored</Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {isRiskLoading ? (
+                    <Skeleton className="h-10 w-full" />
+                  ) : riskScore ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4 pt-2">
+                        <div className="text-4xl font-bold tracking-tight text-primary">{riskScore.riskScore ?? "N/A"}</div>
+                        <div className="text-sm text-muted-foreground leading-tight">Total<br />Risk Score</div>
+                      </div>
+                      {riskScore.factors && riskScore.factors.length > 0 && (
+                        <div className="space-y-2 mt-4 pt-4 border-t border-border">
+                          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Contributing Factors</h4>
+                          {riskScore.factors.map((f: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50 border border-border/50">
+                              <span className="flex items-center gap-2 font-medium">
+                                <AlertCircle className="w-3.5 h-3.5 text-muted-foreground" />
+                                {f.reason}
+                              </span>
+                              <span className="font-bold text-destructive">+{f.scoreContribution}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground py-2 text-center bg-muted/30 rounded-lg p-4 border border-dashed border-border mt-2">
+                      <Activity className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                      No risk score calculated for this patient yet.<br/>Scores are updated nightly based on outcomes.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Program Enrollments */}
-              <Card>
+              <Card className="glass-card">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-lg">Program Enrollments</CardTitle>
                   <Dialog open={isEnrollDialogOpen} onOpenChange={setIsEnrollDialogOpen}>
                     <DialogTrigger asChild>
                       <Button size="sm" variant="outline" className="h-8"><Plus className="w-4 h-4 mr-1" /> Enroll</Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent aria-describedby={undefined}>
                       <DialogHeader><DialogTitle>Enroll in Program</DialogTitle></DialogHeader>
                       <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
@@ -751,7 +919,7 @@ export default function PatientDetailPage() {
                     <DialogTrigger asChild>
                       <Button size="sm" variant="outline" className="h-8"><UserPlus className="w-4 h-4 mr-1" /> Assign Doctor</Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent aria-describedby={undefined}>
                       <DialogHeader><DialogTitle>Assign Doctor to Patient</DialogTitle></DialogHeader>
                       <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
@@ -810,15 +978,15 @@ export default function PatientDetailPage() {
         </TabsContent>
 
         {/* ── JOURNEY TAB ──────────────────────────────────────────────────── */}
-        <TabsContent value="journey">
-          <Card>
+        <TabsContent value="journey" className="animate-in-up">
+          <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg">Patient Journey</CardTitle>
               <Dialog open={isJourneyDialogOpen} onOpenChange={setIsJourneyDialogOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline" className="h-8"><Plus className="w-4 h-4 mr-1" /> Record Event</Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent aria-describedby={undefined}>
                   <DialogHeader><DialogTitle>Record Journey Event</DialogTitle></DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
@@ -849,22 +1017,35 @@ export default function PatientDetailPage() {
               {isJourneyLoading ? (
                 <div className="space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
               ) : journeyList?.data?.length ? (
-                <div className="relative border-l ml-3 pl-4 space-y-6">
-                  {journeyList.data.map((event) => (
-                    <div key={event.id} className="relative">
-                      <div className="absolute -left-[23px] top-1 h-3 w-3 rounded-full bg-primary ring-4 ring-background" />
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">{event.status}</Badge>
-                          <span className="text-xs text-muted-foreground">{format(new Date(event.createdAt), 'MMM d, yyyy HH:mm')}</span>
+                <div className="relative border-l-2 border-border/60 ml-4 pl-6 space-y-8">
+                  {journeyList.data.map((event) => {
+                    const cfg = getJourneyEventConfig(event.status);
+                    return (
+                      <div key={event.id} className="relative group">
+                        <div className={`absolute -left-[35px] top-1 flex h-6 w-6 items-center justify-center rounded-full border ${cfg.bg} ${cfg.color} ring-4 ring-background transition-transform group-hover:scale-110`}>
+                          {cfg.icon}
                         </div>
-                        {event.notes && <p className="text-sm mt-1">{event.notes}</p>}
-                        <span className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                          <User className="w-3 h-3" />{event.actedByUser?.firstName} {event.actedByUser?.lastName}
-                        </span>
+                        <div className="flex flex-col gap-1.5 p-3 rounded-lg border border-border/50 bg-card/50 shadow-sm transition-colors hover:bg-muted/30">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className={`text-xs font-semibold border-transparent ${cfg.bg} ${cfg.color}`}>{cfg.label}</Badge>
+                            </div>
+                            <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5" />
+                              {format(new Date(event.createdAt), 'MMM d, yyyy • h:mm a')}
+                            </span>
+                          </div>
+                          {event.notes && <p className="text-sm text-foreground/90 mt-1 leading-relaxed">{event.notes}</p>}
+                          {event.actedByUser && (
+                            <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground">
+                              <User className="w-3.5 h-3.5" />
+                              <span>Recorded by Dr. {event.actedByUser.lastName}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : <div className="text-sm text-muted-foreground py-4 text-center">No journey events recorded</div>}
             </CardContent>
@@ -872,15 +1053,15 @@ export default function PatientDetailPage() {
         </TabsContent>
 
         {/* ── APPOINTMENTS TAB ──────────────────────────────────────────────── */}
-        <TabsContent value="appointments">
-          <Card>
+        <TabsContent value="appointments" className="animate-in-up">
+          <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg flex items-center gap-2"><Calendar className="w-4 h-4" /> Appointments</CardTitle>
               <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline" className="h-8"><Plus className="w-4 h-4 mr-1" /> Schedule</Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent aria-describedby={undefined}>
                   <DialogHeader><DialogTitle>Schedule Appointment</DialogTitle></DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
@@ -895,13 +1076,32 @@ export default function PatientDetailPage() {
                       </Select>
                     </div>
                     <div className="grid gap-2">
-                      <Label>Clinic</Label>
-                      <Select value={appointmentClinicId} onValueChange={setAppointmentClinicId}>
-                        <SelectTrigger><SelectValue placeholder="Select clinic..." /></SelectTrigger>
+                      <Label>Area</Label>
+                      <Select value={appointmentAreaId} onValueChange={setAppointmentAreaId}>
+                        <SelectTrigger>
+                          {appointmentAreasLoading ? <span className="text-muted-foreground">Loading...</span> : <SelectValue placeholder="Select area..." />}
+                        </SelectTrigger>
                         <SelectContent>
-                          {clinicsData?.data?.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          {appointmentAreas.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                           ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Clinic</Label>
+                      <Select value={appointmentClinicId} onValueChange={setAppointmentClinicId} disabled={!appointmentAreaId || appointmentClinicsLoading}>
+                        <SelectTrigger>
+                          {appointmentClinicsLoading ? <span className="text-muted-foreground">Loading...</span> : !appointmentAreaId ? <span className="text-muted-foreground">Select area first</span> : <SelectValue placeholder="Select clinic..." />}
+                        </SelectTrigger>
+                        <SelectContent>
+                          {appointmentClinics.length === 0 && appointmentAreaId && !appointmentClinicsLoading ? (
+                            <div className="py-2 text-center text-sm text-muted-foreground">No clinics in this area</div>
+                          ) : (
+                            appointmentClinics.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -998,18 +1198,35 @@ export default function PatientDetailPage() {
         </TabsContent>
 
         {/* ── CONSULTATIONS TAB ─────────────────────────────────────────────── */}
-        <TabsContent value="consultations">
-          <Card>
+        <TabsContent value="consultations" className="animate-in-up">
+          <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg flex items-center gap-2"><ClipboardList className="w-4 h-4" /> Consultation History</CardTitle>
-              <Button size="sm" variant="outline" className="h-8" onClick={() => openRecordConsultation()}>
-                <Plus className="w-4 h-4 mr-1" /> Record
-              </Button>
+              <div className="flex gap-2">
+                <Select value={filterConsDoctor} onValueChange={setFilterConsDoctor}>
+                  <SelectTrigger className="w-32 h-8 text-xs">
+                    <SelectValue placeholder="All Doctors" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Doctors</SelectItem>
+                    {consDoctorOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <input 
+                  type="date" 
+                  value={filterConsDate} 
+                  onChange={e => setFilterConsDate(e.target.value)} 
+                  className="flex h-8 rounded-md border border-input bg-background px-2 text-xs w-32"
+                />
+                <Button size="sm" variant="outline" className="h-8" onClick={() => openRecordConsultation()}>
+                  <Plus className="w-4 h-4 mr-1" /> Record
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              {isConsultationsLoading ? <Skeleton className="h-10 w-full" /> : consultationsData?.data?.length ? (
+              {isConsultationsLoading ? <Skeleton className="h-10 w-full" /> : filteredConsultations.length ? (
                 <div className="space-y-4">
-                  {consultationsData.data.map(cons => (
+                  {filteredConsultations.map(cons => (
                     <div key={cons.id} className="p-4 border rounded-lg bg-card/50 text-sm space-y-3">
                       <div className="flex justify-between items-start">
                         <div>
@@ -1063,8 +1280,8 @@ export default function PatientDetailPage() {
         </TabsContent>
 
         {/* ── OUTCOMES TAB ───────────────────────────────────────────────────── */}
-        <TabsContent value="outcomes">
-          <Card>
+        <TabsContent value="outcomes" className="animate-in-up">
+          <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" /> Clinical Outcomes
@@ -1075,7 +1292,7 @@ export default function PatientDetailPage() {
                     <Plus className="w-4 h-4 mr-1" /> Record Outcome
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-lg">
+                <DialogContent aria-describedby={undefined} className="max-w-lg">
                   <DialogHeader><DialogTitle>Record Clinical Outcome</DialogTitle></DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
@@ -1225,16 +1442,255 @@ export default function PatientDetailPage() {
           </Card>
         </TabsContent>
 
+        {/* ── TASKS TAB ──────────────────────────────────────────────────────── */}
+        <TabsContent value="tasks" className="animate-in-up">
+          <Card className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ClipboardList className="w-4 h-4" /> Care Tasks
+              </CardTitle>
+              <Dialog open={isTaskDialogOpen} onOpenChange={(o) => { setIsTaskDialogOpen(o); if (!o) { setTaskTitle(""); setTaskDescription(""); setTaskPriority("MEDIUM"); setTaskAssignedTo(""); setTaskDueDate(""); setTaskDueTime(""); } }}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="h-8">
+                    <Plus className="w-4 h-4 mr-1" /> Add Task
+                  </Button>
+                </DialogTrigger>
+                <DialogContent aria-describedby={undefined} className="max-w-lg">
+                  <DialogHeader><DialogTitle>Add Care Task</DialogTitle></DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label>Task Title <span className="text-destructive">*</span></Label>
+                      <Input value={taskTitle} onChange={(e: any) => setTaskTitle(e.target.value)} placeholder="e.g. Schedule blood test..." />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Description</Label>
+                      <Textarea value={taskDescription} onChange={(e: any) => setTaskDescription(e.target.value)} placeholder="Provide task details..." rows={3} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Assignee <span className="text-destructive">*</span></Label>
+                      <Select value={taskAssignedTo} onValueChange={setTaskAssignedTo}>
+                        <SelectTrigger><SelectValue placeholder="Select team member..." /></SelectTrigger>
+                        <SelectContent>
+                          {(usersData?.data ?? []).map((u: any) => (
+                            <SelectItem key={u.id} value={u.id}>
+                              {u.firstName} {u.lastName} — {u.role?.name ?? "Staff"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-2">
+                        <Label>Priority</Label>
+                        <Select value={taskPriority} onValueChange={(val: any) => setTaskPriority(val)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="LOW">Low</SelectItem>
+                            <SelectItem value="MEDIUM">Medium</SelectItem>
+                            <SelectItem value="HIGH">High</SelectItem>
+                            <SelectItem value="CRITICAL">Critical</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="grid gap-2">
+                          <Label>Due Date <span className="text-destructive">*</span></Label>
+                          <input type="date" value={taskDueDate} onChange={e => setTaskDueDate(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label>Time <span className="text-destructive">*</span></Label>
+                          <input type="time" value={taskDueTime} onChange={e => setTaskDueTime(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsTaskDialogOpen(false)}>Cancel</Button>
+                    <Button
+                      onClick={async () => {
+                        if (!taskTitle.trim() || !taskAssignedTo || !taskDueDate || !taskDueTime) {
+                          toast({ variant: "destructive", title: "All required fields must be filled" }); return;
+                        }
+                        try {
+                          const datetimeStr = `${taskDueDate}T${taskDueTime}:00Z`;
+                          await createTask.mutateAsync({ data: {
+                            patientId: id,
+                            assignedTo: taskAssignedTo,
+                            title: taskTitle.trim(),
+                            description: taskDescription.trim() || undefined,
+                            priority: taskPriority,
+                            dueDate: datetimeStr,
+                          }});
+                          queryClient.invalidateQueries({ queryKey: tasksKey });
+                          setIsTaskDialogOpen(false);
+                          toast({ title: "Care task created successfully" });
+                        } catch (err: any) {
+                          toast({ variant: "destructive", title: "Failed to create task", description: err.message });
+                        }
+                      }}
+                      disabled={createTask.isPending || !taskTitle.trim() || !taskAssignedTo || !taskDueDate || !taskDueTime}
+                    >
+                      {createTask.isPending ? "Creating..." : "Add Task"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {isTasksLoading ? (
+                <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}</div>
+              ) : !tasksData?.data?.length ? (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <ClipboardList className="w-10 h-10 mb-3 opacity-20" />
+                  <p className="font-medium text-sm">No tasks assigned yet</p>
+                  <p className="text-xs mt-1">Create a care task to coordinate patient support</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {tasksData.data.map((task: any) => {
+                    const isTaskOverdue = task.isOverdue || (task.status !== "COMPLETED" && new Date(task.dueDate) < new Date());
+                    const priorityConfig = {
+                      LOW: "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300",
+                      MEDIUM: "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400",
+                      HIGH: "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400",
+                      CRITICAL: "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-200/50",
+                    }[task.priority as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"] || "bg-muted text-muted-foreground";
+
+                    const statusConfig = {
+                      PENDING: { label: "Pending", class: "bg-slate-100 text-slate-600 border-slate-200" },
+                      IN_PROGRESS: { label: "In Progress", class: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+                      COMPLETED: { label: "Completed", class: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+                      OVERDUE: { label: "Overdue", class: "bg-rose-50 text-rose-700 border-rose-200" },
+                    }[task.status as "PENDING" | "IN_PROGRESS" | "COMPLETED" | "OVERDUE"] || { label: task.status, class: "bg-muted text-muted-foreground" };
+
+                    return (
+                      <div key={task.id} className={cn("border border-border rounded-xl p-4 flex flex-col md:flex-row justify-between gap-4 transition-all", task.status === "COMPLETED" && "opacity-75 bg-muted/20")}>
+                        <div className="space-y-2 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={cn("font-semibold text-sm", task.status === "COMPLETED" && "line-through text-muted-foreground")}>{task.title}</span>
+                            <Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 rounded-full border-transparent", priorityConfig)}>
+                              {task.priority}
+                            </Badge>
+                            <Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 rounded-full", statusConfig.class)}>
+                              {isTaskOverdue && task.status !== "COMPLETED" ? "OVERDUE" : statusConfig.label}
+                            </Badge>
+                          </div>
+                          {task.description && (
+                            <p className={cn("text-xs text-muted-foreground leading-relaxed", task.status === "COMPLETED" && "line-through")}>
+                              {task.description}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground pt-1">
+                            {task.assignee && (
+                              <span className="flex items-center gap-1">
+                                <User className="w-3.5 h-3.5" />
+                                Assigned to {task.assignee.firstName} {task.assignee.lastName}
+                              </span>
+                            )}
+                            <span className={cn("flex items-center gap-1", isTaskOverdue && task.status !== "COMPLETED" && "text-destructive font-semibold")}>
+                              <Clock className="w-3.5 h-3.5" />
+                              Due: {format(new Date(task.dueDate), 'MMM d, yyyy • h:mm a')}
+                            </span>
+                            {task.completedAt && (
+                              <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                Completed: {format(new Date(task.completedAt), 'MMM d, yyyy')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 self-end md:self-center">
+                          {task.status !== "COMPLETED" && (
+                            <>
+                              {task.status === "PENDING" && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                                  onClick={async () => {
+                                    try {
+                                      await updateTaskMutation.mutateAsync({ id: task.id, data: { status: "IN_PROGRESS" } });
+                                      queryClient.invalidateQueries({ queryKey: tasksKey });
+                                      toast({ title: "Task started" });
+                                    } catch (err: any) {
+                                      toast({ variant: "destructive", title: "Action failed", description: err.message });
+                                    }
+                                  }}
+                                  disabled={updateTaskMutation.isPending}
+                                >
+                                  <PlayCircle className="w-4 h-4 mr-1" /> Start
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                onClick={async () => {
+                                  try {
+                                    await completeTaskMutation.mutateAsync({ id: task.id });
+                                    queryClient.invalidateQueries({ queryKey: tasksKey });
+                                    toast({ title: "Task completed" });
+                                  } catch (err: any) {
+                                    toast({ variant: "destructive", title: "Action failed", description: err.message });
+                                  }
+                                }}
+                                disabled={completeTaskMutation.isPending}
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" /> Complete
+                              </Button>
+                            </>
+                          )}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Task</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this care task? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                  onClick={async () => {
+                                    try {
+                                      await deleteTaskMutation.mutateAsync({ id: task.id });
+                                      queryClient.invalidateQueries({ queryKey: tasksKey });
+                                      toast({ title: "Task deleted successfully" });
+                                    } catch (err: any) {
+                                      toast({ variant: "destructive", title: "Failed to delete task", description: err.message });
+                                    }
+                                  }}
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* ── FILES TAB ────────────────────────────────────────────────────── */}
-        <TabsContent value="files">
-          <Card>
+        <TabsContent value="files" className="animate-in-up">
+          <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg flex items-center gap-2"><FileText className="w-4 h-4" /> Files & Documents</CardTitle>
               <Dialog open={isFileDialogOpen} onOpenChange={setIsFileDialogOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline" className="h-8"><Upload className="w-4 h-4 mr-1" /> Upload</Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent aria-describedby={undefined}>
                   <DialogHeader><DialogTitle>Upload File</DialogTitle></DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
@@ -1289,8 +1745,8 @@ export default function PatientDetailPage() {
         </TabsContent>
 
         {/* ── COMMUNICATIONS TAB ────────────────────────────────────────────── */}
-        <TabsContent value="communications">
-          <Card>
+        <TabsContent value="communications" className="animate-in-up">
+          <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
                 <CardTitle className="text-lg flex items-center gap-2"><MessageSquare className="w-4 h-4" /> Communications</CardTitle>
@@ -1303,7 +1759,7 @@ export default function PatientDetailPage() {
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline" className="h-8"><Send className="w-4 h-4 mr-1" /> Send {commType}</Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent aria-describedby={undefined}>
                   <DialogHeader><DialogTitle>Send {commType} to Patient</DialogTitle></DialogHeader>
                   <div className="grid gap-4 py-4">
                     {commType === "EMAIL" && (
@@ -1347,6 +1803,7 @@ export default function PatientDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        </div>
       </Tabs>
     </div>
   );

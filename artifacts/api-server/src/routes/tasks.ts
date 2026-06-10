@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { CLINICAL_ROLES, ADMIN_ROLES } from "../middlewares/rbac.js";
+import { authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
@@ -28,7 +28,7 @@ function isOverdue(task: { status: string; dueDate: Date }) {
 }
 
 // GET /api/tasks
-router.get("/", CLINICAL_ROLES, async (req, res, next) => {
+router.get("/", authorizePermission("tasks", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const { patientId, assignedTo, status } = req.query as Record<string, string>;
@@ -62,7 +62,7 @@ router.get("/", CLINICAL_ROLES, async (req, res, next) => {
 });
 
 // GET /api/tasks/:id
-router.get("/:id", CLINICAL_ROLES, async (req, res, next) => {
+router.get("/:id", authorizePermission("tasks", "read"), async (req, res, next) => {
   try {
     const task = await prisma.careTask.findFirst({
       where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null },
@@ -78,7 +78,7 @@ router.get("/:id", CLINICAL_ROLES, async (req, res, next) => {
 });
 
 // POST /api/tasks
-router.post("/", CLINICAL_ROLES, validateBody(TaskSchema), async (req, res, next) => {
+router.post("/", authorizePermission("tasks", "write"), validateBody(TaskSchema), async (req, res, next) => {
   try {
     const data = req.body as z.infer<typeof TaskSchema>;
     const task = await prisma.careTask.create({
@@ -119,7 +119,7 @@ router.post("/", CLINICAL_ROLES, validateBody(TaskSchema), async (req, res, next
 });
 
 // PATCH /api/tasks/:id
-router.patch("/:id", CLINICAL_ROLES, validateBody(TaskSchema.partial().extend({
+router.patch("/:id", authorizePermission("tasks", "write"), validateBody(TaskSchema.partial().extend({
   status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "OVERDUE"]).optional(),
 })), async (req, res, next) => {
   try {
@@ -152,7 +152,7 @@ router.patch("/:id", CLINICAL_ROLES, validateBody(TaskSchema.partial().extend({
 });
 
 // PATCH /api/tasks/:id/complete
-router.patch("/:id/complete", CLINICAL_ROLES, async (req, res, next) => {
+router.patch("/:id/complete", authorizePermission("tasks", "write"), async (req, res, next) => {
   try {
     const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!task) throw Errors.notFound("Task");
@@ -169,7 +169,7 @@ router.patch("/:id/complete", CLINICAL_ROLES, async (req, res, next) => {
 });
 
 // PATCH /api/tasks/:id/reopen
-router.patch("/:id/reopen", CLINICAL_ROLES, async (req, res, next) => {
+router.patch("/:id/reopen", authorizePermission("tasks", "write"), async (req, res, next) => {
   try {
     const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!task) throw Errors.notFound("Task");
@@ -186,7 +186,7 @@ router.patch("/:id/reopen", CLINICAL_ROLES, async (req, res, next) => {
 });
 
 // DELETE /api/tasks/:id (soft-delete)
-router.delete("/:id", ADMIN_ROLES, async (req, res, next) => {
+router.delete("/:id", authorizePermission("tasks", "write"), async (req, res, next) => {
   try {
     const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!task) throw Errors.notFound("Task");

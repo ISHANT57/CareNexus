@@ -3,7 +3,7 @@ import { z } from "zod";
 import twilio from "twilio";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { CLINICAL_ROLES } from "../middlewares/rbac.js";
+import { CLINICAL_ROLES , authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant } from "../middlewares/tenantScope.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
@@ -22,7 +22,7 @@ const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_T
   : null;
 const twilioFromNumber = process.env.TWILIO_FROM_NUMBER || "+15555555555";
 
-router.get("/", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, next) => {
+router.get("/", authorizePermission("communications", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const { patientId, status } = req.query as Record<string, string>;
@@ -41,7 +41,7 @@ router.get("/", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, ne
   } catch (err) { next(err); }
 });
 
-router.post("/", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, next) => {
+router.post("/", authorizePermission("communications", "write"), async (req, res, next) => {
   try {
     const { patientId, type, subject, body: msgBody } = req.body as { patientId: string; type: string; subject: string; body?: string };
     if (!patientId) throw Errors.validation("patientId is required");
@@ -83,7 +83,7 @@ router.post("/", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, n
   } catch (err) { next(err); }
 });
 
-router.get("/:id", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, next) => {
+router.get("/:id", authorizePermission("communications", "read"), async (req, res, next) => {
   try {
     const comm = await prisma.smsCommunication.findFirst({
       where: { id: req.params["id"] as string, tenantId: req.tenantId! },
@@ -94,7 +94,7 @@ router.get("/:id", authenticate, requireTenant, CLINICAL_ROLES, async (req, res,
   } catch (err) { next(err); }
 });
 
-router.delete("/:id", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, next) => {
+router.delete("/:id", authorizePermission("communications", "write"), async (req, res, next) => {
   try {
     const comm = await prisma.smsCommunication.findFirst({
       where: { id: req.params["id"] as string, tenantId: req.tenantId! },
@@ -107,7 +107,7 @@ router.delete("/:id", authenticate, requireTenant, CLINICAL_ROLES, async (req, r
 });
 
 // ── Legacy /sms sub-routes (kept for backwards compatibility) ─────────────────
-router.get("/sms", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, next) => {
+router.get("/sms", authorizePermission("communications", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const { patientId, status } = req.query as Record<string, string>;
@@ -126,7 +126,7 @@ router.get("/sms", authenticate, requireTenant, CLINICAL_ROLES, async (req, res,
   } catch (err) { next(err); }
 });
 
-router.post("/sms", authenticate, requireTenant, CLINICAL_ROLES, validateBody(SendSmsSchema), async (req, res, next) => {
+router.post("/sms", authorizePermission("communications", "write"), validateBody(SendSmsSchema), async (req, res, next) => {
   try {
     const { patientIds, message } = req.body as z.infer<typeof SendSmsSchema>;
 
@@ -188,7 +188,7 @@ router.post("/sms", authenticate, requireTenant, CLINICAL_ROLES, validateBody(Se
   } catch (err) { next(err); }
 });
 
-router.get("/sms/:id", authenticate, requireTenant, CLINICAL_ROLES, async (req, res, next) => {
+router.get("/sms/:id", authorizePermission("communications", "read"), async (req, res, next) => {
   try {
     const comm = await prisma.smsCommunication.findFirst({
       where: { id: req.params["id"] as string, tenantId: req.tenantId! },

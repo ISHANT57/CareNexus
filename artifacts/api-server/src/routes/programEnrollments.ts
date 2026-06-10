@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { CLINICAL_ROLES } from "../middlewares/rbac.js";
+import { CLINICAL_ROLES , authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
@@ -21,7 +21,7 @@ const UpdateEnrollmentSchema = z.object({
   notes: z.string().optional(),
 });
 
-router.get("/", CLINICAL_ROLES, async (req, res, next) => {
+router.get("/", authorizePermission("programs", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const patientId = req.query["patientId"] as string | undefined;
@@ -47,7 +47,7 @@ router.get("/", CLINICAL_ROLES, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post("/", CLINICAL_ROLES, validateBody(EnrollmentSchema), async (req, res, next) => {
+router.post("/", authorizePermission("programs", "write"), validateBody(EnrollmentSchema), async (req, res, next) => {
   try {
     const { patientId, programId, notes } = req.body;
 
@@ -85,7 +85,7 @@ router.post("/", CLINICAL_ROLES, validateBody(EnrollmentSchema), async (req, res
   } catch (err) { next(err); }
 });
 
-router.patch("/:id", CLINICAL_ROLES, validateBody(UpdateEnrollmentSchema), async (req, res, next) => {
+router.patch("/:id", authorizePermission("programs", "write"), validateBody(UpdateEnrollmentSchema), async (req, res, next) => {
   try {
     const enrollment = await prisma.programEnrollment.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!enrollment) throw Errors.notFound("ProgramEnrollment");
@@ -101,7 +101,7 @@ router.patch("/:id", CLINICAL_ROLES, validateBody(UpdateEnrollmentSchema), async
   } catch (err) { next(err); }
 });
 
-router.post("/:id/complete", CLINICAL_ROLES, async (req, res, next) => {
+router.post("/:id/complete", authorizePermission("programs", "write"), async (req, res, next) => {
   try {
     const enrollment = await prisma.programEnrollment.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!enrollment) throw Errors.notFound("ProgramEnrollment");
@@ -117,7 +117,7 @@ router.post("/:id/complete", CLINICAL_ROLES, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post("/:id/cancel", CLINICAL_ROLES, async (req, res, next) => {
+router.post("/:id/cancel", authorizePermission("programs", "write"), async (req, res, next) => {
   try {
     const enrollment = await prisma.programEnrollment.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!enrollment) throw Errors.notFound("ProgramEnrollment");

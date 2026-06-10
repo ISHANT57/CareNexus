@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { ADMIN_ROLES } from "../middlewares/rbac.js";
+import { authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
@@ -11,15 +11,19 @@ import { createAuditLog } from "../lib/audit.js";
 const router = Router();
 router.use(authenticate, requireTenant);
 
-const AreaSchema = z.object({ name: z.string().min(1).max(100) });
+const AreaSchema = z.object({
+  name: z.string().min(1).max(100),
+  tenantId: z.string().uuid().optional(),
+});
 
-router.get("/", async (req, res, next) => {
+router.get("/", authorizePermission("areas", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const q = req.query["q"] as string | undefined;
+    const reqTenantId = req.query["tenantId"] as string | undefined;
     const where = {
-      tenantId: req.tenantId!,
       deletedAt: null,
+      ...(req.tenantId ? { tenantId: req.tenantId } : reqTenantId ? { tenantId: reqTenantId } : {}),
       ...(q ? { name: { contains: q, mode: "insensitive" as const } } : {}),
     };
     const [total, areas] = await Promise.all([
@@ -33,7 +37,7 @@ router.get("/", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.get("/:id", async (req, res, next) => {
+router.get("/:id", authorizePermission("areas", "read"), async (req, res, next) => {
   try {
     const area = await prisma.area.findFirst({
       where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null },
@@ -44,17 +48,21 @@ router.get("/:id", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post("/", ADMIN_ROLES, validateBody(AreaSchema), async (req, res, next) => {
+router.post("/", authorizePermission("areas", "write"), validateBody(AreaSchema), async (req, res, next) => {
   try {
+    const data = req.body as z.infer<typeof AreaSchema>;
+    const targetTenantId = data.tenantId || req.tenantId;
+    if (!targetTenantId) throw Errors.badRequest("Tenant ID is required");
+
     const area = await prisma.area.create({
-      data: { tenantId: req.tenantId!, name: req.body.name },
+      data: { tenantId: targetTenantId, name: data.name },
     });
-    await createAuditLog({ req, entityType: "Area", entityId: area.id, action: "CREATE", after: req.body });
+    await createAuditLog({ req, entityType: "Area", entityId: area.id, action: "CREATE", after: data });
     res.status(201).json(area);
   } catch (err) { next(err); }
 });
 
-router.patch("/:id", ADMIN_ROLES, validateBody(AreaSchema.partial()), async (req, res, next) => {
+router.patch("/:id", authorizePermission("areas", "write"), validateBody(AreaSchema.partial()), async (req, res, next) => {
   try {
     const area = await prisma.area.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!area) throw Errors.notFound("Area");
@@ -65,7 +73,7 @@ router.patch("/:id", ADMIN_ROLES, validateBody(AreaSchema.partial()), async (req
   } catch (err) { next(err); }
 });
 
-router.delete("/:id", ADMIN_ROLES, async (req, res, next) => {
+router.delete("/:id", authorizePermission("areas", "write"), async (req, res, next) => {
   try {
     const area = await prisma.area.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!area) throw Errors.notFound("Area");

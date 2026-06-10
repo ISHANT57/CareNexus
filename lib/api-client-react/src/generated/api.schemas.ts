@@ -1019,12 +1019,20 @@ q?: string;
 export type ListAreasParams = {
 page?: number;
 limit?: number;
+q?: string;
 };
 
 export type ListClinicsParams = {
 page?: number;
 limit?: number;
 areaId?: string;
+q?: string;
+};
+
+export type ListRolesParams = {
+page?: number;
+limit?: number;
+q?: string;
 };
 
 export type ListUsersParams = {
@@ -1038,6 +1046,7 @@ clinicId?: string;
 export type ListProgramsParams = {
 page?: number;
 limit?: number;
+q?: string;
 };
 
 export type ListPatientsParams = {

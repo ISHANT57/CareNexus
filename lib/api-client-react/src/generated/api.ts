@@ -76,6 +76,7 @@ import type {
   ListProgramEnrollmentsParams,
   ListProgramsParams,
   ListRiskScoresParams,
+  ListRolesParams,
   ListTasksParams,
   ListTenantsParams,
   ListUsersParams,
@@ -1727,17 +1728,24 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getDeleteClinicMutationOptions(options));
     }
 
-export const getListRolesUrl = () => {
+export const getListRolesUrl = (params?: ListRolesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/roles`
+  return stringifiedParams.length > 0 ? `/api/roles?${stringifiedParams}` : `/api/roles`
 }
 
-export const listRoles = async ( options?: RequestInit): Promise<RoleList> => {
+export const listRoles = async (params?: ListRolesParams, options?: RequestInit): Promise<RoleList> => {
 
-  return customFetch<RoleList>(getListRolesUrl(),
+  return customFetch<RoleList>(getListRolesUrl(params),
   {
     ...options,
     method: 'GET'
@@ -1750,23 +1758,23 @@ export const listRoles = async ( options?: RequestInit): Promise<RoleList> => {
 
 
 
-export const getListRolesQueryKey = () => {
+export const getListRolesQueryKey = (params?: ListRolesParams,) => {
     return [
-    `/api/roles`
+    `/api/roles`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListRolesQueryOptions = <TData = Awaited<ReturnType<typeof listRoles>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListRolesQueryOptions = <TData = Awaited<ReturnType<typeof listRoles>>, TError = ErrorType<unknown>>(params?: ListRolesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListRolesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListRolesQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRoles>>> = ({ signal }) => listRoles({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRoles>>> = ({ signal }) => listRoles(params, { signal, ...requestOptions });
 
 
 
@@ -1781,11 +1789,11 @@ export type ListRolesQueryError = ErrorType<unknown>
 
 
 export function useListRoles<TData = Awaited<ReturnType<typeof listRoles>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListRolesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListRolesQueryOptions(options)
+  const queryOptions = getListRolesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

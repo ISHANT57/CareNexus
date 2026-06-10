@@ -19,6 +19,36 @@ export function authorize(...roles: Role[]) {
   };
 }
 
+const SYSTEM_ROLE_FALLBACKS: Record<string, boolean | Record<string, string[]>> = {
+  SUPER_ADMIN: true,
+  AREA_ADMIN: true,
+  CLINIC_ADMIN: true,
+  DOCTOR: {
+    patients: ["read", "write"],
+    appointments: ["read", "write"],
+    tasks: ["read", "write"],
+    programs: ["read", "write"],
+    communications: ["read", "write"],
+    consultations: ["read", "write"],
+  },
+  OPERATOR: {
+    patients: ["read", "write"],
+    appointments: ["read", "write"],
+    tasks: ["read", "write"],
+    programs: ["read", "write"],
+    communications: ["read", "write"],
+    consultations: ["read"],
+  },
+  STAFF: {
+    patients: ["read"],
+    appointments: ["read"],
+    tasks: ["read", "write"],
+    programs: ["read"],
+    communications: ["read"],
+    consultations: ["read"],
+  }
+};
+
 /**
  * authorizePermission — checks that the user's role has a specific module+action
  * permission entry in the role_permissions table.
@@ -37,9 +67,15 @@ export function authorizePermission(module: string, action: string) {
       // SUPER_ADMIN bypasses granular permissions
       if (req.user.role === "SUPER_ADMIN") return next();
 
-      // Load the role by name for this tenant
+      // Load the role by name for this tenant or if it is a system role
       const role = await prisma.role.findFirst({
-        where: { name: req.user.role },
+        where: { 
+          name: req.user.role,
+          OR: [
+            { tenantId: req.tenantId },
+            { isSystem: true }
+          ]
+        },
         include: {
           rolePermissions: {
             include: { permission: true },
@@ -47,17 +83,28 @@ export function authorizePermission(module: string, action: string) {
         },
       });
 
-      // If role has NO permissions configured, allow (system roles rely on group-level RBAC)
-      if (!role || role.rolePermissions.length === 0) return next();
-
-      const hasPermission = role.rolePermissions.some(
-        (rp) => rp.permission.module === module && rp.permission.action === action
-      );
-
-      if (!hasPermission) {
-        return next(
-          Errors.forbidden(`Permission '${module}:${action}' not granted to role '${req.user.role}'`)
+      // If role has permissions configured in DB, use them
+      if (role && role.rolePermissions.length > 0) {
+        const hasPermission = role.rolePermissions.some(
+          (rp) => rp.permission.module === module && rp.permission.action === action
         );
+        if (!hasPermission) {
+          return next(Errors.forbidden(`Permission '${module}:${action}' not granted to role '${req.user.role}'`));
+        }
+        return next();
+      }
+
+      // No DB permissions. Check legacy fallback to avoid breaking existing flows.
+      const fallback = SYSTEM_ROLE_FALLBACKS[req.user.role as string];
+      if (!fallback) {
+        return next(Errors.forbidden(`Role '${req.user.role}' has no permissions configured`));
+      }
+
+      if (fallback === true) return next(); // Admin wildcard
+
+      const allowedActions = (fallback as any)[module];
+      if (!allowedActions || (!allowedActions.includes(action) && !allowedActions.includes("*"))) {
+        return next(Errors.forbidden(`Permission '${module}:${action}' not granted by system default to '${req.user.role}'`));
       }
       next();
     } catch (err) {

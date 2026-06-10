@@ -31,6 +31,8 @@ const RESOURCE_GROUPS = [
       { key: "consultations", label: "Consultations", description: "Clinical consultation notes" },
       { key: "appointments", label: "Appointments", description: "Scheduling and attendance" },
       { key: "journeys", label: "Patient Journey", description: "Status transitions and events" },
+      { key: "tasks", label: "Tasks", description: "Patient care tasks and actions" },
+      { key: "outcomes", label: "Outcomes", description: "Clinical and lifestyle outcome tracking" },
     ],
   },
   {
@@ -114,16 +116,16 @@ export default function RolesPage() {
   const selectedRole = rolesData?.data?.find((r) => r.id === selectedRoleId);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-background">
+    <div className="page-container animate-in-up flex flex-col h-[calc(100vh-2rem)]">
       {/* Header */}
-      <div className="bg-card border-b border-border px-8 py-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Roles & Permissions</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Define roles and configure granular access control for your team.
-            </p>
-          </div>
+      <div className="page-header shrink-0">
+        <div>
+          <h1 className="text-h2">Roles & Permissions</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Define roles and configure granular access control for your team.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
           <Dialog open={isCreateRoleOpen} onOpenChange={setIsCreateRoleOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
@@ -131,7 +133,7 @@ export default function RolesPage() {
                 Create Role
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-sm">
+            <DialogContent aria-describedby={undefined} className="max-w-sm">
               <DialogHeader>
                 <DialogTitle>Create New Role</DialogTitle>
               </DialogHeader>
@@ -166,7 +168,7 @@ export default function RolesPage() {
         </div>
       </div>
 
-      <div className="p-8 flex gap-6 min-h-0" style={{ height: "calc(100vh - 130px)" }}>
+      <div className="flex-1 flex gap-6 min-h-0 pt-4">
         {/* Roles List */}
         <div className="w-64 shrink-0 flex flex-col">
           <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">

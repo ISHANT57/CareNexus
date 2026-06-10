@@ -60,22 +60,24 @@ export default function NewUserPage() {
   };
 
   return (
-    <div className="p-8 flex-1 overflow-y-auto">
+    <div className="page-container animate-in-up">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-6">
-          <Link href="/users">
-            <Button variant="ghost" size="sm" className="mb-4 -ml-3 text-muted-foreground">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Team Members
-            </Button>
-          </Link>
-          <h1 className="text-3xl font-bold tracking-tight">Invite Team Member</h1>
-          <p className="text-muted-foreground mt-2">Add a new clinician or staff member to the system.</p>
+        <div className="page-header border-b-0 pb-2 mb-6">
+          <div>
+            <Link href="/users">
+              <Button variant="ghost" size="sm" className="mb-4 -ml-3 text-muted-foreground hover:text-foreground">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Team Members
+              </Button>
+            </Link>
+            <h1 className="text-h2">Invite Team Member</h1>
+            <p className="text-muted-foreground text-sm mt-1">Add a new clinician or staff member to the system.</p>
+          </div>
         </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <Card>
+            <Card className="glass-card">
               <CardHeader>
                 <CardTitle>Personal Details</CardTitle>
               </CardHeader>
@@ -138,7 +140,7 @@ export default function NewUserPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="glass-card">
               <CardHeader>
                 <CardTitle>Access & Roles</CardTitle>
                 <CardDescription>Determine what this user can see and do</CardDescription>

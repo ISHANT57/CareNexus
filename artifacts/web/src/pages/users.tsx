@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { useListUsers } from "@workspace/api-client-react";
+import { useListUsers, useGetMe } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Loader2, ChevronLeft, ChevronRight, UserCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Search, Plus, Loader2, ChevronLeft, ChevronRight, UserCircle, Download } from "lucide-react";
+import { cn, exportToCSV } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const PAGE_SIZE = 20;
 
@@ -24,6 +25,9 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
+  const { data: me } = useGetMe();
+  const isSuperAdmin = me?.role === "SUPER_ADMIN";
+  const { toast } = useToast();
 
   useEffect(() => {
     const timer = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 400);
@@ -38,18 +42,41 @@ export default function UsersPage() {
 
   const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;
 
+  const handleExport = () => {
+    if (!data?.data || data.data.length === 0) {
+      toast({ title: "No data", description: "There are no users to export." });
+      return;
+    }
+    const exportData = data.data.map((u: any) => ({
+      ID: u.id,
+      "First Name": u.firstName,
+      "Last Name": u.lastName,
+      Email: u.email,
+      Role: u.systemRole ?? u.role?.name ?? "",
+      Organization: u.tenant?.name || "N/A",
+      Status: u.status,
+      "Last Login": u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString("en-GB") : "Never",
+      "Created At": new Date(u.createdAt).toLocaleDateString("en-GB")
+    }));
+    exportToCSV(exportData, `team_members_export_${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
   return (
-    <div className="flex-1 overflow-y-auto bg-background">
-      <div className="bg-card border-b border-border px-8 py-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Team Members</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              {data?.meta?.total ? `${data.meta.total} ` : ""}Manage access and roles for clinical and admin staff.
-            </p>
-          </div>
+    <div className="page-container animate-in-up">
+      <div className="page-header">
+        <div>
+          <h1 className="text-h2">Team Members</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            {data?.meta?.total ? `${data.meta.total} ` : ""}Manage access and roles for clinical and admin staff.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !data?.data?.length}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
           <Link href="/users/new">
-            <Button size="sm" data-testid="button-new-user">
+            <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" data-testid="button-new-user">
               <Plus className="w-4 h-4 mr-2" />
               Invite Member
             </Button>
@@ -91,6 +118,7 @@ export default function UsersPage() {
                       <TableHead className="font-semibold text-xs uppercase tracking-wide">Member</TableHead>
                       <TableHead className="font-semibold text-xs uppercase tracking-wide">Email</TableHead>
                       <TableHead className="font-semibold text-xs uppercase tracking-wide">Role</TableHead>
+                      {isSuperAdmin && <TableHead className="font-semibold text-xs uppercase tracking-wide">Organization</TableHead>}
                       <TableHead className="font-semibold text-xs uppercase tracking-wide">Status</TableHead>
                       <TableHead className="font-semibold text-xs uppercase tracking-wide">Last Login</TableHead>
                       <TableHead className="font-semibold text-xs uppercase tracking-wide text-right">Actions</TableHead>
@@ -122,6 +150,11 @@ export default function UsersPage() {
                               {roleName.replace(/_/g, " ") || user.role?.name || "—"}
                             </Badge>
                           </TableCell>
+                          {isSuperAdmin && (
+                            <TableCell className="text-sm text-muted-foreground font-medium">
+                              {(user as any).tenant?.name || "—"}
+                            </TableCell>
+                          )}
                           <TableCell>
                             <Badge
                               variant="outline"

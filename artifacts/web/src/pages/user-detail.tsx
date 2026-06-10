@@ -24,7 +24,7 @@ import { useEffect } from "react";
 const userEditSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  mobile: z.string().optional(),
+  mobile: z.string().regex(/^\+?[0-9\s\-()]{10,20}$/, "Invalid mobile format").optional().or(z.literal('')),
   roleId: z.string().min(1, "Role is required"),
 });
 

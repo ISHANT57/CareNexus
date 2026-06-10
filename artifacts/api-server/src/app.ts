@@ -46,6 +46,9 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+import { csrfProtection } from "./middlewares/csrf.js";
+app.use(csrfProtection);
+
 // ── Global rate limiting ──────────────────────────────────────────────────────
 // Skip in development to avoid 429 errors during hot-reload / rapid testing
 if (process.env.NODE_ENV === "production") {

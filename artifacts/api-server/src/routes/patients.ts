@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { CLINICAL_ROLES, ADMIN_ROLES } from "../middlewares/rbac.js";
+import { authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
@@ -69,7 +69,7 @@ const JourneySchema = z.object({
 });
 
 // GET /api/patients
-router.get("/", CLINICAL_ROLES, async (req, res, next) => {
+router.get("/", authorizePermission("patients", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const { clinicId, areaId, programId, journeyStatus, patientGroup, userType, q } = req.query as Record<string, string>;
@@ -100,6 +100,7 @@ router.get("/", CLINICAL_ROLES, async (req, res, next) => {
           id: true, nhsNumber: true, firstName: true, lastName: true, mobile: true,
           status: true, patientGroup: true, userType: true, isTest: true,
           registrationDate: true, firstConsultationDate: true,
+          riskScore: true, riskLevel: true,
           program: { select: { id: true, name: true } },
           clinic: { select: { id: true, name: true } },
           area: { select: { id: true, name: true } },
@@ -119,7 +120,7 @@ router.get("/", CLINICAL_ROLES, async (req, res, next) => {
 });
 
 // GET /api/patients/:id
-router.get("/:id", CLINICAL_ROLES, async (req, res, next) => {
+router.get("/:id", authorizePermission("patients", "read"), async (req, res, next) => {
   try {
     const roleScope = await getRoleScope(req, "patient");
     const patient = await prisma.patient.findFirst({
@@ -149,7 +150,7 @@ router.get("/:id", CLINICAL_ROLES, async (req, res, next) => {
 });
 
 // POST /api/patients
-router.post("/", ADMIN_ROLES, validateBody(PatientSchema), async (req, res, next) => {
+router.post("/", authorizePermission("patients", "write"), validateBody(PatientSchema), async (req, res, next) => {
   try {
     const { gpDetails, referral, ...patientData } = req.body as z.infer<typeof PatientSchema>;
 
@@ -197,7 +198,7 @@ router.post("/", ADMIN_ROLES, validateBody(PatientSchema), async (req, res, next
 });
 
 // PATCH /api/patients/:id
-router.patch("/:id", CLINICAL_ROLES, validateBody(PatientSchema.partial().omit({ gpDetails: true, referral: true })), async (req, res, next) => {
+router.patch("/:id", authorizePermission("patients", "write"), validateBody(PatientSchema.partial().omit({ gpDetails: true, referral: true })), async (req, res, next) => {
   try {
     const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!patient) throw Errors.notFound("Patient");
@@ -228,7 +229,7 @@ router.patch("/:id", CLINICAL_ROLES, validateBody(PatientSchema.partial().omit({
 });
 
 // DELETE /api/patients/:id
-router.delete("/:id", ADMIN_ROLES, async (req, res, next) => {
+router.delete("/:id", authorizePermission("patients", "write"), async (req, res, next) => {
   try {
     const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!patient) throw Errors.notFound("Patient");
@@ -240,7 +241,7 @@ router.delete("/:id", ADMIN_ROLES, async (req, res, next) => {
 });
 
 // GET /api/patients/:id/journey
-router.get("/:id/journey", CLINICAL_ROLES, async (req, res, next) => {
+router.get("/:id/journey", authorizePermission("patients", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
@@ -258,7 +259,7 @@ router.get("/:id/journey", CLINICAL_ROLES, async (req, res, next) => {
 });
 
 // POST /api/patients/:id/journey
-router.post("/:id/journey", CLINICAL_ROLES, validateBody(JourneySchema), async (req, res, next) => {
+router.post("/:id/journey", authorizePermission("patients", "write"), validateBody(JourneySchema), async (req, res, next) => {
   try {
     const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!patient) throw Errors.notFound("Patient");
@@ -280,7 +281,7 @@ const StatusSchema = z.object({
   notes: z.string().max(500).optional().nullable(),
 });
 
-router.patch("/:id/status", CLINICAL_ROLES, validateBody(StatusSchema), async (req, res, next) => {
+router.patch("/:id/status", authorizePermission("patients", "write"), validateBody(StatusSchema), async (req, res, next) => {
   try {
     const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!patient) throw Errors.notFound("Patient");
@@ -298,7 +299,7 @@ router.patch("/:id/status", CLINICAL_ROLES, validateBody(StatusSchema), async (r
 });
 
 // PATCH /api/patients/:id/gp
-router.patch("/:id/gp", CLINICAL_ROLES, validateBody(GpSchema), async (req, res, next) => {
+router.patch("/:id/gp", authorizePermission("patients", "write"), validateBody(GpSchema), async (req, res, next) => {
   try {
     const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!patient) throw Errors.notFound("Patient");
@@ -312,7 +313,7 @@ router.patch("/:id/gp", CLINICAL_ROLES, validateBody(GpSchema), async (req, res,
 });
 
 // GET /api/patients/:id/communications
-router.get("/:id/communications", CLINICAL_ROLES, async (req, res, next) => {
+router.get("/:id/communications", authorizePermission("communications", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { customFetch } from "@workspace/api-client-react";
+import { Link } from "wouter";
 
 interface TenantData {
   id: string;
@@ -24,7 +25,7 @@ export default function TenantsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["tenants-admin-list"],
     queryFn: async () => {
-      const res = await customFetch<{ data: TenantData[] }>("/api/tenants", {
+      const res = await customFetch<{ data: TenantData[] }>("/api/tenants?limit=1000", {
         headers: { "x-tenant-id": "ALL" }
       });
       return res.data;
@@ -40,10 +41,12 @@ export default function TenantsPage() {
             Platform governance and tenant isolation management.
           </p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Register Tenant
-        </Button>
+        <Link href="/onboarding">
+          <Button>
+            <Plus className="w-4 h-4 mr-2" />
+            Register Tenant
+          </Button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

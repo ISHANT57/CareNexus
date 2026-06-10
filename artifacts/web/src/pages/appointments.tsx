@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListAppointments, getListAppointmentsQueryKey, useCancelAppointment, useCompleteAppointment, useGetMe } from "@workspace/api-client-react";
+import { useListAppointments, getListAppointmentsQueryKey, useCancelAppointment, useCompleteAppointment, useGetMe, useListRoles } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,8 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useListUsers, useListClinics } from "@workspace/api-client-react";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Filter, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-
 const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
   SCHEDULED: { label: "Scheduled", class: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20" },
   COMPLETED: { label: "Completed", class: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20" },
@@ -28,10 +31,25 @@ export default function AppointmentsPage() {
   const isDoctor = me?.role === "DOCTOR";
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [filterStatus, setFilterStatus] = useState("");
+  const { filters, setFilter, clearFilters } = useUrlFilters<{
+    status: string;
+    doctorId: string;
+    clinicId: string;
+  }>();
+
+  const filterStatus = filters.status || "";
+  const filterDoctor = filters.doctorId || "";
+  const filterClinic = filters.clinicId || "";
+  const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
 
-  const queryParams = isDoctor ? { doctorId: me?.id } : {};
+  const queryParams = {
+    ...(isDoctor ? { doctorId: me?.id } : filterDoctor ? { doctorId: filterDoctor } : {}),
+    ...(filterClinic ? { clinicId: filterClinic } : {}),
+    ...(filterStatus ? { status: filterStatus } : {}),
+    page,
+    limit: PAGE_SIZE,
+  };
   const appointmentsKey = getListAppointmentsQueryKey(queryParams);
 
   const { data: appointmentsData, isLoading } = useListAppointments(
@@ -56,10 +74,17 @@ export default function AppointmentsPage() {
     }
   };
 
+  const { data: rolesData } = useListRoles();
+  const doctorRoleId = rolesData?.data?.find(r => r.name === "DOCTOR")?.id;
+  const { data: usersData, isLoading: usersLoading } = useListUsers({ limit: 500, roleId: doctorRoleId }, { query: { enabled: !isDoctor && !!doctorRoleId } as any });
+  const { data: clinicsData, isLoading: clinicsLoading } = useListClinics({ limit: 500 });
+
+  const doctorOptions = (usersData?.data ?? []).map((u: any) => ({ label: `${u.firstName} ${u.lastName}`, value: u.id }));
+  const clinicOptions = (clinicsData?.data ?? []).map((c: any) => ({ label: c.name, value: c.id }));
+
   const allAppointments = appointmentsData?.data ?? [];
-  const filtered = filterStatus ? allAppointments.filter((a) => a.status === filterStatus) : allAppointments;
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = appointmentsData?.meta ? Math.ceil(appointmentsData.meta.total / PAGE_SIZE) : 1;
+  const activeFilterCount = [filterStatus, filterDoctor, filterClinic].filter(Boolean).length;
 
   return (
     <div className="flex-1 overflow-y-auto bg-background">
@@ -73,30 +98,90 @@ export default function AppointmentsPage() {
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <CalendarIcon className="w-4 h-4" />
-            {allAppointments.length} total
+            {appointmentsData?.meta?.total ?? 0} total
           </div>
         </div>
       </div>
 
       <div className="p-8 space-y-4">
-        {/* Filters */}
         <div className="flex items-center gap-3">
-          <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v === "ALL" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="w-44 bg-card">
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All statuses</SelectItem>
-              <SelectItem value="SCHEDULED">Scheduled</SelectItem>
-              <SelectItem value="COMPLETED">Completed</SelectItem>
-              <SelectItem value="CANCELLED">Cancelled</SelectItem>
-              <SelectItem value="NO_SHOW">No Show</SelectItem>
-            </SelectContent>
-          </Select>
-          {filterStatus && (
-            <Badge variant="secondary">{filtered.length} shown</Badge>
+          <Button
+            variant={showFilters ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="gap-2"
+          >
+            <Filter className="w-4 h-4" />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="bg-primary-foreground text-primary rounded-full text-xs font-bold w-4 h-4 flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
+
+          {activeFilterCount > 0 && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
+              <X className="w-3.5 h-3.5" />
+              Clear
+            </Button>
           )}
         </div>
+
+        {/* Expanded Filter panel */}
+        {showFilters && (
+          <div className="bg-card border border-border rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-in-up">
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Status
+              </div>
+              <Select value={filterStatus} onValueChange={(v) => { setFilter("status", v === "ALL" ? "" : v); setPage(1); }}>
+                <SelectTrigger className="w-full bg-card">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All statuses</SelectItem>
+                  <SelectItem value="SCHEDULED">Scheduled</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                  <SelectItem value="NO_SHOW">No Show</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {!isDoctor && (
+              <div className="space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Doctor
+                </div>
+                <SearchableSelect
+                  options={doctorOptions}
+                  value={filterDoctor}
+                  onValueChange={(v) => { setFilter("doctorId", v); setPage(1); }}
+                  placeholder="All doctors"
+                  searchPlaceholder="Search doctors..."
+                  isLoading={usersLoading}
+                  clearable
+                />
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Clinic
+              </div>
+              <SearchableSelect
+                options={clinicOptions}
+                value={filterClinic}
+                onValueChange={(v) => { setFilter("clinicId", v); setPage(1); }}
+                placeholder="All clinics"
+                searchPlaceholder="Search clinics..."
+                isLoading={clinicsLoading}
+                clearable
+              />
+            </div>
+          </div>
+        )}
 
         <Card className="overflow-hidden">
           <CardContent className="p-0">
@@ -104,7 +189,7 @@ export default function AppointmentsPage() {
               <div className="space-y-1 p-4">
                 {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
               </div>
-            ) : paginated.length === 0 ? (
+            ) : allAppointments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <CalendarIcon className="w-12 h-12 mb-3 opacity-20" />
                 <p className="font-medium">No appointments found</p>
@@ -126,7 +211,7 @@ export default function AppointmentsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginated.map((appt) => {
+                      {allAppointments.map((appt) => {
                         const statusCfg = STATUS_CONFIG[appt.status] ?? { label: appt.status, class: "bg-muted text-muted-foreground" };
                         return (
                           <TableRow key={appt.id} className="hover:bg-muted/20 transition-colors">

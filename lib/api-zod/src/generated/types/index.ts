@@ -79,6 +79,7 @@ export * from './listProgramEnrollmentsParams';
 export * from './listProgramsParams';
 export * from './listRiskScoresParams';
 export * from './listRiskScoresRiskLevel';
+export * from './listRolesParams';
 export * from './listTasksParams';
 export * from './listTasksStatus';
 export * from './listTenantsParams';

@@ -9,4 +9,5 @@
 export type ListProgramsParams = {
 page?: number;
 limit?: number;
+q?: string;
 };

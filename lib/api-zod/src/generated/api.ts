@@ -180,7 +180,8 @@ export const DeleteTenantResponse = zod.object({
 
 export const ListAreasQueryParams = zod.object({
   "page": zod.coerce.number().optional(),
-  "limit": zod.coerce.number().optional()
+  "limit": zod.coerce.number().optional(),
+  "q": zod.coerce.string().optional()
 })
 
 export const ListAreasResponse = zod.object({
@@ -246,7 +247,8 @@ export const DeleteAreaResponse = zod.object({
 export const ListClinicsQueryParams = zod.object({
   "page": zod.coerce.number().optional(),
   "limit": zod.coerce.number().optional(),
-  "areaId": zod.coerce.string().optional()
+  "areaId": zod.coerce.string().optional(),
+  "q": zod.coerce.string().optional()
 })
 
 export const ListClinicsResponse = zod.object({
@@ -342,6 +344,12 @@ export const DeleteClinicResponse = zod.object({
   "ok": zod.boolean()
 })
 
+
+export const ListRolesQueryParams = zod.object({
+  "page": zod.coerce.number().optional(),
+  "limit": zod.coerce.number().optional(),
+  "q": zod.coerce.string().optional()
+})
 
 export const ListRolesResponse = zod.object({
   "data": zod.array(zod.object({
@@ -544,7 +552,8 @@ export const DeleteUserResponse = zod.object({
 
 export const ListProgramsQueryParams = zod.object({
   "page": zod.coerce.number().optional(),
-  "limit": zod.coerce.number().optional()
+  "limit": zod.coerce.number().optional(),
+  "q": zod.coerce.string().optional()
 })
 
 export const ListProgramsResponse = zod.object({

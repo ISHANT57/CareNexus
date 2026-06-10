@@ -6,9 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListClinicsParams = {
+export type ListRolesParams = {
 page?: number;
 limit?: number;
-areaId?: string;
 q?: string;
 };

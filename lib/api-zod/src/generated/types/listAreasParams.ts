@@ -9,4 +9,5 @@
 export type ListAreasParams = {
 page?: number;
 limit?: number;
+q?: string;
 };

@@ -289,6 +289,10 @@ paths:
           in: query
           schema:
             type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
       responses:
         "200":
           description: List of areas
@@ -397,6 +401,10 @@ paths:
           in: query
           schema:
             type: string
+        - name: q
+          in: query
+          schema:
+            type: string
       responses:
         "200":
           description: List of clinics
@@ -492,6 +500,19 @@ paths:
       tags: [roles]
       security:
         - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
       responses:
         "200":
           description: List of roles
@@ -763,6 +784,10 @@ paths:
           in: query
           schema:
             type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
       responses:
         "200":
           description: List of programs

@@ -5,11 +5,13 @@ import {
   useUpdateArea,
   useDeleteArea,
   getListAreasQueryKey,
+  useListTenants,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Map, Plus, ChevronLeft, ChevronRight, Pencil, Trash2, Search, Building2 } from "lucide-react";
+import { Map, Plus, ChevronLeft, ChevronRight, Pencil, Trash2, Search, Building2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn, exportToCSV } from "@/lib/utils";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
@@ -22,25 +24,50 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 const PAGE_SIZE = 20;
 
 export default function AreasPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const { data, isLoading } = useListAreas({ page, limit: PAGE_SIZE });
+  const { data, isLoading } = useListAreas(
+    { page, limit: PAGE_SIZE },
+    { request: { headers: { "x-tenant-id": "ALL" } } }
+  );
+  const { data: tenantsData, isLoading: tenantsLoading } = useListTenants(
+    { limit: 500 },
+    { request: { headers: { "x-tenant-id": "ALL" } } }
+  );
+
+  const { data: allAreasData, isLoading: allAreasLoading } = useListAreas(
+    { limit: 1000 },
+    { request: { headers: { "x-tenant-id": "ALL" } } }
+  );
+  
+  const tenantOptions = useMemo(() => {
+    return (tenantsData?.data ?? []).map((t: any) => ({ label: t.name, value: t.id }));
+  }, [tenantsData]);
+
+  const masterAreaOptions = useMemo(() => {
+    const uniqueNames = Array.from(new Set((allAreasData?.data ?? []).map((a: any) => a.name)));
+    return uniqueNames.map(name => ({ label: name as string, value: name as string })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [allAreasData]);
+
   const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const createArea = useCreateArea();
-  const updateArea = useUpdateArea();
-  const deleteArea = useDeleteArea();
+  const createArea = useCreateArea({ request: { headers: { "x-tenant-id": "ALL" } } });
+  const updateArea = useUpdateArea({ request: { headers: { "x-tenant-id": "ALL" } } });
+  const deleteArea = useDeleteArea({ request: { headers: { "x-tenant-id": "ALL" } } });
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newAreaTenantId, setNewAreaTenantId] = useState("");
   const [newAreaName, setNewAreaName] = useState("");
   const [newAreaDescription, setNewAreaDescription] = useState("");
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editId, setEditId] = useState("");
+  const [editTenantId, setEditTenantId] = useState("");
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
 
@@ -53,25 +80,25 @@ export default function AreasPage() {
   );
 
   const handleCreateArea = async () => {
-    if (!newAreaName.trim()) { toast({ variant: "destructive", title: "Name is required" }); return; }
+    if (!newAreaName.trim() || !newAreaTenantId) { toast({ variant: "destructive", title: "Name and Tenant are required" }); return; }
     try {
-      await createArea.mutateAsync({ data: { name: newAreaName.trim(), description: newAreaDescription.trim() || undefined } });
+      await createArea.mutateAsync({ data: { tenantId: newAreaTenantId, name: newAreaName.trim(), description: newAreaDescription.trim() || undefined } as any });
       queryClient.invalidateQueries({ queryKey: getListAreasQueryKey() });
-      setIsCreateOpen(false); setNewAreaName(""); setNewAreaDescription("");
+      setIsCreateOpen(false); setNewAreaName(""); setNewAreaDescription(""); setNewAreaTenantId("");
       toast({ title: "Area created successfully" });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Failed to create area", description: err.message });
     }
   };
 
-  const openEdit = (area: { id: string; name: string; description?: string | null }) => {
-    setEditId(area.id); setEditName(area.name); setEditDescription(area.description ?? ""); setIsEditOpen(true);
+  const openEdit = (area: any) => {
+    setEditId(area.id); setEditName(area.name); setEditDescription(area.description ?? ""); setEditTenantId(area.tenantId); setIsEditOpen(true);
   };
 
   const handleEditArea = async () => {
-    if (!editName.trim()) { toast({ variant: "destructive", title: "Name is required" }); return; }
+    if (!editName.trim() || !editTenantId) { toast({ variant: "destructive", title: "Name and Tenant are required" }); return; }
     try {
-      await updateArea.mutateAsync({ id: editId, data: { name: editName.trim(), description: editDescription.trim() || undefined } });
+      await updateArea.mutateAsync({ id: editId, data: { tenantId: editTenantId, name: editName.trim(), description: editDescription.trim() || undefined } as any });
       queryClient.invalidateQueries({ queryKey: getListAreasQueryKey() });
       setIsEditOpen(false);
       toast({ title: "Area updated successfully" });
@@ -90,26 +117,65 @@ export default function AreasPage() {
     }
   };
 
+  const handleExport = () => {
+    if (!filteredAreas.length) {
+      toast({ title: "No data", description: "There are no areas to export." });
+      return;
+    }
+    const exportData = filteredAreas.map((a: any) => ({
+      ID: a.id,
+      "Area Name": a.name,
+      Description: a.description || "N/A",
+      "Created At": new Date(a.createdAt).toLocaleDateString("en-GB")
+    }));
+    exportToCSV(exportData, `areas_export_${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
   return (
-    <div className="flex-1 overflow-y-auto bg-background">
-      <div className="bg-card border-b border-border px-8 py-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Geographic Areas</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              {data?.meta?.total?.toLocaleString() ?? "—"} service regions managing clinics and patient assignments.
-            </p>
-          </div>
+    <div className="page-container animate-in-up">
+      <div className="page-header">
+        <div>
+          <h1 className="text-h2">Geographic Areas</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            {data?.meta?.total?.toLocaleString() ?? "—"} service regions managing clinics and patient assignments.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !filteredAreas.length}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
-              <Button size="sm"><Plus className="w-4 h-4 mr-2" />Create Area</Button>
+              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Area
+              </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-sm">
+            <DialogContent aria-describedby={undefined} className="max-w-sm">
               <DialogHeader><DialogTitle>Create New Area</DialogTitle></DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
+                  <Label>Tenant / Hospital <span className="text-destructive">*</span></Label>
+                  <SearchableSelect
+                    options={tenantOptions}
+                    value={newAreaTenantId}
+                    onValueChange={setNewAreaTenantId}
+                    placeholder="Select a tenant..."
+                    searchPlaceholder="Search tenants..."
+                    isLoading={tenantsLoading}
+                  />
+                </div>
+                <div className="grid gap-2">
                   <Label>Area Name <span className="text-destructive">*</span></Label>
-                  <Input value={newAreaName} onChange={(e) => setNewAreaName(e.target.value)} placeholder="e.g. North Mumbai Region" />
+                  <SearchableSelect
+                    options={masterAreaOptions}
+                    value={newAreaName}
+                    onValueChange={setNewAreaName}
+                    placeholder="Select an area..."
+                    searchPlaceholder="Search master areas..."
+                    isLoading={allAreasLoading}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label>Description</Label>
@@ -118,7 +184,7 @@ export default function AreasPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-                <Button onClick={handleCreateArea} disabled={createArea.isPending || !newAreaName.trim()}>Create</Button>
+                <Button onClick={handleCreateArea} disabled={createArea.isPending || !newAreaName.trim() || !newAreaTenantId}>Create</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -126,12 +192,30 @@ export default function AreasPage() {
       </div>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent aria-describedby={undefined} className="max-w-sm">
           <DialogHeader><DialogTitle>Edit Area</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
+              <Label>Tenant / Hospital <span className="text-destructive">*</span></Label>
+              <SearchableSelect
+                options={tenantOptions}
+                value={editTenantId}
+                onValueChange={setEditTenantId}
+                placeholder="Select a tenant..."
+                searchPlaceholder="Search tenants..."
+                isLoading={tenantsLoading}
+              />
+            </div>
+            <div className="grid gap-2">
               <Label>Area Name <span className="text-destructive">*</span></Label>
-              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+              <SearchableSelect
+                options={masterAreaOptions}
+                value={editName}
+                onValueChange={setEditName}
+                placeholder="Select an area..."
+                searchPlaceholder="Search master areas..."
+                isLoading={allAreasLoading}
+              />
             </div>
             <div className="grid gap-2">
               <Label>Description</Label>
@@ -140,7 +224,7 @@ export default function AreasPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
-            <Button onClick={handleEditArea} disabled={updateArea.isPending || !editName.trim()}>Save Changes</Button>
+            <Button onClick={handleEditArea} disabled={updateArea.isPending || !editName.trim() || !editTenantId}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

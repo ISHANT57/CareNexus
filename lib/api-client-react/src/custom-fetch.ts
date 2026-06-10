@@ -19,6 +19,12 @@ export function setTenantIdGetter(fn: () => string | null) {
   _getTenantId = fn;
 }
 
+function getXsrfToken(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export async function customFetch<T = unknown>(
   url: string,
   options: CustomFetchOptions = {}
@@ -26,8 +32,12 @@ export async function customFetch<T = unknown>(
   const token = _getToken();
   const tenantId = _getTenantId();
   const headers = new Headers(options.headers);
-  if (token) headers.set("Authorization", `Bearer ${token}`);
-  if (tenantId) headers.set("x-tenant-id", tenantId);
+  if (token && !headers.has("Authorization")) headers.set("Authorization", `Bearer ${token}`);
+  if (tenantId && !headers.has("x-tenant-id")) headers.set("x-tenant-id", tenantId);
+  
+  const xsrfToken = getXsrfToken();
+  if (xsrfToken) headers.set("x-xsrf-token", xsrfToken);
+
   if (!headers.has("Content-Type") && options.body) {
     headers.set("Content-Type", "application/json");
   }

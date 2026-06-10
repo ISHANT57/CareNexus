@@ -23,10 +23,12 @@ import ClinicsPage from "@/pages/clinics";
 import ProgramsPage from "@/pages/programs";
 import AreasPage from "@/pages/areas";
 import TenantsPage from "@/pages/tenants";
+import OnboardingPage from "@/pages/onboarding";
 import AuditLogsPage from "@/pages/audit-logs";
 import SettingsPage from "@/pages/settings";
 import NotificationsPage from "@/pages/notifications";
 import AppointmentsPage from "@/pages/appointments";
+import TasksPage from "@/pages/tasks";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
 // ─── PERFORMANCE FIX: Global QueryClient defaults ─────────────────────────────
@@ -113,6 +115,13 @@ function Router() {
           </RoleGuard>
         </AppLayout>
       </Route>
+      <Route path="/onboarding">
+        <AppLayout>
+          <RoleGuard allowedRoles={["SUPER_ADMIN"]}>
+            <OnboardingPage />
+          </RoleGuard>
+        </AppLayout>
+      </Route>
       <Route path="/audit-logs">
         <AppLayout>
           <RoleGuard allowedRoles={["SUPER_ADMIN", "AREA_ADMIN"]}>
@@ -128,6 +137,9 @@ function Router() {
       </Route>
       <Route path="/appointments">
         <AppLayout><AppointmentsPage /></AppLayout>
+      </Route>
+      <Route path="/tasks">
+        <AppLayout><TasksPage /></AppLayout>
       </Route>
 
       <Route component={NotFound} />

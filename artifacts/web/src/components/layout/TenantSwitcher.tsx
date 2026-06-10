@@ -36,7 +36,7 @@ export function TenantSwitcher() {
     queryKey: ["tenants-list"],
     queryFn: async () => {
       // Temporarily bypass activeTenantId to fetch ALL tenants
-      const res = await customFetch<{ data: Tenant[] }>("/api/tenants", {
+      const res = await customFetch<{ data: Tenant[] }>("/api/tenants?limit=1000", {
         headers: { "x-tenant-id": "ALL" }
       });
       return res.data;

@@ -31,6 +31,7 @@ const ADMIN_ROLES = ["SUPER_ADMIN", "AREA_ADMIN", "CLINIC_ADMIN"];
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, group: "main", allowedRoles: ALL_ROLES },
   { href: "/patients", label: "Patients", icon: Users, group: "clinical", allowedRoles: ALL_ROLES },
+  { href: "/tasks", label: "Tasks", icon: Calendar, group: "clinical", allowedRoles: ALL_ROLES },
   { href: "/appointments", label: "Appointments", icon: Calendar, group: "clinical", allowedRoles: ["SUPER_ADMIN", "AREA_ADMIN", "CLINIC_ADMIN", "DOCTOR", "OPERATOR"] },
   { href: "/tenants", label: "Tenants", icon: Building2, group: "admin", allowedRoles: ["SUPER_ADMIN"] },
   { href: "/users", label: "Team Members", icon: UserCircle, group: "admin", allowedRoles: ADMIN_ROLES },
@@ -46,6 +47,7 @@ const navGroups = [
   { key: "clinical", label: "Clinical" },
   { key: "admin", label: "Administration" },
   { key: "org", label: "Organization" },
+  { key: "master_data", label: "Master Data" },
   { key: "system", label: "System" },
 ];
 
@@ -88,7 +90,18 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   const unreadCount = notificationsData?.data?.filter((n: any) => !n.readAt)?.length ?? 0;
 
-  const filteredItems = navItems.filter((item) => user?.role && item.allowedRoles.includes(user.role));
+  const filteredItems = navItems
+    .filter((item) => user?.role && item.allowedRoles.includes(user.role))
+    .map((item) => {
+      // Group platform-wide data into "Master Data" for SUPER_ADMIN
+      if (
+        user?.role === "SUPER_ADMIN" &&
+        ["/tenants", "/areas", "/clinics", "/programs", "/users"].includes(item.href)
+      ) {
+        return { ...item, group: "master_data" };
+      }
+      return item;
+    });
 
   const handleLogout = async () => {
     await logout.mutateAsync();
@@ -109,7 +122,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
+    <div className="flex flex-col h-full bg-transparent text-sidebar-foreground">
       {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-sidebar-border shrink-0">
         <div className="flex items-center gap-2.5">
@@ -263,7 +276,7 @@ export function Sidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <div className="hidden md:flex w-64 border-r border-border flex-col h-screen sticky top-0 shadow-lg">
+      <div className="hidden md:flex w-64 border-r border-sidebar-border flex-col h-screen sticky top-0 bg-sidebar/80 backdrop-blur-2xl shadow-2xl z-40">
         <SidebarContent />
       </div>
 
@@ -291,7 +304,7 @@ export function Sidebar() {
       {/* Mobile drawer */}
       <div
         className={cn(
-          "md:hidden fixed inset-y-0 left-0 z-50 w-72 flex flex-col transition-transform duration-300 ease-in-out",
+          "md:hidden fixed inset-y-0 left-0 z-50 w-72 flex flex-col transition-transform duration-300 ease-in-out bg-sidebar/90 backdrop-blur-2xl border-r border-sidebar-border shadow-2xl",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >

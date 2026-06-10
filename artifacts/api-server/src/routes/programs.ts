@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { ADMIN_ROLES } from "../middlewares/rbac.js";
+import { authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
@@ -12,6 +12,9 @@ const router = Router();
 router.use(authenticate, requireTenant);
 
 const ProgramSchema = z.object({
+  tenantId: z.string().uuid().optional(),
+  areaId: z.string().uuid().optional().nullable(),
+  clinicId: z.string().uuid().optional().nullable(),
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional().nullable(),
   activationCode: z.string().max(50).optional().nullable(),
@@ -22,12 +25,18 @@ const ProgramSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-router.get("/", async (req, res, next) => {
+router.get("/", authorizePermission("programs", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const q = req.query["q"] as string | undefined;
+    const reqTenantId = req.query["tenantId"] as string | undefined;
+    const areaId = req.query["areaId"] as string | undefined;
+    const clinicId = req.query["clinicId"] as string | undefined;
     const where = {
-      tenantId: req.tenantId!, deletedAt: null,
+      deletedAt: null,
+      ...(req.tenantId ? { tenantId: req.tenantId } : reqTenantId ? { tenantId: reqTenantId } : {}),
+      ...(areaId ? { areaId } : {}),
+      ...(clinicId ? { clinicId } : {}),
       ...(q ? { name: { contains: q, mode: "insensitive" as const } } : {}),
     };
     const [total, programs] = await Promise.all([
@@ -41,7 +50,7 @@ router.get("/", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.get("/:id", async (req, res, next) => {
+router.get("/:id", authorizePermission("programs", "read"), async (req, res, next) => {
   try {
     const program = await prisma.program.findFirst({
       where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null },
@@ -52,17 +61,20 @@ router.get("/:id", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post("/", ADMIN_ROLES, validateBody(ProgramSchema), async (req, res, next) => {
+router.post("/", authorizePermission("programs", "write"), validateBody(ProgramSchema), async (req, res, next) => {
   try {
     const data = req.body as z.infer<typeof ProgramSchema>;
+    const targetTenantId = data.tenantId || req.tenantId;
+    if (!targetTenantId) throw Errors.badRequest("Tenant ID is required");
+
     const activationCode = data.activationCode ?? `${data.name.toUpperCase().replace(/\s+/g, "_").slice(0, 20)}_${Date.now()}`;
-    const program = await prisma.program.create({ data: { ...data, activationCode, tenantId: req.tenantId! } });
+    const program = await prisma.program.create({ data: { ...data, activationCode, tenantId: targetTenantId, areaId: data.areaId, clinicId: data.clinicId } });
     await createAuditLog({ req, entityType: "Program", entityId: program.id, action: "CREATE", after: data });
     res.status(201).json(program);
   } catch (err) { next(err); }
 });
 
-router.patch("/:id", ADMIN_ROLES, validateBody(ProgramSchema.partial()), async (req, res, next) => {
+router.patch("/:id", authorizePermission("programs", "write"), validateBody(ProgramSchema.partial()), async (req, res, next) => {
   try {
     const program = await prisma.program.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!program) throw Errors.notFound("Program");
@@ -73,7 +85,7 @@ router.patch("/:id", ADMIN_ROLES, validateBody(ProgramSchema.partial()), async (
   } catch (err) { next(err); }
 });
 
-router.delete("/:id", ADMIN_ROLES, async (req, res, next) => {
+router.delete("/:id", authorizePermission("programs", "write"), async (req, res, next) => {
   try {
     const program = await prisma.program.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!program) throw Errors.notFound("Program");

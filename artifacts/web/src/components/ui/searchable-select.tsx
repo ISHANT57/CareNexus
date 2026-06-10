@@ -1,14 +1,7 @@
 import * as React from "react";
-import { Check, ChevronsUpDown, Loader2, Search, X } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Search, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   Popover,
   PopoverContent,
@@ -33,13 +26,13 @@ interface SearchableSelectProps {
   className?: string;
   emptyMessage?: string;
   clearable?: boolean;
-  /** Max items to render at once. Defaults to 100. Use lower values for very large lists. */
-  maxVisible?: number;
+  creatable?: boolean;
+  onSearch?: (query: string) => void;
 }
 
-// ─── PERFORMANCE FIX ──────────────────────────────────────────────────────────
-// Previously: All 707 clinic / 195 area options were rendered as DOM nodes at once.
-// Now: debounced search query + sliced visible window limits DOM nodes.
+// ─── PERFORMANCE FIX: VIRTUALIZED SEARCHABLE SELECT ──────────────────────────
+// Renders only the visible subset of options using @tanstack/react-virtual,
+// supporting 10,000+ items smoothly with debounced input and memoized lookups.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function SearchableSelect({
@@ -53,19 +46,25 @@ export function SearchableSelect({
   className,
   emptyMessage = "No results found.",
   clearable = false,
-  maxVisible = 100,
+  creatable = false,
+  onSearch,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState("");
   const [debouncedQuery, setDebouncedQuery] = React.useState("");
 
-  // Debounce the search query so filtering doesn't run synchronously on every keystroke
+  // Debounce search input to prevent heavy filtering on every keystroke
   React.useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(inputValue), 150);
+    const t = setTimeout(() => {
+      setDebouncedQuery(inputValue);
+      if (onSearch) {
+        onSearch(inputValue);
+      }
+    }, 150);
     return () => clearTimeout(t);
-  }, [inputValue]);
+  }, [inputValue, onSearch]);
 
-  // Reset search when dropdown closes
+  // Reset input state when closing
   React.useEffect(() => {
     if (!open) {
       setInputValue("");
@@ -73,28 +72,35 @@ export function SearchableSelect({
     }
   }, [open]);
 
-  // Pre-filter + slice to maxVisible — avoids rendering 700+ DOM nodes
-  const visibleOptions = React.useMemo(() => {
-    if (!debouncedQuery) return options.slice(0, maxVisible);
-    const q = debouncedQuery.toLowerCase();
-    const filtered = options.filter(
-      (o) => o.label.toLowerCase().includes(q) || (o.description ?? "").toLowerCase().includes(q)
-    );
-    return filtered.slice(0, maxVisible);
-  }, [options, debouncedQuery, maxVisible]);
-
-  const totalMatches = React.useMemo(() => {
-    if (!debouncedQuery) return options.length;
+  // Filtered options based on query
+  const filteredOptions = React.useMemo(() => {
+    // If we're using server-side search, don't double filter unless there's no onSearch
+    if (!debouncedQuery || onSearch) return options;
     const q = debouncedQuery.toLowerCase();
     return options.filter(
-      (o) => o.label.toLowerCase().includes(q) || (o.description ?? "").toLowerCase().includes(q)
-    ).length;
-  }, [options, debouncedQuery]);
+      (o) =>
+        o.label.toLowerCase().includes(q) ||
+        (o.description ?? "").toLowerCase().includes(q)
+    );
+  }, [options, debouncedQuery, onSearch]);
 
   const selected = React.useMemo(
     () => options.find((opt) => opt.value === value),
     [options, value]
   );
+
+  const parentRef = React.useRef<HTMLDivElement>(null);
+
+  // Setup virtualization
+  const rowVirtualizer = useVirtualizer({
+    count: filteredOptions.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: React.useCallback(
+      (index) => (filteredOptions[index]?.description ? 52 : 38),
+      [filteredOptions]
+    ),
+    overscan: 5,
+  });
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -105,7 +111,7 @@ export function SearchableSelect({
           aria-expanded={open}
           disabled={disabled || isLoading}
           className={cn(
-            "w-full justify-between font-normal",
+            "w-full justify-between font-normal bg-card",
             !value && "text-muted-foreground",
             className
           )}
@@ -118,6 +124,8 @@ export function SearchableSelect({
               </span>
             ) : selected ? (
               selected.label
+            ) : value ? (
+              value
             ) : (
               placeholder
             )}
@@ -140,7 +148,7 @@ export function SearchableSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-        {/* Custom search input with debounce — bypasses cmdk's synchronous filtering */}
+        {/* Search Input */}
         <div className="flex items-center border-b border-border px-3">
           <Search className="w-4 h-4 shrink-0 text-muted-foreground mr-2" />
           <input
@@ -160,49 +168,81 @@ export function SearchableSelect({
           )}
         </div>
 
-        {/* Options list — capped at maxVisible to prevent DOM bloat */}
-        <div className="max-h-64 overflow-y-auto">
-          {visibleOptions.length === 0 ? (
+        {/* Scrollable Container */}
+        <div
+          ref={parentRef}
+          className="max-h-64 overflow-y-auto relative"
+          style={{ contain: "minimal" }}
+        >
+          {filteredOptions.length === 0 && !(creatable && inputValue) ? (
             <div className="py-6 text-center text-sm text-muted-foreground">
               {emptyMessage}
             </div>
           ) : (
-            <>
-              {visibleOptions.map((option) => (
-                <div
-                  key={option.value}
-                  onClick={() => {
-                    onValueChange(option.value === value ? "" : option.value);
-                    setOpen(false);
-                  }}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-2 cursor-pointer text-sm hover:bg-muted/60 transition-colors",
-                    option.value === value && "bg-muted"
-                  )}
-                >
-                  <Check
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+                const option = filteredOptions[virtualItem.index];
+                if (!option) return null;
+
+                return (
+                  <div
+                    key={option.value}
+                    data-index={virtualItem.index}
+                    ref={rowVirtualizer.measureElement}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                    onClick={() => {
+                      onValueChange(option.value === value ? "" : option.value);
+                      setOpen(false);
+                    }}
                     className={cn(
-                      "h-4 w-4 shrink-0",
-                      value === option.value ? "opacity-100 text-primary" : "opacity-0"
+                      "flex items-center gap-2 px-3 py-2 cursor-pointer text-sm hover:bg-muted/60 transition-colors",
+                      option.value === value && "bg-muted"
                     )}
-                  />
-                  <div className="flex flex-col min-w-0">
-                    <span className="truncate">{option.label}</span>
-                    {option.description && (
-                      <span className="text-xs text-muted-foreground truncate">
-                        {option.description}
-                      </span>
-                    )}
+                  >
+                    <Check
+                      className={cn(
+                        "h-4 w-4 shrink-0",
+                        value === option.value ? "opacity-100 text-primary" : "opacity-0"
+                      )}
+                    />
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate">{option.label}</span>
+                      {option.description && (
+                        <span className="text-xs text-muted-foreground truncate">
+                          {option.description}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-              {/* Show count indicator when results are truncated */}
-              {totalMatches > maxVisible && (
-                <div className="px-3 py-2 text-xs text-muted-foreground border-t border-border bg-muted/30">
-                  Showing {maxVisible} of {totalMatches} — type to narrow results
-                </div>
-              )}
-            </>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Creatable option */}
+          {creatable && inputValue && !options.some(o => o.label.toLowerCase() === inputValue.toLowerCase()) && (
+            <div
+              onClick={() => {
+                onValueChange(inputValue);
+                setOpen(false);
+              }}
+              className="flex items-center gap-2 px-3 py-2 cursor-pointer text-sm text-primary hover:bg-muted/60 transition-colors border-t border-border mt-1 pt-1 bg-card"
+            >
+              <Plus className="h-4 w-4 shrink-0" />
+              <span className="truncate">Create "{inputValue}"</span>
+            </div>
           )}
         </div>
       </PopoverContent>

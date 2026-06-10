@@ -28,6 +28,8 @@ export function useAreaClinicCascade(
 ) {
   const [areaId, setAreaIdInternal] = useState(initialAreaId);
   const [clinicId, setClinicId] = useState(initialClinicId);
+  const [areaQuery, setAreaQuery] = useState("");
+  const [clinicQuery, setClinicQuery] = useState("");
 
   const { data: me } = useGetMe({ query: { queryKey: ["getMe"] } });
   const { activeTenantId } = useTenantContext();
@@ -41,14 +43,14 @@ export function useAreaClinicCascade(
   // Backend filters by req.tenantId automatically (set by requireTenant middleware
   // from either the user's JWT or X-Tenant-Id header for SUPER_ADMIN).
   const { data: areasData, isLoading: areasLoading } = useListAreas(
-    { limit: 1000 },
+    { limit: 1000, q: areaQuery || undefined },
     { query: { enabled: !isSuperAdminWithNoTenant } as any }
   );
 
   // Fetch clinics ONLY for the selected area — backend supports ?areaId=
   // Also tenant-scoped by the backend automatically.
   const { data: clinicsData, isLoading: clinicsLoading } = useListClinics(
-    { areaId: areaId || undefined, limit: 1000 },
+    { areaId: areaId || undefined, limit: 1000, q: clinicQuery || undefined },
     { query: { enabled: !!areaId && !isSuperAdminWithNoTenant } as any }
   );
 
@@ -79,6 +81,8 @@ export function useAreaClinicCascade(
     clinicId,
     setAreaId,
     setClinicId,
+    setAreaQuery,
+    setClinicQuery,
     areas,
     clinics,
     areasLoading,

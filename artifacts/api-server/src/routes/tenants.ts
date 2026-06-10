@@ -2,13 +2,15 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
+import { requireTenant } from "../middlewares/tenantScope.js";
 import { SUPER_ADMIN_ONLY } from "../middlewares/rbac.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 import { createAuditLog } from "../lib/audit.js";
 
 const router = Router();
-router.use(authenticate, SUPER_ADMIN_ONLY);
+router.use(authenticate);
+router.use(requireTenant);
 
 const TenantSchema = z.object({
   name: z.string().min(2).max(100),
@@ -20,14 +22,32 @@ const TenantSchema = z.object({
 
 const UpdateTenantSchema = TenantSchema.partial();
 
+const OnboardTenantSchema = z.object({
+  tenant: TenantSchema,
+  areas: z.array(z.string().min(1).max(100)),
+  clinics: z.array(z.object({
+    name: z.string().min(1).max(100),
+    areaIndex: z.number().int().min(0),
+  })),
+  adminUser: z.object({
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    email: z.string().email(),
+    password: z.string().min(8),
+  }),
+});
+
 // GET /api/tenants
 router.get("/", async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const q = req.query["q"] as string | undefined;
 
+    console.log("tenantId:", req.tenantId, "header:", req.headers["x-tenant-id"], "role:", req.user?.role);
+
     const where = {
       deletedAt: null,
+      ...(req.tenantId ? { id: req.tenantId } : {}),
       ...(q ? { name: { contains: q, mode: "insensitive" as const } } : {}),
     };
 
@@ -65,7 +85,7 @@ router.get("/:id", async (req, res, next) => {
 });
 
 // POST /api/tenants
-router.post("/", validateBody(TenantSchema), async (req, res, next) => {
+router.post("/", SUPER_ADMIN_ONLY, validateBody(TenantSchema), async (req, res, next) => {
   try {
     const data = req.body as z.infer<typeof TenantSchema>;
     const existing = await prisma.tenant.findUnique({ where: { domain: data.domain } });
@@ -79,8 +99,62 @@ router.post("/", validateBody(TenantSchema), async (req, res, next) => {
   }
 });
 
+// POST /api/tenants/onboard
+router.post("/onboard", SUPER_ADMIN_ONLY, validateBody(OnboardTenantSchema), async (req, res, next) => {
+  try {
+    const data = req.body as z.infer<typeof OnboardTenantSchema>;
+    const existing = await prisma.tenant.findUnique({ where: { domain: data.tenant.domain } });
+    if (existing) throw Errors.conflict("Domain already in use");
+
+    const existingUser = await prisma.user.findUnique({ where: { email: data.adminUser.email } });
+    if (existingUser) throw Errors.conflict("Admin email already in use");
+
+    const role = await prisma.role.findFirst({ where: { name: "CLINIC_ADMIN" } });
+    if (!role) throw Errors.notFound("CLINIC_ADMIN role not found");
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Create Tenant
+      const tenant = await tx.tenant.create({ data: data.tenant });
+
+      // 2. Create Areas
+      const createdAreas = await Promise.all(
+        data.areas.map(name => tx.area.create({ data: { name, tenantId: tenant.id } }))
+      );
+
+      // 3. Create Clinics
+      const createdClinics = await Promise.all(
+        data.clinics.map(c => tx.clinic.create({
+          data: { name: c.name, areaId: createdAreas[c.areaIndex]!.id, tenantId: tenant.id }
+        }))
+      );
+
+      // 4. Create Clinic Admin
+      const { default: bcrypt } = await import("bcryptjs");
+      const hashed = await bcrypt.hash(data.adminUser.password, 12);
+      const admin = await tx.user.create({
+        data: {
+          ...data.adminUser,
+          password: hashed,
+          roleId: role.id,
+          tenantId: tenant.id,
+          clinicAssignments: {
+            create: createdClinics.map(c => ({ clinicId: c.id }))
+          }
+        }
+      });
+
+      return { tenant, areas: createdAreas, clinics: createdClinics, admin };
+    });
+
+    await createAuditLog({ req, entityType: "Tenant", entityId: result.tenant.id, action: "CREATE", after: data });
+    res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // PATCH /api/tenants/:id
-router.patch("/:id", validateBody(UpdateTenantSchema), async (req, res, next) => {
+router.patch("/:id", SUPER_ADMIN_ONLY, validateBody(UpdateTenantSchema), async (req, res, next) => {
   try {
     const tenant = await prisma.tenant.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!tenant) throw Errors.notFound("Tenant");
@@ -94,7 +168,7 @@ router.patch("/:id", validateBody(UpdateTenantSchema), async (req, res, next) =>
 });
 
 // DELETE /api/tenants/:id
-router.delete("/:id", async (req, res, next) => {
+router.delete("/:id", SUPER_ADMIN_ONLY, async (req, res, next) => {
   try {
     const tenant = await prisma.tenant.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!tenant) throw Errors.notFound("Tenant");

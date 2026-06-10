@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { ADMIN_ROLES } from "../middlewares/rbac.js";
+import { ADMIN_ROLES , authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant } from "../middlewares/tenantScope.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
@@ -54,7 +54,7 @@ router.get("/:id", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post("/", ADMIN_ROLES, validateBody(RoleSchema), async (req, res, next) => {
+router.post("/", authorizePermission("roles", "write"), validateBody(RoleSchema), async (req, res, next) => {
   try {
     const data = req.body as z.infer<typeof RoleSchema>;
     if (SYSTEM_ROLES.includes(data.name.toUpperCase())) {
@@ -65,7 +65,7 @@ router.post("/", ADMIN_ROLES, validateBody(RoleSchema), async (req, res, next) =
   } catch (err) { next(err); }
 });
 
-router.patch("/:id", ADMIN_ROLES, validateBody(RoleSchema.partial()), async (req, res, next) => {
+router.patch("/:id", authorizePermission("roles", "write"), validateBody(RoleSchema.partial()), async (req, res, next) => {
   try {
     const role = await prisma.role.findFirst({ where: { id: req.params["id"] as string } });
     if (!role) throw Errors.notFound("Role");
@@ -75,7 +75,7 @@ router.patch("/:id", ADMIN_ROLES, validateBody(RoleSchema.partial()), async (req
   } catch (err) { next(err); }
 });
 
-router.delete("/:id", ADMIN_ROLES, async (req, res, next) => {
+router.delete("/:id", authorizePermission("roles", "write"), async (req, res, next) => {
   try {
     const role = await prisma.role.findFirst({ where: { id: req.params["id"] as string } });
     if (!role) throw Errors.notFound("Role");
@@ -88,7 +88,7 @@ router.delete("/:id", ADMIN_ROLES, async (req, res, next) => {
 // ── Role Permissions CRUD ─────────────────────────────────────────────────────
 
 const PermissionSchema = z.object({
-  module: z.string().min(1).max(100),
+  resource: z.string().min(1).max(100),
   action: z.string().min(1).max(100),
 });
 
@@ -102,18 +102,26 @@ router.get("/:id/permissions", async (req, res, next) => {
       include: { permission: true },
       orderBy: { permission: { module: "asc" } },
     });
-    res.json({ data: permissions });
+    const mapped = permissions.map((rp) => ({
+      id: rp.id,
+      roleId: rp.roleId,
+      resource: rp.permission.module,
+      action: rp.permission.action,
+      createdAt: rp.createdAt,
+    }));
+    res.json({ data: mapped });
   } catch (err) { next(err); }
 });
 
 // POST /api/roles/:id/permissions
-router.post("/:id/permissions", ADMIN_ROLES, validateBody(PermissionSchema), async (req, res, next) => {
+router.post("/:id/permissions", authorizePermission("roles", "write"), validateBody(PermissionSchema), async (req, res, next) => {
   try {
     const role = await prisma.role.findFirst({ where: { id: req.params["id"] as string } });
     if (!role) throw Errors.notFound("Role");
     if (role.isSystem) throw Errors.forbidden("Cannot modify system role permissions");
 
-    const { module, action } = req.body as z.infer<typeof PermissionSchema>;
+    const { resource, action } = req.body as z.infer<typeof PermissionSchema>;
+    const module = resource;
 
     // Upsert the permission record
     let permission = await prisma.permission.findFirst({ where: { module, action } });
@@ -122,22 +130,46 @@ router.post("/:id/permissions", ADMIN_ROLES, validateBody(PermissionSchema), asy
     }
 
     // Check if already granted
-    const existing = await prisma.rolePermission.findFirst({ where: { roleId: role.id, permissionId: permission.id } });
-    if (existing) { res.json(existing); return; }
+    const existing = await prisma.rolePermission.findFirst({ 
+      where: { roleId: role.id, permissionId: permission.id },
+      include: { permission: true }
+    });
+    if (existing) { 
+      res.json({
+        id: existing.id,
+        roleId: existing.roleId,
+        resource: existing.permission.module,
+        action: existing.permission.action,
+        createdAt: existing.createdAt,
+      }); 
+      return; 
+    }
 
     const rolePermission = await prisma.rolePermission.create({
       data: { roleId: role.id, permissionId: permission.id },
       include: { permission: true },
     });
-    res.status(201).json(rolePermission);
+    res.status(201).json({
+      id: rolePermission.id,
+      roleId: rolePermission.roleId,
+      resource: rolePermission.permission.module,
+      action: rolePermission.permission.action,
+      createdAt: rolePermission.createdAt,
+    });
   } catch (err) { next(err); }
 });
 
 // DELETE /api/roles/:id/permissions/:permissionId
-router.delete("/:id/permissions/:permissionId", ADMIN_ROLES, async (req, res, next) => {
+router.delete("/:id/permissions/:permissionId", authorizePermission("roles", "write"), async (req, res, next) => {
   try {
     const rolePermission = await prisma.rolePermission.findFirst({
-      where: { roleId: req.params["id"] as string, permissionId: req.params["permissionId"] as string },
+      where: { 
+        roleId: req.params["id"] as string,
+        OR: [
+          { id: req.params["permissionId"] as string },
+          { permissionId: req.params["permissionId"] as string }
+        ]
+      },
     });
     if (!rolePermission) throw Errors.notFound("Permission");
     await prisma.rolePermission.delete({ where: { id: rolePermission.id } });

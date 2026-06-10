@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { ADMIN_ROLES } from "../middlewares/rbac.js";
+import { authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
@@ -19,6 +19,7 @@ const router = Router();
 router.use(authenticate, requireTenant);
 
 const CreateUserSchema = z.object({
+  tenantId: z.string().uuid().optional(),
   roleId: z.string().uuid(),
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
@@ -33,7 +34,7 @@ const UpdateUserSchema = CreateUserSchema.omit({ password: true, email: true }).
 
 const safeUser = { id: true, email: true, firstName: true, lastName: true, mobile: true, avatarUrl: true, status: true, lastLoginAt: true, createdAt: true };
 
-router.get("/", async (req, res, next) => {
+router.get("/", authorizePermission("users", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const roleId = req.query["roleId"] as string | undefined;
@@ -55,6 +56,7 @@ router.get("/", async (req, res, next) => {
         where, skip, take, orderBy: { createdAt: "desc" },
         select: {
           ...safeUser,
+          tenant: { select: { id: true, name: true } },
           role: { select: { id: true, name: true } },
           clinicAssignments: { where: { deletedAt: null }, include: { clinic: { select: { id: true, name: true } } } },
         },
@@ -64,12 +66,13 @@ router.get("/", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.get("/:id", async (req, res, next) => {
+router.get("/:id", authorizePermission("users", "read"), async (req, res, next) => {
   try {
     const user = await prisma.user.findFirst({
       where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null },
       select: {
         ...safeUser,
+        tenant: { select: { id: true, name: true } },
         role: { select: { id: true, name: true } },
         clinicAssignments: { where: { deletedAt: null }, include: { clinic: { select: { id: true, name: true } } } },
         programAssignments: { where: { deletedAt: null }, include: { program: { select: { id: true, name: true } } } },
@@ -80,7 +83,7 @@ router.get("/:id", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post("/", ADMIN_ROLES, validateBody(CreateUserSchema), async (req, res, next) => {
+router.post("/", authorizePermission("users", "write"), validateBody(CreateUserSchema), async (req, res, next) => {
   try {
     const data = req.body as z.infer<typeof CreateUserSchema>;
     const existing = await prisma.user.findUnique({ where: { email: data.email } });
@@ -98,13 +101,16 @@ router.post("/", ADMIN_ROLES, validateBody(CreateUserSchema), async (req, res, n
     }
 
     const hashed = await bcrypt.hash(data.password, 12);
-    const { clinicIds, programIds, ...rest } = data;
+    const targetTenantId = data.tenantId || req.tenantId;
+    if (!targetTenantId) throw Errors.badRequest("Tenant ID is required");
+
+    const { clinicIds, programIds, tenantId, ...rest } = data;
 
     const user = await prisma.user.create({
       data: {
         ...rest,
         password: hashed,
-        tenantId: req.tenantId!,
+        tenantId: targetTenantId,
         clinicAssignments: clinicIds?.length
           ? { create: clinicIds.map((clinicId) => ({ clinicId })) }
           : undefined,
@@ -120,7 +126,7 @@ router.post("/", ADMIN_ROLES, validateBody(CreateUserSchema), async (req, res, n
   } catch (err) { next(err); }
 });
 
-router.patch("/:id", ADMIN_ROLES, validateBody(UpdateUserSchema), async (req, res, next) => {
+router.patch("/:id", authorizePermission("users", "write"), validateBody(UpdateUserSchema), async (req, res, next) => {
   try {
     const user = await prisma.user.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!user) throw Errors.notFound("User");
@@ -151,7 +157,7 @@ router.patch("/:id", ADMIN_ROLES, validateBody(UpdateUserSchema), async (req, re
   } catch (err) { next(err); }
 });
 
-router.delete("/:id", ADMIN_ROLES, async (req, res, next) => {
+router.delete("/:id", authorizePermission("users", "write"), async (req, res, next) => {
   try {
     const user = await prisma.user.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!user) throw Errors.notFound("User");
@@ -165,7 +171,7 @@ router.delete("/:id", ADMIN_ROLES, async (req, res, next) => {
 });
 
 // Clinic assignments
-router.post("/:id/clinics", ADMIN_ROLES, async (req, res, next) => {
+router.post("/:id/clinics", authorizePermission("users", "write"), async (req, res, next) => {
   try {
     const { clinicId } = req.body as { clinicId: string };
     if (!clinicId) throw Errors.validation("clinicId is required");
@@ -178,7 +184,7 @@ router.post("/:id/clinics", ADMIN_ROLES, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.delete("/:id/clinics/:clinicId", ADMIN_ROLES, async (req, res, next) => {
+router.delete("/:id/clinics/:clinicId", authorizePermission("users", "write"), async (req, res, next) => {
   try {
     await prisma.userClinicAssignment.updateMany({
       where: { userId: req.params["id"] as string, clinicId: req.params["clinicId"] as string },
@@ -189,7 +195,7 @@ router.delete("/:id/clinics/:clinicId", ADMIN_ROLES, async (req, res, next) => {
 });
 
 // Program assignments
-router.post("/:id/programs", ADMIN_ROLES, async (req, res, next) => {
+router.post("/:id/programs", authorizePermission("users", "write"), async (req, res, next) => {
   try {
     const { programId } = req.body as { programId: string };
     if (!programId) throw Errors.validation("programId is required");
@@ -202,7 +208,7 @@ router.post("/:id/programs", ADMIN_ROLES, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.delete("/:id/programs/:programId", ADMIN_ROLES, async (req, res, next) => {
+router.delete("/:id/programs/:programId", authorizePermission("users", "write"), async (req, res, next) => {
   try {
     await prisma.userProgramAssignment.updateMany({
       where: { userId: req.params["id"] as string, programId: req.params["programId"] as string },

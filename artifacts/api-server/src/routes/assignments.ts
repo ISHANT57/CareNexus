@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
-import { ADMIN_ROLES } from "../middlewares/rbac.js";
+import { ADMIN_ROLES , authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant } from "../middlewares/tenantScope.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
@@ -44,7 +44,7 @@ router.get("/", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post("/", ADMIN_ROLES, validateBody(AssignmentSchema), async (req, res, next) => {
+router.post("/", authorizePermission("tasks", "write"), validateBody(AssignmentSchema), async (req, res, next) => {
   try {
     const data = req.body as z.infer<typeof AssignmentSchema>;
 
@@ -81,7 +81,7 @@ router.post("/", ADMIN_ROLES, validateBody(AssignmentSchema), async (req, res, n
   } catch (err) { next(err); }
 });
 
-router.delete("/:id", ADMIN_ROLES, async (req, res, next) => {
+router.delete("/:id", authorizePermission("tasks", "write"), async (req, res, next) => {
   try {
     const assignment = await prisma.doctorPatientAssignment.findFirst({
       where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null },

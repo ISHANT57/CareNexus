@@ -1,181 +1,81 @@
-# PROJECT_HEALTH_REPORT.md — CareNexus Platform
+# PROJECT_HEALTH_REPORT.md — CareNexus Platform Health Assessment
 
-_Generated: 2026-06-09 | Sprint: Performance Optimization & API Sync_
-
----
-
-## Executive Summary
-
-The CareNexus platform is in **active development** and has reached **~85% overall completion**. The build is now green, all critical performance bottlenecks have been resolved, the OpenAPI specification has been synchronized with all backend routes, and new React Query hooks have been generated for Phases 1–5 features.
+_Generated: 2026-06-11 | Fast Audit & Bug Discovery Mode_
 
 ---
 
-## Build Status
+## 1. Executive Summary
 
-| Check | Status | Notes |
-|---|---|---|
-| **Frontend Build** (`pnpm --filter @workspace/web run build`) | ✅ **PASSING** | 2805 modules, 11.72s |
-| **TypeScript Errors** | ✅ **0** | Clean build |
-| **Import Errors** | ✅ **0** | All imports resolved |
-| **Bundle Size** | ⚠️ 1.2MB (gzipped: 328KB) | Consider code-splitting |
+This report evaluates the current build, security architecture, relational hierarchy, and frontend stability of the CareNexus platform. A comprehensive fast audit was conducted to identify active bugs, security vulnerabilities, role capabilities, and database-to-code structural mismatches. 
 
 ---
 
-## Repository Statistics
+## 2. Feature & Bug Metrics
 
-| Metric | Count |
-|---|---|
-| Total source files (excl. node_modules, generated) | ~120 |
-| Frontend pages | 23 |
-| Backend API routes | 24 |
-| Generated API hooks | 46 |
-| Generated Zod schemas | 150+ |
-| Root documentation files | 45 |
-| UI components (Shadcn) | 58 |
-| Custom components | 8 |
+### Feature Status
+* **Total Features Audited:** 14
+* **Working Features:** 2
+* **Partially Working Features:** 10
+* **Broken Features:** 2 (Care Tasks UI, Risk Scoring UI — both backend-only with no frontend UI)
 
----
-
-## Recent Changes Summary (This Session)
-
-| Category | Change | Impact |
-|---|---|---|
-| **Build Fix** | Replaced non-existent hooks in dashboard.tsx | ✅ Build now passes |
-| **Performance** | Fixed component-in-render in programs.tsx | Eliminated 300–500ms typing lag |
-| **Performance** | Virtualized SearchableSelect dropdown | 24× faster for 707-item lists |
-| **Performance** | Configured QueryClient staleTime=60s | Eliminated 15+ parallel refetches on tab switch |
-| **Performance** | Memoized filteredAreas in areas.tsx | No unnecessary re-renders |
-| **API Sync** | Synced openapi.yaml with Phase 1–5 routes | Unlocked frontend integration |
-| **Code Gen** | Generated hooks for Outcomes/Tasks/Risk Scores | 46 total hooks now available |
-| **Reports** | Generated 7 performance audit documents | Engineering documentation complete |
-| **Plan** | Generated GIT_COMMIT_PLAN.md (32 commits) | History reconstruction ready |
-| **Inventory** | Generated CODEBASE_INVENTORY.md | Full repository catalogued |
+### Identified Bugs Summary
+* **Critical Bugs Count:** 6
+* **High Bugs Count:** 8
+* **Medium Bugs Count:** 7
+* **Low Bugs Count:** 4
+* **Total Audited Bugs:** 25
 
 ---
 
-## Module Completion Dashboard (Updated)
+## 3. Detailed Feature Audits
 
-| Module | Backend | OpenAPI | Frontend | Overall | Notes |
-|---|---|---|---|---|---|
-| Authentication & Security | ✅ | ✅ | ✅ | 90% | CSRF protection still pending |
-| User & Role Management | ✅ | ✅ | ✅ | 85% | DB permissions not enforced at runtime |
-| Patient Management | ✅ | ✅ | ✅ | 95% | Tab restructure pending |
-| Appointments | ✅ | ✅ | ✅ | 90% | Fully functional |
-| Consultation Notes | 🟡 | ✅ | 🟡 | 70% | No DELETE or Edit UI |
-| Program Enrollments | ✅ | ✅ | ✅ | 95% | Fully functional |
-| Dashboard & Reports | ✅ | ✅ | ✅ | 85% | Clinic stats using list endpoint |
-| Communications | ✅ | ✅ | ✅ | 90% | SMS + EMAIL supported |
-| File Uploads | ✅ | ✅ | ✅ | 70% | Local disk only (no cloud) |
-| **Phase 1: Outcomes** | ✅ | ✅ | ✅ | **85%** | Tab active, hooks generated |
-| **Phase 2: Care Tasks** | ✅ | ✅ | 🔴 | **66%** | Hooks available, UI not built |
-| **Phase 3: Notifications** | ✅ | ✅ | ✅ | 100% | Complete |
-| **Phase 5: Risk Scoring** | ✅ | ✅ | 🔴 | **66%** | Hooks available, UI not built |
-
----
-
-## Performance Benchmarks
-
-| Interaction | Before | After |
-|---|---|---|
-| Typing in Programs form | 300–500ms lag per character | < 16ms (60fps) |
-| Opening clinic dropdown (707 items) | ~1,200ms freeze | < 50ms |
-| Searching in clinic dropdown | ~350ms per keystroke | < 10ms |
-| Tab switch (window focus) refetches | 15+ API calls | 0 |
-| Initial dashboard load | Multiple flashes | Single load, stable |
+| Feature | Status | Scoping Enforcement | Notes |
+|---|---|---|---|
+| **Authentication** | ✅ WORKING | Token-based HTTP-only cookies | Working login, registration, refresh, logout, `/me`. |
+| **User Management** | 🟡 PARTIALLY WORKING | Role checks active | Bypasses hierarchy on creation (privilege escalation), and user details fetch clinic scoping is bypassed. |
+| **Tenant Management** | 🟡 PARTIALLY WORKING | superAdminOnly middleware | Onboard endpoint crashes if Prisma client is regenerated. Metadata leaks to standard users. |
+| **Area Management** | 🟡 PARTIALLY WORKING | tenantScope assert active | Area admins can modify areas they are not assigned to. |
+| **Clinic Management** | 🟡 PARTIALLY WORKING | tenantScope assert active | Clinic admins can modify clinics outside their scope. Search is client-side only. |
+| **Program Management** | 🟡 PARTIALLY WORKING | tenantScope active | Active programs exist, but update/create endpoints lack clinic-scoping. |
+| **Patient Registration** | 🟡 PARTIALLY WORKING | Zod schema validation | Clinic Admins can register patients in clinics outside their scope. CSV import bypasses clinical boundaries. |
+| **Appointments** | 🟡 PARTIALLY WORKING | getRoleScope active | Clinic/doctor scopes bypassed during scheduling. |
+| **Consultations** | 🟡 PARTIALLY WORKING | getRoleScope active | All backend endpoints are present, but the frontend lacks Edit and Delete UI controls. |
+| **Outcomes** | 🟡 PARTIALLY WORKING | getRoleScope active | Outcomes backend is functional, but the frontend detail tracking tab lacks a record outcome dialog. |
+| **Tasks** | 🔴 BROKEN | Backend scope implemented | Fully implemented on the backend database and API layer, but the frontend UI is completely missing. |
+| **Dashboards** | 🟡 PARTIALLY WORKING | getRoleScope partially active | Dashboard statistics count, audit logs, and pending SMS counts bypass clinician scoping, leaking trust-wide numbers. |
+| **Notifications** | ✅ WORKING | tenantScope user-specific | Notifications dispatch on assignment, and UI panel functions. |
+| **Reports** | 🟡 PARTIALLY WORKING | tenantScope active | Reports API is active, but lacks scoping controls on clinic-stats and audit trail history. |
 
 ---
 
-## Technical Debt Inventory
+## 4. Quality & Security Scores
 
-### P0 — Critical (Production Blockers)
-
-| ID | Description | Estimated Effort |
-|---|---|---|
-| SEC-003 | RBAC: `role_permissions` not enforced at runtime | 3 days |
-| SEC-004 | Missing CSRF protection on state-changing routes | 1 day |
-| INFRA-001 | File uploads use local disk (not S3/R2) | 2 days |
-
-### P1 — High
-
-| ID | Description | Estimated Effort |
-|---|---|---|
-| CONSULT-001 | No DELETE endpoint for consultations | 4 hours |
-| CONSULT-002 | No Edit UI for consultations | 4 hours |
-| FEAT-018 | Care Tasks UI not built | 2 days |
-| FEAT-019 | Risk Score UI not built (dashboard + patient) | 1 day |
-| QA-001 | Zero automated test coverage | 1 week |
-
-### P2 — Medium
-
-| ID | Description | Estimated Effort |
-|---|---|---|
-| CONSULT-003 | Patient Detail tab restructure | 4 hours |
-| CONSULT-006 | Reports: consultations-by-clinic | 4 hours |
-| CONSULT-008 | Reports: follow-ups required | 4 hours |
-| PERF-001 | Bundle size > 1.2MB — needs code-splitting | 2 days |
-| DB-001 | Clinic search is client-side only (page-limited) | 2 hours |
-
-### P3 — Low
-
-| ID | Description | Estimated Effort |
-|---|---|---|
-| QA-003 | Appointment complete event type confusion | 30 min |
-| CLEAN-001 | 17 unused UI components in components/ui/ | 1 hour |
-| CLEAN-002 | 20+ intermediate report .md files at root | 30 min |
-| CLEAN-003 | mockup-sandbox unused production artifact | 30 min |
-| CLEAN-004 | scripts/src/hello.ts (46-byte test file) | 5 min |
-| CLEAN-005 | Deprecated: check-pragati.ts, verify-pragati.ts | 30 min |
+* **Security Score: 40/100**
+  _Rationale:_ Multiple critical tenant isolation leaks exist where custom roles of other tenants can be modified/deleted, and metadata can be leaked. Additionally, role visibility scoping is bypassed for patient details sub-resources (SMS history, GP details, status logs), and there is no role hierarchy check on user registration.
+  
+* **Architecture Score: 55/100**
+  _Rationale:_ There is a severe database-to-code mismatch. The database schema defines tenant and role connections via a mapping table (`user_tenant_assignments`), while backend route files query and write `User.tenantId` and `User.roleId` directly on the User model. If the Prisma Client is regenerated, compilation will fail immediately.
+  
+* **Frontend Score: 60/100**
+  _Rationale:_ UI styling looks premium and clean, but the frontend is missing critical page components (no Care Tasks UI, no Risk Score UI, no Consultation Edit/Delete dialogs). Standard users also experience a default tenant display of `"Unknown"` on initial load.
+  
+* **Backend Score: 50/100**
+  _Rationale:_ 23+ REST endpoint routes exist, but write handlers lack clinical scoping validation (enabling clinic admins to create resources in unassigned locations). Super admin requests crash the server when operating in global "ALL" mode.
+  
+* **Database Score: 45/100**
+  _Rationale:_ Stale client definitions conceal a mismatch in the `User` model relationships. There are also missing database-level unique constraints preventing duplicate active doctor-patient assignments, and missing relational checks on clinic deletions.
 
 ---
 
-## Architecture Assessment
+## 5. Final Verdict
 
-| Concern | Status | Notes |
-|---|---|---|
-| Tenant isolation | ✅ Strong | tenantScope middleware on all routes |
-| API design consistency | ✅ Good | Standard REST, consistent naming |
-| Type safety | ✅ Good | Zod validation on all inputs |
-| Code organization | ✅ Good | Clear module boundaries |
-| Dual-DB sync pattern | ⚠️ Complex | PostgreSQL→MySQL sync adds operational burden |
-| Frontend state management | ✅ Good | React Query for server state, minimal Zustand |
-| Component architecture | ✅ Good | Clear page/component/hook separation |
-| OpenAPI contract | ✅ Current | Synced after this sprint |
+### Verdict: **NOT READY FOR SUBMISSION**
 
----
-
-## Risk Assessment
-
-| Risk | Severity | Mitigation |
-|---|---|---|
-| RBAC bypass in production | 🔴 HIGH | Fix SEC-003 before production release |
-| CSRF vulnerability | 🔴 HIGH | Fix SEC-004 before production release |
-| File loss on server restart | 🟡 MEDIUM | Migrate to S3 before production |
-| Zero test coverage | 🟡 MEDIUM | Add Vitest tests before major features |
-| Bundle size (1.2MB) | 🟢 LOW | Add route-based code splitting |
-
----
-
-## Recommendations
-
-### Immediate (before next release)
-1. ✅ Fix build errors — **DONE**
-2. ✅ Fix typing lag — **DONE**
-3. Fix SEC-003 (RBAC enforcement) — critical security issue
-4. Fix SEC-004 (CSRF protection) — critical security issue
-
-### Next Sprint
-1. Build Care Tasks UI (hooks are ready — just needs UI)
-2. Build Risk Score widgets on dashboard and patient list
-3. Add consultation Edit/Delete functionality
-4. Migrate file uploads to cloud storage
-
-### Technical Housekeeping
-1. Run `pnpm --filter @workspace/web run build` — ensure it stays green
-2. Move 20+ report .md files to `/docs/reports/`
-3. Remove `mockup-sandbox` if no longer needed for prototyping
-4. Remove 17 unused Shadcn UI components to reduce bundle size
-5. Add route-based code splitting (`React.lazy` + `Suspense`)
-
----
-
-_Report generated by CareNexus Engineering. Build: ✅ PASSING. Performance: ✅ OPTIMIZED._
+### Critical Reasons:
+1. **Database Schema & Code Mismatch:** The code assumes direct fields `tenantId` and `roleId` on the `User` model, but `schema.prisma` defines them inside the `user_tenant_assignments` mapping model. Rebuilding/regenerating the Prisma Client will break the build.
+2. **Cross-Tenant Privilege Escalation:** Any user can modify or delete role permission lists belonging to other tenants by querying `/api/roles/:id` directly.
+3. **Privilege Escalation on User Creation:** Clinic or Area Admins can create new user profiles and assign them higher roles (e.g. `SUPER_ADMIN`), bypassing system security hierarchy.
+4. **Clinical Boundaries Bypass:** The `roleScope.ts` returns empty scoping objects for `CLINIC_ADMIN` and `AREA_ADMIN`, granting them access to clinics, areas, and patients they are not assigned to.
+5. **Patient Data Leakage:** Sub-resource detail endpoints (Twilio SMS logs, status history, GP updates) do not verify if the patient is assigned to the requesting doctor, leading to HIPAA/GDPR data leakage.
+6. **Platform Governance Crashes:** Performing writes (e.g., scheduling appointments) in Super Admin "ALL" mode crashes the server with database errors since `tenantId` is non-nullable.
+7. **Missing Core Frontend Modules:** Care Tasks (Phase 2) and Risk Scoring (Phase 5) are completely missing from the web interface, and consultations lack edit/delete UI buttons.

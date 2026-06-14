@@ -63,7 +63,7 @@ router.post("/", authorizePermission("outcomes", "write"), validateBody(MetricSc
 // PATCH /api/outcome-metrics/:id
 router.patch("/:id", authorizePermission("outcomes", "write"), validateBody(MetricSchema.partial()), async (req, res, next) => {
   try {
-    const metric = await prisma.outcomeMetric.findFirst({ where: { id: req.params["id"] as string } });
+    const metric = await prisma.outcomeMetric.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId! } });
     if (!metric) throw Errors.notFound("OutcomeMetric");
     assertTenantMatch(req, metric.tenantId);
     const updated = await prisma.outcomeMetric.update({ where: { id: metric.id }, data: req.body });
@@ -75,7 +75,7 @@ router.patch("/:id", authorizePermission("outcomes", "write"), validateBody(Metr
 // DELETE /api/outcome-metrics/:id (soft deactivate)
 router.delete("/:id", authorizePermission("outcomes", "write"), async (req, res, next) => {
   try {
-    const metric = await prisma.outcomeMetric.findFirst({ where: { id: req.params["id"] as string } });
+    const metric = await prisma.outcomeMetric.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId! } });
     if (!metric) throw Errors.notFound("OutcomeMetric");
     assertTenantMatch(req, metric.tenantId);
     await prisma.outcomeMetric.update({ where: { id: metric.id }, data: { isActive: false } });

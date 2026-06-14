@@ -46,7 +46,7 @@ router.get("/", async (req, res, next) => {
 router.get("/:id", async (req, res, next) => {
   try {
     const role = await prisma.role.findFirst({
-      where: { id: req.params["id"] as string },
+      where: { id: req.params["id"] as string, OR: [{ tenantId: req.tenantId! }, { isSystem: true }] },
       include: { rolePermissions: { include: { permission: true } } },
     });
     if (!role) throw Errors.notFound("Role");
@@ -67,7 +67,7 @@ router.post("/", authorizePermission("roles", "write"), validateBody(RoleSchema)
 
 router.patch("/:id", authorizePermission("roles", "write"), validateBody(RoleSchema.partial()), async (req, res, next) => {
   try {
-    const role = await prisma.role.findFirst({ where: { id: req.params["id"] as string } });
+    const role = await prisma.role.findFirst({ where: { id: req.params["id"] as string, OR: [{ tenantId: req.tenantId! }, { isSystem: true }] } });
     if (!role) throw Errors.notFound("Role");
     if (role.isSystem) throw Errors.forbidden("Cannot modify system roles");
     const updated = await prisma.role.update({ where: { id: role.id }, data: req.body });
@@ -77,7 +77,7 @@ router.patch("/:id", authorizePermission("roles", "write"), validateBody(RoleSch
 
 router.delete("/:id", authorizePermission("roles", "write"), async (req, res, next) => {
   try {
-    const role = await prisma.role.findFirst({ where: { id: req.params["id"] as string } });
+    const role = await prisma.role.findFirst({ where: { id: req.params["id"] as string, OR: [{ tenantId: req.tenantId! }, { isSystem: true }] } });
     if (!role) throw Errors.notFound("Role");
     if (role.isSystem) throw Errors.forbidden("Cannot delete system roles");
     await prisma.role.delete({ where: { id: role.id } });
@@ -95,7 +95,7 @@ const PermissionSchema = z.object({
 // GET /api/roles/:id/permissions
 router.get("/:id/permissions", async (req, res, next) => {
   try {
-    const role = await prisma.role.findFirst({ where: { id: req.params["id"] as string } });
+    const role = await prisma.role.findFirst({ where: { id: req.params["id"] as string, OR: [{ tenantId: req.tenantId! }, { isSystem: true }] } });
     if (!role) throw Errors.notFound("Role");
     const permissions = await prisma.rolePermission.findMany({
       where: { roleId: role.id },
@@ -116,7 +116,7 @@ router.get("/:id/permissions", async (req, res, next) => {
 // POST /api/roles/:id/permissions
 router.post("/:id/permissions", authorizePermission("roles", "write"), validateBody(PermissionSchema), async (req, res, next) => {
   try {
-    const role = await prisma.role.findFirst({ where: { id: req.params["id"] as string } });
+    const role = await prisma.role.findFirst({ where: { id: req.params["id"] as string, OR: [{ tenantId: req.tenantId! }, { isSystem: true }] } });
     if (!role) throw Errors.notFound("Role");
     if (role.isSystem) throw Errors.forbidden("Cannot modify system role permissions");
 

@@ -550,6 +550,36 @@ export const DeleteUserResponse = zod.object({
 })
 
 
+export const AssignUserClinicParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const AssignUserClinicBody = zod.object({
+  "clinicId": zod.string()
+})
+
+
+export const UnassignUserClinicParams = zod.object({
+  "id": zod.coerce.string(),
+  "clinicId": zod.coerce.string()
+})
+
+
+export const AssignUserProgramParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const AssignUserProgramBody = zod.object({
+  "programId": zod.string()
+})
+
+
+export const UnassignUserProgramParams = zod.object({
+  "id": zod.coerce.string(),
+  "programId": zod.coerce.string()
+})
+
+
 export const ListProgramsQueryParams = zod.object({
   "page": zod.coerce.number().optional(),
   "limit": zod.coerce.number().optional(),
@@ -2715,6 +2745,11 @@ export const UpdateConsultationResponse = zod.object({
 }).optional()
 }).optional()
 }).optional()
+})
+
+
+export const DeleteConsultationParams = zod.object({
+  "id": zod.coerce.string()
 })
 
 

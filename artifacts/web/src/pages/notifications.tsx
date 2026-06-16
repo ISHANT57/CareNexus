@@ -1,22 +1,29 @@
 import { useListNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bell, Check, CheckCheck } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Bell, BellOff, Check, CheckCheck } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 export default function NotificationsPage() {
-  const { data, isLoading } = useListNotifications();
+  const { data, isLoading, isError } = useListNotifications({ limit: 100 });
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  const notifications = data?.data ?? [];
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
   const handleMarkRead = async (id: string) => {
     try {
       await markRead.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-    } catch (e) {
+    } catch {
       toast({ variant: "destructive", title: "Failed to mark as read" });
     }
   };
@@ -26,54 +33,55 @@ export default function NotificationsPage() {
       await markAllRead.mutateAsync();
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
       toast({ title: "All notifications marked as read" });
-    } catch (e) {
+    } catch {
       toast({ variant: "destructive", title: "Failed to mark all as read" });
     }
   };
 
   return (
-    <div className="p-8 space-y-6 flex-1 overflow-y-auto max-w-4xl mx-auto w-full">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
-          <p className="text-muted-foreground mt-2">System alerts and communications.</p>
-        </div>
-        <Button variant="outline" onClick={handleMarkAllRead} disabled={markAllRead.isPending || !data?.data?.some(n => !n.isRead)}>
-          <CheckCheck className="w-4 h-4 mr-2" />
-          Mark all as read
-        </Button>
-      </div>
+    <div className="page-container">
+      <PageHeader
+        title="Notifications"
+        description="System alerts, task assignments and care updates."
+        actions={
+          <>
+            {unreadCount > 0 && <Badge variant="secondary">{unreadCount} unread</Badge>}
+            <Button variant="outline" onClick={handleMarkAllRead} disabled={markAllRead.isPending || unreadCount === 0}>
+              <CheckCheck className="w-4 h-4 mr-2" /> Mark all as read
+            </Button>
+          </>
+        }
+      />
 
-      <div className="space-y-4">
-        {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground">Loading notifications...</div>
-        ) : !data?.data || data.data.length === 0 ? (
-          <div className="text-center p-12 text-muted-foreground border border-dashed border-border rounded-lg">
-            <Bell className="w-8 h-8 mx-auto mb-3 opacity-20" />
-            No notifications to display.
-          </div>
-        ) : (
-          data.data.map((notification) => (
-            <Card key={notification.id} className={notification.isRead ? 'opacity-70 bg-muted/50' : 'border-primary/20 bg-primary/5'}>
+      {isLoading ? (
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-2xl" />)}
+        </div>
+      ) : isError ? (
+        <EmptyState icon={BellOff} title="Couldn't load notifications" description="Please refresh the page to try again." />
+      ) : notifications.length === 0 ? (
+        <EmptyState icon={Bell} title="You're all caught up" description="New alerts and task updates will appear here." />
+      ) : (
+        <div className="space-y-3">
+          {notifications.map((n) => (
+            <Card key={n.id} className={n.isRead ? "opacity-75" : "border-primary/30 bg-primary/[0.04]"}>
               <CardContent className="p-4 flex gap-4">
-                <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${notification.isRead ? 'bg-transparent' : 'bg-primary'}`} />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-sm">{notification.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
-                  <p className="text-xs text-muted-foreground/70 mt-2">
-                    {new Date(notification.createdAt).toLocaleString()}
-                  </p>
+                <div className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.isRead ? "bg-transparent" : "bg-primary"}`} />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm">{n.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{n.message}</p>
+                  <p className="text-xs text-muted-foreground/70 mt-2">{new Date(n.createdAt).toLocaleString()}</p>
                 </div>
-                {!notification.isRead && (
-                  <Button variant="ghost" size="icon" onClick={() => handleMarkRead(notification.id)} disabled={markRead.isPending}>
+                {!n.isRead && (
+                  <Button variant="ghost" size="icon" onClick={() => handleMarkRead(n.id)} disabled={markRead.isPending} aria-label="Mark as read">
                     <Check className="w-4 h-4" />
                   </Button>
                 )}
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

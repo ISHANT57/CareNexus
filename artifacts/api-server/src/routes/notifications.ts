@@ -29,7 +29,7 @@ router.get("/", async (req, res, next) => {
 router.patch("/:id/read", async (req, res, next) => {
   try {
     const notification = await prisma.notification.findFirst({
-      where: { id: req.params["id"], userId: req.user!.userId },
+      where: { id: req.params["id"], userId: req.user!.userId, tenantId: req.tenantId! },
     });
     if (!notification) throw Errors.notFound("Notification");
     const updated = await prisma.notification.update({
@@ -53,7 +53,7 @@ router.patch("/read-all", async (req, res, next) => {
 router.delete("/:id", async (req, res, next) => {
   try {
     const notification = await prisma.notification.findFirst({
-      where: { id: req.params["id"], userId: req.user!.userId },
+      where: { id: req.params["id"], userId: req.user!.userId, tenantId: req.tenantId! },
     });
     if (!notification) throw Errors.notFound("Notification");
     await prisma.notification.delete({ where: { id: notification.id } });

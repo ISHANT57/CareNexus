@@ -370,7 +370,8 @@ function PermissionsMatrix({ role }: { role: { id: string; name: string; isSyste
             {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
           </div>
         ) : (
-          <div className="p-6 space-y-6">
+          <div className="p-6 overflow-x-auto">
+           <div className="min-w-[680px] space-y-6">
             {/* Legend */}
             <div className="flex items-center gap-6 text-xs text-muted-foreground pb-2 border-b border-border">
               <span className="font-medium">Permissions Matrix</span>
@@ -458,6 +459,7 @@ function PermissionsMatrix({ role }: { role: { id: string; name: string; isSyste
                 {hasFullAccess && " · Wildcard grants full access"}
               </p>
             </div>
+           </div>
           </div>
         )}
       </CardContent>

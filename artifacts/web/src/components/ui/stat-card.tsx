@@ -17,31 +17,32 @@ interface StatCardProps {
   href?: string;
 }
 
+// Flat, restrained icon tiles — soft tint + saturated glyph, no gradients or glow.
 const variantStyles = {
   default: {
     card: "bg-card border-border",
-    icon: "bg-muted text-muted-foreground",
+    icon: "bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-300",
     value: "text-foreground",
   },
   primary: {
-    card: "bg-primary/5 border-primary/20",
+    card: "bg-card border-border",
     icon: "bg-primary/10 text-primary",
-    value: "text-primary",
+    value: "text-foreground",
   },
   success: {
-    card: "bg-emerald-500/5 border-emerald-500/20",
-    icon: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-    value: "text-emerald-700 dark:text-emerald-400",
+    card: "bg-card border-border",
+    icon: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400",
+    value: "text-foreground",
   },
   warning: {
-    card: "bg-amber-500/5 border-amber-500/20",
-    icon: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-    value: "text-amber-700 dark:text-amber-400",
+    card: "bg-card border-border",
+    icon: "bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400",
+    value: "text-foreground",
   },
   destructive: {
-    card: "bg-destructive/5 border-destructive/20",
-    icon: "bg-destructive/10 text-destructive",
-    value: "text-destructive",
+    card: "bg-card border-border",
+    icon: "bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400",
+    value: "text-foreground",
   },
 };
 
@@ -60,10 +61,10 @@ function StatCardInner({
   return (
     <div
       className={cn(
-        "rounded-xl border p-5 flex flex-col gap-3 transition-all duration-200",
+        "rounded-xl border p-5 flex flex-col gap-3 transition-colors duration-200",
         href
-          ? "cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:ring-2 hover:ring-primary/20 group"
-          : "hover:shadow-md hover:-translate-y-0.5",
+          ? "cursor-pointer hover:border-primary/40 hover:shadow-sm group"
+          : "",
         styles.card,
         className
       )}
@@ -71,8 +72,8 @@ function StatCardInner({
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-muted-foreground">{title}</p>
         <div className="flex items-center gap-1.5">
-          <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", styles.icon)}>
-            <Icon className="w-4.5 h-4.5" />
+          <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", styles.icon)}>
+            <Icon className="w-5 h-5" />
           </div>
           {href && (
             <ArrowRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -81,7 +82,7 @@ function StatCardInner({
       </div>
 
       <div>
-        <p className={cn("text-2xl font-bold tracking-tight", styles.value)}>
+        <p className={cn("text-3xl font-bold tracking-tight", styles.value)}>
           {value}
         </p>
         {subtitle && (

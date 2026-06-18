@@ -5,6 +5,7 @@ import { authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 import { createAuditLog } from "../lib/audit.js";
+import { getRoleScope } from "../middlewares/roleScope.js";
 import { calculateRiskScore, calculateAndPersistRisk, calculateAllPatientRisks } from "../services/RiskScoringService.js";
 
 const router = Router();
@@ -15,7 +16,8 @@ router.get("/", authorizePermission("patients", "read"), async (req, res, next) 
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const { riskLevel } = req.query as Record<string, string>;
-    const where: Record<string, unknown> = { tenantId: req.tenantId!, deletedAt: null };
+    const patientScope = await getRoleScope(req, "patient");
+    const where: Record<string, unknown> = { tenantId: req.tenantId!, deletedAt: null, ...patientScope };
     if (riskLevel) where["riskLevel"] = riskLevel;
 
     const [total, patients] = await Promise.all([
@@ -38,8 +40,9 @@ router.get("/", authorizePermission("patients", "read"), async (req, res, next) 
 // GET /api/risk-scores/:patientId — get risk details for a patient
 router.get("/:patientId", authorizePermission("patients", "read"), async (req, res, next) => {
   try {
+    const patientScope = await getRoleScope(req, "patient");
     const patient = await prisma.patient.findFirst({
-      where: { id: req.params["patientId"] as string, tenantId: req.tenantId!, deletedAt: null },
+      where: { id: req.params["patientId"] as string, tenantId: req.tenantId!, deletedAt: null, ...patientScope },
       select: { id: true, firstName: true, lastName: true, nhsNumber: true, riskScore: true, riskLevel: true, lastCalculatedAt: true },
     });
     if (!patient) throw Errors.notFound("Patient");
@@ -51,8 +54,9 @@ router.get("/:patientId", authorizePermission("patients", "read"), async (req, r
 // POST /api/risk-scores/:patientId/calculate — recalculate one patient
 router.post("/:patientId/calculate", authorizePermission("patients", "write"), async (req, res, next) => {
   try {
+    const patientScope = await getRoleScope(req, "patient");
     const patient = await prisma.patient.findFirst({
-      where: { id: req.params["patientId"] as string, tenantId: req.tenantId!, deletedAt: null },
+      where: { id: req.params["patientId"] as string, tenantId: req.tenantId!, deletedAt: null, ...patientScope },
     });
     if (!patient) throw Errors.notFound("Patient");
 

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar as CalendarIcon, User, Building2, CheckCircle, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar as CalendarIcon, User, Building2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -59,8 +59,10 @@ export default function AppointmentsPage() {
 
   const cancelMutation = useCancelAppointment();
   const completeMutation = useCompleteAppointment();
+  const [actingOnId, setActingOnId] = useState<string | null>(null);
 
   const handleAction = async (appointmentId: string, action: "cancel" | "complete") => {
+    setActingOnId(appointmentId);
     try {
       if (action === "cancel") {
         await cancelMutation.mutateAsync({ id: appointmentId });
@@ -71,6 +73,8 @@ export default function AppointmentsPage() {
       toast({ title: `Appointment ${action === "cancel" ? "cancelled" : "completed"} successfully` });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Action failed", description: err.message });
+    } finally {
+      setActingOnId(null);
     }
   };
 
@@ -104,7 +108,7 @@ export default function AppointmentsPage() {
       </div>
 
       <div className="p-8 space-y-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 py-2 -my-2">
           <Button
             variant={showFilters ? "default" : "outline"}
             size="sm"
@@ -197,17 +201,17 @@ export default function AppointmentsPage() {
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto">
+                <div className="max-h-[62vh] overflow-auto">
                   <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/30 hover:bg-muted/30">
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Date & Time</TableHead>
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Patient</TableHead>
-                        {!isDoctor && <TableHead className="font-semibold text-xs uppercase tracking-wide">Doctor</TableHead>}
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Clinic</TableHead>
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Status</TableHead>
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Type</TableHead>
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide text-right">Actions</TableHead>
+                    <TableHeader className="sticky top-0 z-10">
+                      <TableRow className="bg-muted hover:bg-muted">
+                        <TableHead>Date & Time</TableHead>
+                        <TableHead>Patient</TableHead>
+                        {!isDoctor && <TableHead>Doctor</TableHead>}
+                        <TableHead>Clinic</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -253,44 +257,52 @@ export default function AppointmentsPage() {
                             <TableCell className="text-right">
                               {appt.status === "SCHEDULED" && (
                                 <div className="flex justify-end gap-1">
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button size="sm" variant="ghost" className="h-8 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20">
-                                        <CheckCircle className="w-3.5 h-3.5 mr-1" />Complete
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Complete Appointment</AlertDialogTitle>
-                                        <AlertDialogDescription>Mark this appointment as completed?</AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleAction(appt.id, "complete")}>
-                                          Yes, Complete
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button size="sm" variant="ghost" className="h-8 text-xs text-muted-foreground hover:text-destructive">
-                                        <XCircle className="w-3.5 h-3.5 mr-1" />Cancel
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
-                                        <AlertDialogDescription>Are you sure you want to cancel this appointment?</AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Keep</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleAction(appt.id, "cancel")} className="bg-destructive hover:bg-destructive/90">
-                                          Yes, Cancel
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
+                                  {actingOnId === appt.id ? (
+                                    <Button size="sm" variant="ghost" className="h-8 text-xs" disabled>
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    </Button>
+                                  ) : (
+                                    <>
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button size="sm" variant="ghost" className="h-8 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-950/20">
+                                            <CheckCircle className="w-3.5 h-3.5 mr-1" />Complete
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Complete Appointment</AlertDialogTitle>
+                                            <AlertDialogDescription>Mark this appointment as completed?</AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleAction(appt.id, "complete")}>
+                                              Yes, Complete
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button size="sm" variant="ghost" className="h-8 text-xs text-muted-foreground hover:text-destructive">
+                                            <XCircle className="w-3.5 h-3.5 mr-1" />Cancel
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
+                                            <AlertDialogDescription>Are you sure you want to cancel this appointment?</AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Keep</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleAction(appt.id, "cancel")} className="bg-destructive hover:bg-destructive/90">
+                                              Yes, Cancel
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    </>
+                                  )}
                                 </div>
                               )}
                             </TableCell>

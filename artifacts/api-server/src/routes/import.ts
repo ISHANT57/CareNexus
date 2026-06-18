@@ -7,6 +7,7 @@ import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
 import { CLINICAL_ROLES , authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant } from "../middlewares/tenantScope.js";
+import { getRoleScope } from "../middlewares/roleScope.js";
 import { Errors } from "../lib/errors.js";
 
 const router = Router();
@@ -14,6 +15,7 @@ const upload = multer({ dest: "uploads/" });
 
 router.post("/patients", authorizePermission("patients", "write"), upload.single("file"), async (req, res, next) => {
   try {
+    if (!req.tenantId) throw Errors.validation("A specific tenant must be selected to import patients. Please select a tenant from the switcher.");
     if (!req.file) throw Errors.validation("No CSV file uploaded");
 
     const fileContent = await fs.readFile(req.file.path, "utf-8");
@@ -30,12 +32,17 @@ router.post("/patients", authorizePermission("patients", "write"), upload.single
     let successCount = 0;
     const errors: Array<{ row: number; error: string }> = [];
 
-    let defaultProgram = await prisma.program.findFirst({ where: { tenantId: req.tenantId! } });
-    let defaultClinic = await prisma.clinic.findFirst({ where: { tenantId: req.tenantId! } });
-    let defaultArea = await prisma.area.findFirst({ where: { tenantId: req.tenantId! } });
+    // MED-002: pick a clinic within the importing user's clinical scope (not just the first
+    // clinic in the tenant), and derive the area from that clinic so they stay consistent.
+    const clinicScope = await getRoleScope(req, "clinic");
+    const defaultProgram = await prisma.program.findFirst({ where: { tenantId: req.tenantId!, deletedAt: null } });
+    const defaultClinic = await prisma.clinic.findFirst({ where: { tenantId: req.tenantId!, deletedAt: null, ...clinicScope } });
+    const defaultArea = defaultClinic
+      ? await prisma.area.findFirst({ where: { id: defaultClinic.areaId, tenantId: req.tenantId!, deletedAt: null } })
+      : null;
 
     if (!defaultProgram || !defaultClinic || !defaultArea) {
-      throw new Error("Cannot import patients without at least one Program, Clinic, and Area in the system.");
+      throw Errors.validation("Cannot import patients without at least one Program, and a Clinic/Area within your assigned scope.");
     }
 
     for (let i = 0; i < records.length; i++) {

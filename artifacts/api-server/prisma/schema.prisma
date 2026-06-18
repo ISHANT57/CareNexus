@@ -19,6 +19,7 @@ model Tenant {
   deletedAt               DateTime?
   appointments            Appointment[]
   areas                   Area[]
+  clinics                 Clinic[]
   auditLogs               AuditLog[]
   careTasks               CareTask[]
   consultations           Consultation[]
@@ -29,6 +30,7 @@ model Tenant {
   programEnrollments      ProgramEnrollment[]
   programs                Program[]
   smsComs                 SmsCommunication[]
+  users                   User[]
   user_tenant_assignments user_tenant_assignments[]
 
   @@map("tenants")
@@ -63,6 +65,7 @@ model Clinic {
   deletedAt                DateTime?
   appointments             Appointment[]
   area                     Area                      @relation(fields: [areaId], references: [id])
+  tenant                   Tenant                    @relation(fields: [tenantId], references: [id])
   consultations            Consultation[]
   doctorPatientAssignments DoctorPatientAssignment[]
   patients                 Patient[]
@@ -84,6 +87,7 @@ model Role {
   createdAt               DateTime                  @default(now())
   updatedAt               DateTime                  @updatedAt
   rolePermissions         RolePermission[]
+  users                   User[]
   user_tenant_assignments user_tenant_assignments[]
 
   @@unique([tenantId, name])
@@ -128,11 +132,15 @@ model User {
   resetTokenExpiresAt     DateTime?
   emailVerified           Boolean                   @default(false)
   verificationToken       String?
+  tenantId                String
+  roleId                  String
   createdAt               DateTime                  @default(now())
   updatedAt               DateTime                  @updatedAt
   deletedAt               DateTime?
   createdBy               String?
   updatedBy               String?
+  tenant                  Tenant                    @relation(fields: [tenantId], references: [id])
+  role                    Role                      @relation(fields: [roleId], references: [id])
   appointments            Appointment[]
   auditLogs               AuditLog[]
   createdTasks            CareTask[]                @relation("TaskCreator")

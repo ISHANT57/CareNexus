@@ -7,6 +7,7 @@ import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js"
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 import { createAuditLog } from "../lib/audit.js";
+import { getRoleScope } from "../middlewares/roleScope.js";
 
 const router = Router();
 router.use(authenticate, requireTenant);
@@ -65,7 +66,12 @@ router.get("/:id", authorizePermission("clinics", "read"), async (req, res, next
 router.post("/", authorizePermission("clinics", "write"), validateBody(ClinicSchema), async (req, res, next) => {
   try {
     const data = req.body as z.infer<typeof ClinicSchema>;
-    let targetTenantId = data.tenantId || req.tenantId;
+    // HIGH-008: non-super-admins may only create within their own tenant
+    const isSuperAdmin = req.user?.role === "SUPER_ADMIN";
+    if (!isSuperAdmin && data.tenantId && data.tenantId !== req.tenantId) {
+      throw Errors.forbidden("You cannot create clinics in another tenant");
+    }
+    let targetTenantId = isSuperAdmin ? (data.tenantId || req.tenantId) : req.tenantId;
 
     if (!targetTenantId) {
       // If SUPER_ADMIN didn't pass tenantId, infer it from the Area
@@ -85,10 +91,11 @@ router.post("/", authorizePermission("clinics", "write"), validateBody(ClinicSch
 
 router.patch("/:id", authorizePermission("clinics", "write"), validateBody(ClinicSchema.partial()), async (req, res, next) => {
   try {
-    const clinic = await prisma.clinic.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const clinicScope = await getRoleScope(req, "clinic");
+    const clinic = await prisma.clinic.findFirst({ where: { AND: [{ id: req.params["id"] as string, deletedAt: null }, clinicScope] } });
     if (!clinic) throw Errors.notFound("Clinic");
     assertTenantMatch(req, clinic.tenantId);
-    
+
     let updateData = req.body;
     if (updateData.areaId && updateData.areaId !== clinic.areaId) {
       const area = await prisma.area.findUnique({ where: { id: updateData.areaId } });
@@ -105,7 +112,8 @@ router.patch("/:id", authorizePermission("clinics", "write"), validateBody(Clini
 
 router.delete("/:id", authorizePermission("clinics", "write"), async (req, res, next) => {
   try {
-    const clinic = await prisma.clinic.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const clinicScope = await getRoleScope(req, "clinic");
+    const clinic = await prisma.clinic.findFirst({ where: { AND: [{ id: req.params["id"] as string, deletedAt: null }, clinicScope] } });
     if (!clinic) throw Errors.notFound("Clinic");
     assertTenantMatch(req, clinic.tenantId);
     await prisma.clinic.update({ where: { id: clinic.id }, data: { deletedAt: new Date() } });

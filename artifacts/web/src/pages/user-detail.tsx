@@ -7,6 +7,11 @@ import {
   useUpdateUser,
   useListRoles,
   useListClinics,
+  useListPrograms,
+  useAssignUserClinic,
+  useUnassignUserClinic,
+  useAssignUserProgram,
+  useUnassignUserProgram,
   getGetUserQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,8 +23,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { ArrowLeft, Loader2, Plus, X, Building2, FolderGit2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const userEditSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -41,7 +46,40 @@ export default function UserDetailPage() {
     query: { enabled: !!id, queryKey: getGetUserQueryKey(id) },
   });
   const { data: roles } = useListRoles();
+  const { data: clinics } = useListClinics({ limit: 1000 });
+  const { data: programs } = useListPrograms({ limit: 1000 });
   const updateUser = useUpdateUser();
+  const assignClinic = useAssignUserClinic();
+  const unassignClinic = useUnassignUserClinic();
+  const assignProgram = useAssignUserProgram();
+  const unassignProgram = useUnassignUserProgram();
+  const [clinicToAdd, setClinicToAdd] = useState("");
+  const [programToAdd, setProgramToAdd] = useState("");
+
+  const refreshUser = () => queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(id) });
+  const clinicAssignments = (((user as any)?.clinicAssignments ?? []) as Array<{ clinicId: string; clinic?: { id: string; name: string } }>);
+  const programAssignments = (((user as any)?.programAssignments ?? []) as Array<{ programId: string; program?: { id: string; name: string } }>);
+  const assignedClinicIds = new Set(clinicAssignments.map((a) => a.clinicId));
+  const assignedProgramIds = new Set(programAssignments.map((a) => a.programId));
+
+  const handleAddClinic = async () => {
+    if (!clinicToAdd) return;
+    try { await assignClinic.mutateAsync({ id, data: { clinicId: clinicToAdd } }); setClinicToAdd(""); refreshUser(); toast({ title: "Clinic assigned" }); }
+    catch (err: any) { toast({ variant: "destructive", title: "Failed to assign clinic", description: err.message }); }
+  };
+  const handleRemoveClinic = async (clinicId: string) => {
+    try { await unassignClinic.mutateAsync({ id, clinicId }); refreshUser(); toast({ title: "Clinic removed" }); }
+    catch (err: any) { toast({ variant: "destructive", title: "Failed to remove clinic", description: err.message }); }
+  };
+  const handleAddProgram = async () => {
+    if (!programToAdd) return;
+    try { await assignProgram.mutateAsync({ id, data: { programId: programToAdd } }); setProgramToAdd(""); refreshUser(); toast({ title: "Program assigned" }); }
+    catch (err: any) { toast({ variant: "destructive", title: "Failed to assign program", description: err.message }); }
+  };
+  const handleRemoveProgram = async (programId: string) => {
+    try { await unassignProgram.mutateAsync({ id, programId }); refreshUser(); toast({ title: "Program removed" }); }
+    catch (err: any) { toast({ variant: "destructive", title: "Failed to remove program", description: err.message }); }
+  };
 
   const form = useForm<UserEditForm>({
     resolver: zodResolver(userEditSchema),
@@ -208,6 +246,77 @@ export default function UserDetailPage() {
             </div>
           </form>
         </Form>
+
+        {/* ── Assignments (clinic + program scope) ─────────────────────────── */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Building2 className="w-5 h-5 text-primary" /> Clinic Access</CardTitle>
+            <CardDescription>Clinics this user can access. Determines which patients & data are visible to non-admin roles.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {clinicAssignments.length === 0 && (
+                <p className="text-sm text-muted-foreground">No clinics assigned yet.</p>
+              )}
+              {clinicAssignments.map((a) => (
+                <span key={a.clinicId} className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-sm text-secondary-foreground">
+                  {a.clinic?.name ?? a.clinicId}
+                  <button type="button" onClick={() => handleRemoveClinic(a.clinicId)} className="text-muted-foreground hover:text-destructive" aria-label="Remove clinic">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Select value={clinicToAdd} onValueChange={setClinicToAdd}>
+                <SelectTrigger className="sm:max-w-md"><SelectValue placeholder="Select a clinic to assign" /></SelectTrigger>
+                <SelectContent>
+                  {(clinics?.data ?? []).filter((c: any) => !assignedClinicIds.has(c.id)).map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}{c.area?.name ? ` · ${c.area.name}` : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button type="button" onClick={handleAddClinic} disabled={!clinicToAdd || assignClinic.isPending}>
+                <Plus className="h-4 w-4 mr-1" /> Assign clinic
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><FolderGit2 className="w-5 h-5 text-primary" /> Program Access</CardTitle>
+            <CardDescription>Programs (workflows) this user is responsible for.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {programAssignments.length === 0 && (
+                <p className="text-sm text-muted-foreground">No programs assigned yet.</p>
+              )}
+              {programAssignments.map((a) => (
+                <span key={a.programId} className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-sm text-secondary-foreground">
+                  {a.program?.name ?? a.programId}
+                  <button type="button" onClick={() => handleRemoveProgram(a.programId)} className="text-muted-foreground hover:text-destructive" aria-label="Remove program">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Select value={programToAdd} onValueChange={setProgramToAdd}>
+                <SelectTrigger className="sm:max-w-md"><SelectValue placeholder="Select a program to assign" /></SelectTrigger>
+                <SelectContent>
+                  {(programs?.data ?? []).filter((p: any) => !assignedProgramIds.has(p.id)).map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button type="button" onClick={handleAddProgram} disabled={!programToAdd || assignProgram.isPending}>
+                <Plus className="h-4 w-4 mr-1" /> Assign program
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

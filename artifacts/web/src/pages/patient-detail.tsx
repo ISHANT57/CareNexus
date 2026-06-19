@@ -11,7 +11,7 @@ import {
   useListProgramEnrollments, useCreateProgramEnrollment, useCompleteProgramEnrollment, useCancelProgramEnrollment, getListProgramEnrollmentsQueryKey,
   useListPrograms,
   useListAppointments, useCreateAppointment, useCancelAppointment, useCompleteAppointment, useUpdateAppointment, getListAppointmentsQueryKey,
-  useListConsultations, useCreateConsultation, useUpdateConsultation, getListConsultationsQueryKey,
+  useListConsultations, useCreateConsultation, useUpdateConsultation, useDeleteConsultation, getListConsultationsQueryKey,
   useListOutcomes, useCreateOutcome, getListOutcomesQueryKey,
   useListOutcomeMetrics,
   useListTasks, useCreateTask, useCompleteTask, useUpdateTask, useDeleteTask, getListTasksQueryKey,
@@ -47,36 +47,36 @@ const ConsultationFormFields = ({ form, setForm }: { form: typeof emptyConsultat
     <div className="grid grid-cols-2 gap-4">
       <div className="grid gap-2">
         <label className="text-sm font-medium">Chief Complaint</label>
-        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.chiefComplaint} onChange={e => setForm({ ...form, chiefComplaint: e.target.value })} placeholder="Main reason for visit..." />
+        <Textarea className="min-h-[80px]" value={form.chiefComplaint} onChange={e => setForm({ ...form, chiefComplaint: e.target.value })} placeholder="Main reason for visit..." />
       </div>
       <div className="grid gap-2">
         <label className="text-sm font-medium">Symptoms</label>
-        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.symptoms} onChange={e => setForm({ ...form, symptoms: e.target.value })} placeholder="Patient reported symptoms..." />
+        <Textarea className="min-h-[80px]" value={form.symptoms} onChange={e => setForm({ ...form, symptoms: e.target.value })} placeholder="Patient reported symptoms..." />
       </div>
     </div>
     <div className="grid grid-cols-2 gap-4">
       <div className="grid gap-2">
         <label className="text-sm font-medium">Observations</label>
-        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.observations} onChange={e => setForm({ ...form, observations: e.target.value })} placeholder="Clinical observations..." />
+        <Textarea className="min-h-[80px]" value={form.observations} onChange={e => setForm({ ...form, observations: e.target.value })} placeholder="Clinical observations..." />
       </div>
       <div className="grid gap-2">
         <label className="text-sm font-medium">Diagnosis</label>
-        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.diagnosis} onChange={e => setForm({ ...form, diagnosis: e.target.value })} placeholder="Primary and secondary diagnosis..." />
+        <Textarea className="min-h-[80px]" value={form.diagnosis} onChange={e => setForm({ ...form, diagnosis: e.target.value })} placeholder="Primary and secondary diagnosis..." />
       </div>
     </div>
     <div className="grid grid-cols-2 gap-4">
       <div className="grid gap-2">
         <label className="text-sm font-medium">Treatment Plan</label>
-        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.treatmentPlan} onChange={e => setForm({ ...form, treatmentPlan: e.target.value })} placeholder="Recommended treatments..." />
+        <Textarea className="min-h-[80px]" value={form.treatmentPlan} onChange={e => setForm({ ...form, treatmentPlan: e.target.value })} placeholder="Recommended treatments..." />
       </div>
       <div className="grid gap-2">
         <label className="text-sm font-medium">Medications</label>
-        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.medications} onChange={e => setForm({ ...form, medications: e.target.value })} placeholder="Prescribed medications..." />
+        <Textarea className="min-h-[80px]" value={form.medications} onChange={e => setForm({ ...form, medications: e.target.value })} placeholder="Prescribed medications..." />
       </div>
     </div>
     <div className="grid gap-2">
       <label className="text-sm font-medium">Follow-up Instructions</label>
-      <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.followUpInstructions} onChange={e => setForm({ ...form, followUpInstructions: e.target.value })} placeholder="Instructions for patient..." />
+      <Textarea className="min-h-[80px]" value={form.followUpInstructions} onChange={e => setForm({ ...form, followUpInstructions: e.target.value })} placeholder="Instructions for patient..." />
     </div>
   </div>
 );
@@ -97,7 +97,7 @@ const getJourneyEventConfig = (status: string) => {
     case "DISCHARGE":
       return { icon: <LogOut className="w-4 h-4" />, color: "text-rose-500", bg: "bg-rose-500/10 border-rose-500/20", label: "Discharged" };
     case "ENROLLED":
-      return { icon: <PlayCircle className="w-4 h-4" />, color: "text-teal-500", bg: "bg-teal-500/10 border-teal-500/20", label: "Enrolled" };
+      return { icon: <PlayCircle className="w-4 h-4" />, color: "text-blue-500", bg: "bg-blue-500/10 border-blue-500/20", label: "Enrolled" };
     case "UNENROLLED":
       return { icon: <StopCircle className="w-4 h-4" />, color: "text-orange-500", bg: "bg-orange-500/10 border-orange-500/20", label: "Unenrolled" };
     case "PSI":
@@ -523,6 +523,17 @@ export default function PatientDetailPage() {
     }
   };
 
+  const deleteConsultation = useDeleteConsultation();
+  const handleDeleteConsultation = async (consultationId: string) => {
+    try {
+      await deleteConsultation.mutateAsync({ id: consultationId });
+      queryClient.invalidateQueries({ queryKey: consultationsKey });
+      toast({ title: "Consultation deleted" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.response?.data?.message || err.message, variant: "destructive" });
+    }
+  };
+
   // ── Guards ────────────────────────────────────────────────────────────────────
   if (isNew) return <div>New Patient form handled in patient-new.tsx</div>;
 
@@ -540,25 +551,34 @@ export default function PatientDetailPage() {
 
   if (!patient) return <div className="p-8">Patient not found</div>;
 
+  const patientAge = patient.dob
+    ? Math.max(0, Math.floor((Date.now() - new Date(patient.dob).getTime()) / 31557600000))
+    : null;
+
   return (
     <div className="page-container animate-in-up">
       {/* ── Patient Header (always visible) ──────────────────────────────────── */}
-      <div className="page-header border-b border-border/50 pb-6 mb-6">
-        <div className="flex w-full justify-between items-start">
-          <div className="space-y-4">
-            <Link href="/patients">
-          <Button variant="ghost" size="sm" className="mb-4 -ml-3 text-muted-foreground">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Patients
-          </Button>
-        </Link>
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
-              <User className="w-8 h-8 text-primary" />
+      <Link href="/patients">
+        <Button variant="ghost" size="sm" className="mb-4 -ml-3 text-muted-foreground">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Patients
+        </Button>
+      </Link>
+
+      {/* Hero profile card */}
+      <div className="relative rounded-3xl border border-border bg-card shadow-sm overflow-hidden mb-6">
+        <div className="h-24 bg-gradient-to-r from-blue-700 via-blue-600 to-sky-500" />
+        <div className="px-6 pb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+          {/* Left: avatar + identity */}
+          <div className="min-w-0">
+            <div className="w-24 h-24 rounded-2xl bg-card ring-4 ring-card shadow-md flex items-center justify-center shrink-0 -mt-12 mb-3 overflow-hidden">
+              <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                <User className="w-10 h-10 text-primary" />
+              </div>
             </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold tracking-tight">
+            <div className="min-w-0">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-2xl lg:text-3xl font-bold tracking-tight truncate">
                   {patient.title ? `${patient.title} ` : ''}{patient.firstName} {patient.lastName}
                 </h1>
                 {isRiskLoading ? (
@@ -569,21 +589,30 @@ export default function PatientDetailPage() {
                   </Badge>
                 ) : null}
               </div>
-              <div className="flex items-center gap-3 mt-2 text-muted-foreground text-sm">
-                <span className="font-mono bg-muted px-2 py-0.5 rounded">{patient.nhsNumber}</span>
-                <span>•</span>
-                <span>{patient.gender || 'Unknown gender'}</span>
-                <span>•</span>
-                <span>DOB: {patient.dob || 'Unknown'}</span>
+              <div className="flex items-center gap-2 mt-3 flex-wrap text-sm">
+                <span className="inline-flex items-center gap-1.5 font-mono bg-muted px-2.5 py-1 rounded-lg text-foreground">
+                  <FileText className="w-3.5 h-3.5 text-muted-foreground" />{patient.nhsNumber}
+                </span>
+                <span className="inline-flex items-center gap-1.5 bg-muted/60 px-2.5 py-1 rounded-lg text-muted-foreground">
+                  {patientAge != null ? `${patientAge} yrs` : 'Age —'} · {patient.gender || 'Unknown'}
+                </span>
+                <span className="inline-flex items-center gap-1.5 bg-muted/60 px-2.5 py-1 rounded-lg text-muted-foreground">
+                  <Calendar className="w-3.5 h-3.5" />DOB: {patient.dob || 'Unknown'}
+                </span>
+                {patient.program?.name && (
+                  <span className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1 rounded-lg font-medium">
+                    <Activity className="w-3.5 h-3.5" />{patient.program.name}
+                  </span>
+                )}
               </div>
             </div>
-            </div>
           </div>
-          
-          <div className="flex items-center gap-3">
+
+          {/* Right: actions */}
+          <div className="flex items-center gap-3 shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 px-3 shadow-sm" disabled={updatePatient.isPending}>
+                <Button variant="outline" className="gap-2 px-3 shadow-sm bg-card" disabled={updatePatient.isPending}>
                   <Badge variant={patient.status === 'ACTIVE' ? 'default' : 'secondary'} className="pointer-events-none">
                     {patient.status}
                   </Badge>
@@ -596,7 +625,6 @@ export default function PatientDetailPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Action Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
@@ -620,10 +648,31 @@ export default function PatientDetailPage() {
             </DropdownMenu>
           </div>
         </div>
+
+        {/* Vital / clinical metric tiles (Medlink-style) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border border-t border-border">
+          {[
+            { label: "Risk Score", value: riskScore?.riskScore ?? "—", sub: riskScore?.riskLevel ?? "Not scored", icon: AlertCircle, chip: "bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400" },
+            { label: "Active Programs", value: (enrollments?.data ?? []).filter((e: any) => e.status === "ACTIVE").length, sub: `${enrollments?.data?.length ?? 0} total`, icon: Activity, chip: "bg-primary/10 text-primary" },
+            { label: "Appointments", value: appointmentsData?.data?.length ?? 0, sub: `${(appointmentsData?.data ?? []).filter((a: any) => a.status === "SCHEDULED").length} upcoming`, icon: Calendar, chip: "bg-primary/10 text-primary" },
+            { label: "Consultations", value: consultationsData?.data?.length ?? 0, sub: "On record", icon: Stethoscope, chip: "bg-primary/10 text-primary" },
+          ].map((m) => (
+            <div key={m.label} className="bg-card px-5 py-4 flex items-center gap-3">
+              <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", m.chip)}>
+                <m.icon className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-2xl font-bold leading-none">{m.value}</div>
+                <div className="text-xs font-medium text-foreground mt-1">{m.label}</div>
+                <div className="text-[11px] text-muted-foreground truncate">{m.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── Record Consultation Dialog ─────────────────────────────────────────── */}
-      <Dialog open={isConsultationDialogOpen} onOpenChange={setIsConsultationDialogOpen}>
+      <Dialog open={isConsultationDialogOpen} onOpenChange={(open) => { setIsConsultationDialogOpen(open); if (!open) { setSelectedAppointmentId(""); setConsultationForm(emptyConsultationForm); } }}>
         <DialogContent aria-describedby={undefined} className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Record Consultation</DialogTitle>
@@ -672,7 +721,7 @@ export default function PatientDetailPage() {
       </Dialog>
 
       {/* ── Edit Appointment Dialog ───────────────────────────────────────────── */}
-      <Dialog open={isEditApptDialogOpen} onOpenChange={setIsEditApptDialogOpen}>
+      <Dialog open={isEditApptDialogOpen} onOpenChange={(open) => { setIsEditApptDialogOpen(open); if (!open) { setEditApptDate(""); setEditApptTime(""); setEditApptDuration(30); setEditApptNotes(""); } }}>
         <DialogContent aria-describedby={undefined}>
           <DialogHeader><DialogTitle>Edit Appointment</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
@@ -832,7 +881,7 @@ export default function PatientDetailPage() {
               <Card className="glass-card">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-lg">Program Enrollments</CardTitle>
-                  <Dialog open={isEnrollDialogOpen} onOpenChange={setIsEnrollDialogOpen}>
+                  <Dialog open={isEnrollDialogOpen} onOpenChange={(open) => { setIsEnrollDialogOpen(open); if (!open) { setEnrollProgramId(""); } }}>
                     <DialogTrigger asChild>
                       <Button size="sm" variant="outline" className="h-8"><Plus className="w-4 h-4 mr-1" /> Enroll</Button>
                     </DialogTrigger>
@@ -915,7 +964,7 @@ export default function PatientDetailPage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-lg">Care Team</CardTitle>
-                  <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+                  <Dialog open={isAssignDialogOpen} onOpenChange={(open) => { setIsAssignDialogOpen(open); if (!open) { setSelectedDoctorId(""); } }}>
                     <DialogTrigger asChild>
                       <Button size="sm" variant="outline" className="h-8"><UserPlus className="w-4 h-4 mr-1" /> Assign Doctor</Button>
                     </DialogTrigger>
@@ -982,7 +1031,7 @@ export default function PatientDetailPage() {
           <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg">Patient Journey</CardTitle>
-              <Dialog open={isJourneyDialogOpen} onOpenChange={setIsJourneyDialogOpen}>
+              <Dialog open={isJourneyDialogOpen} onOpenChange={(open) => { setIsJourneyDialogOpen(open); if (!open) { setJourneyStatus("NEW"); setJourneyNotes(""); } }}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline" className="h-8"><Plus className="w-4 h-4 mr-1" /> Record Event</Button>
                 </DialogTrigger>
@@ -1237,10 +1286,31 @@ export default function PatientDetailPage() {
                             <span>{cons.clinic?.name}</span>
                           </div>
                         </div>
-                        {/* KI-002: Edit button */}
-                        <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-primary" onClick={() => openEditConsultation(cons)}>
-                          <Pencil className="w-4 h-4 mr-1" /> Edit
-                        </Button>
+                        {/* MED-004: Edit + Delete consultation actions */}
+                        <div className="flex items-center gap-1">
+                          <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-primary" onClick={() => openEditConsultation(cons)}>
+                            <Pencil className="w-4 h-4 mr-1" /> Edit
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-destructive">
+                                <Trash2 className="w-4 h-4 mr-1" /> Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete consultation?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will remove the consultation recorded on {cons.consultationDate ? format(new Date(cons.consultationDate), "MMMM d, yyyy") : "this date"}. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => cons.id && handleDeleteConsultation(cons.id)}>Delete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-x-6 gap-y-3 pt-2">
                         <div>
@@ -1557,10 +1627,10 @@ export default function PatientDetailPage() {
                     }[task.priority as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"] || "bg-muted text-muted-foreground";
 
                     const statusConfig = {
-                      PENDING: { label: "Pending", class: "bg-slate-100 text-slate-600 border-slate-200" },
-                      IN_PROGRESS: { label: "In Progress", class: "bg-indigo-50 text-indigo-700 border-indigo-200" },
-                      COMPLETED: { label: "Completed", class: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-                      OVERDUE: { label: "Overdue", class: "bg-rose-50 text-rose-700 border-rose-200" },
+                      PENDING: { label: "Pending", class: "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700" },
+                      IN_PROGRESS: { label: "In Progress", class: "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-300 dark:border-indigo-900" },
+                      COMPLETED: { label: "Completed", class: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900" },
+                      OVERDUE: { label: "Overdue", class: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-900" },
                     }[task.status as "PENDING" | "IN_PROGRESS" | "COMPLETED" | "OVERDUE"] || { label: task.status, class: "bg-muted text-muted-foreground" };
 
                     return (
@@ -1605,7 +1675,7 @@ export default function PatientDetailPage() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="h-8 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                                  className="h-8 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:text-indigo-300 dark:hover:bg-indigo-950/30"
                                   onClick={async () => {
                                     try {
                                       await updateTaskMutation.mutateAsync({ id: task.id, data: { status: "IN_PROGRESS" } });
@@ -1623,7 +1693,7 @@ export default function PatientDetailPage() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-8 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                className="h-8 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-950/30"
                                 onClick={async () => {
                                   try {
                                     await completeTaskMutation.mutateAsync({ id: task.id });
@@ -1686,7 +1756,7 @@ export default function PatientDetailPage() {
           <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg flex items-center gap-2"><FileText className="w-4 h-4" /> Files & Documents</CardTitle>
-              <Dialog open={isFileDialogOpen} onOpenChange={setIsFileDialogOpen}>
+              <Dialog open={isFileDialogOpen} onOpenChange={(open) => { setIsFileDialogOpen(open); if (!open) { setSelectedFile(null); } }}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline" className="h-8"><Upload className="w-4 h-4 mr-1" /> Upload</Button>
                 </DialogTrigger>
@@ -1755,7 +1825,7 @@ export default function PatientDetailPage() {
                   <Button size="sm" variant={commType === "EMAIL" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setCommType("EMAIL")}>Email</Button>
                 </div>
               </div>
-              <Dialog open={isSmsDialogOpen} onOpenChange={setIsSmsDialogOpen}>
+              <Dialog open={isSmsDialogOpen} onOpenChange={(open) => { setIsSmsDialogOpen(open); if (!open) { setSmsMessage(""); } }}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline" className="h-8"><Send className="w-4 h-4 mr-1" /> Send {commType}</Button>
                 </DialogTrigger>

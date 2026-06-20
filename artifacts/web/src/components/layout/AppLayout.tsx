@@ -8,7 +8,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:shadow-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
         Skip to content
       </a>
-      <div className="flex min-h-screen bg-background text-foreground overflow-hidden">
+      <div className="flex min-h-screen text-foreground overflow-hidden">
         <Sidebar />
         
         <div className="flex-1 flex flex-col min-w-0">

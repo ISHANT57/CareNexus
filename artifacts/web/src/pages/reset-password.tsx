@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useSearch, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,13 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [done, setDone] = useState(false);
 
+  // Seed the XSRF-TOKEN cookie so the POST below passes CSRF validation.
+  // Users arrive here from an email link and may not have visited any other page.
+  useEffect(() => {
+    const m = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+    if (!m) fetch("/api/health/public-stats", { credentials: "include" }).catch(() => {});
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirm) {
@@ -35,9 +42,14 @@ export default function ResetPasswordPage() {
     }
     setIsLoading(true);
     try {
+      const xsrf = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/)?.[1];
       const res = await fetch("/api/auth/reset-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(xsrf ? { "x-xsrf-token": decodeURIComponent(xsrf) } : {}),
+        },
+        credentials: "include",
         body: JSON.stringify({ token, newPassword: password }),
       });
       if (!res.ok) {

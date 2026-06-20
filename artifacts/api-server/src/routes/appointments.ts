@@ -58,6 +58,7 @@ router.get("/", authorizePermission("appointments", "read"), async (req, res, ne
 
 router.post("/", authorizePermission("appointments", "write"), validateBody(AppointmentSchema), async (req, res, next) => {
   try {
+    if (!req.tenantId) throw Errors.validation("A specific tenant must be selected to perform this action. Please select a tenant from the switcher.");
     const { patientId, doctorId, clinicId, appointmentDate, durationMinutes, notes } = req.body;
 
     const patient = await prisma.patient.findFirst({ where: { id: patientId, tenantId: req.tenantId!, deletedAt: null } });

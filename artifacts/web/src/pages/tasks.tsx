@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useListTasks, getListTasksQueryKey, useUpdateTask, useCreateTask, useGetMe, useListPatients, useListUsers } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckSquare, User, Clock, ChevronLeft, ChevronRight, PlusCircle, CheckCircle, AlertCircle } from "lucide-react";
+import { CheckSquare, User, Clock, ChevronLeft, ChevronRight, PlusCircle, CheckCircle, AlertCircle, Search, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -38,18 +38,31 @@ export default function TasksPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [filterStatus, setFilterStatus] = useState<any>("");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({ title: "", description: "", patientId: "", assignedTo: "", priority: "MEDIUM", dueDate: "" });
 
-  const { data: patientsData, isLoading: patientsLoading } = useListPatients({ limit: 1000 }, { request: { headers: { "x-tenant-id": "ALL" } } });
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const { data: patientsData, isLoading: patientsLoading } = useListPatients({ limit: 1000 });
   const patientOptions = useMemo(() => (patientsData?.data ?? []).map(p => ({ label: `${p.firstName} ${p.lastName}`, value: p.id })), [patientsData]);
 
-  const { data: usersData, isLoading: usersLoading } = useListUsers({ limit: 1000 }, { request: { headers: { "x-tenant-id": "ALL" } } });
+  const { data: usersData, isLoading: usersLoading } = useListUsers({ limit: 1000 });
   const userOptions = useMemo(() => (usersData?.data ?? []).map(u => ({ label: `${u.firstName} ${u.lastName}`, value: u.id })), [usersData]);
 
-  const queryParams = filterStatus ? { status: filterStatus } : {};
+  const queryParams: Record<string, any> = {
+    page,
+    limit: PAGE_SIZE,
+    ...(filterStatus ? { status: filterStatus } : {}),
+    ...(debouncedSearch ? { q: debouncedSearch } : {}),
+  };
   const tasksKey = getListTasksQueryKey(queryParams);
 
   const { data: tasksData, isLoading } = useListTasks(
@@ -61,6 +74,7 @@ export default function TasksPage() {
   const createMutation = useCreateTask();
 
   const handleStatusUpdate = async (taskId: string, newStatus: any) => {
+    setUpdatingTaskId(taskId);
     try {
       await updateMutation.mutateAsync({
         id: taskId,
@@ -70,6 +84,8 @@ export default function TasksPage() {
       toast({ title: `Task updated to ${newStatus}` });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Action failed", description: err.message });
+    } finally {
+      setUpdatingTaskId(null);
     }
   };
 
@@ -99,8 +115,8 @@ export default function TasksPage() {
   };
 
   const allTasks = tasksData?.data ?? [];
-  const totalPages = Math.ceil(allTasks.length / PAGE_SIZE);
-  const paginated = allTasks.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = tasksData?.meta ? Math.ceil(tasksData.meta.total / PAGE_SIZE) : 1;
+  const paginated = allTasks;
 
   return (
     <div className="flex-1 overflow-y-auto bg-background">
@@ -188,7 +204,16 @@ export default function TasksPage() {
 
       <div className="p-8 space-y-4">
         {/* Filters */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 py-2 -my-2">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search tasks..."
+              className="pl-9 bg-card"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
           <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v === "ALL" ? "" : v); setPage(1); }}>
             <SelectTrigger className="w-44 bg-card">
               <SelectValue placeholder="All statuses" />
@@ -201,8 +226,8 @@ export default function TasksPage() {
               <SelectItem value="OVERDUE">Overdue</SelectItem>
             </SelectContent>
           </Select>
-          {filterStatus && (
-            <Badge variant="secondary">{allTasks.length} shown</Badge>
+          {tasksData?.meta && (
+            <span className="text-sm text-muted-foreground">{tasksData.meta.total} task{tasksData.meta.total !== 1 ? "s" : ""}</span>
           )}
         </div>
 
@@ -220,16 +245,17 @@ export default function TasksPage() {
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto">
+                <div className="max-h-[62vh] overflow-auto">
                   <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/30 hover:bg-muted/30">
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Title</TableHead>
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Priority</TableHead>
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Patient</TableHead>
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Assignee</TableHead>
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Status</TableHead>
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide text-right">Actions</TableHead>
+                    <TableHeader className="sticky top-0 z-10">
+                      <TableRow className="bg-muted hover:bg-muted">
+                        <TableHead>Title</TableHead>
+                        <TableHead>Priority</TableHead>
+                        <TableHead>Patient</TableHead>
+                        <TableHead>Assignee</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -269,6 +295,14 @@ export default function TasksPage() {
                                 {task.assignee ? `${task.assignee.firstName} ${task.assignee.lastName}` : "Unassigned"}
                               </div>
                             </TableCell>
+                            <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                              {(task as any).dueDate
+                                ? <span className={cn(new Date((task as any).dueDate) < new Date() && task.status !== "COMPLETED" ? "text-destructive font-medium" : "")}>
+                                    {format(new Date((task as any).dueDate), "MMM d, yyyy")}
+                                  </span>
+                                : "—"
+                              }
+                            </TableCell>
                             <TableCell>
                               <Badge variant="outline" className={cn("text-xs font-medium", statusCfg.class)}>
                                 {statusCfg.label}
@@ -276,13 +310,17 @@ export default function TasksPage() {
                             </TableCell>
                             <TableCell className="text-right">
                               {task.status !== "COMPLETED" && (
-                                <Button 
-                                  size="sm" 
-                                  variant="ghost" 
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
                                   onClick={() => handleStatusUpdate(task.id, task.status === "PENDING" ? "IN_PROGRESS" : "COMPLETED")}
                                   className="h-8 text-xs"
+                                  disabled={updatingTaskId === task.id}
                                 >
-                                  {task.status === "PENDING" ? "Start" : "Complete"}
+                                  {updatingTaskId === task.id
+                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    : task.status === "PENDING" ? "Start" : "Complete"
+                                  }
                                 </Button>
                               )}
                             </TableCell>

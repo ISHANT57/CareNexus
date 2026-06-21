@@ -22,6 +22,7 @@ import {
 import { FolderGit2, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Search, Users, Building2, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { cn, exportToCSV } from "@/lib/utils";
@@ -168,7 +169,6 @@ export default function ProgramsPage() {
       clinicId: filterClinic || undefined,
       q: search || undefined
     } as any,
-    { request: { headers: { "x-tenant-id": "ALL" } } }
   );
   const { data: tenantsData, isLoading: tenantsLoading } = useListTenants(
     { limit: 500, q: tenantQuery || undefined },
@@ -181,9 +181,9 @@ export default function ProgramsPage() {
 
   const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;
   const activeFilterCount = [filterTenant, filterArea, filterClinic].filter(Boolean).length;
-  const createProgram = useCreateProgram({ request: { headers: { "x-tenant-id": "ALL" } } });
-  const updateProgram = useUpdateProgram({ request: { headers: { "x-tenant-id": "ALL" } } });
-  const deleteProgram = useDeleteProgram({ request: { headers: { "x-tenant-id": "ALL" } } });
+  const createProgram = useCreateProgram();
+  const updateProgram = useUpdateProgram();
+  const deleteProgram = useDeleteProgram();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -429,15 +429,22 @@ export default function ProgramsPage() {
             {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-40 rounded-xl" />)}
           </div>
         ) : filteredPrograms.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-            <FolderGit2 className="w-12 h-12 mb-3 opacity-20" />
-            <p className="font-medium">{search ? "No programs match your search" : "No programs yet"}</p>
-            {!search && (
-              <Button size="sm" className="mt-4" onClick={openCreate}>
-                <Plus className="w-4 h-4 mr-2" />Create First Program
-              </Button>
-            )}
-          </div>
+          <EmptyState
+            icon={FolderGit2}
+            title={search ? "No programs match your search" : "No programs yet"}
+            description={
+              search
+                ? "Try a different name or clear the search to see all programs."
+                : "Create your first clinical program to define care pathways and treatments."
+            }
+            action={
+              !search ? (
+                <Button size="sm" onClick={openCreate}>
+                  <Plus className="w-4 h-4 mr-2" />Create First Program
+                </Button>
+              ) : undefined
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredPrograms.map((program, index) => {

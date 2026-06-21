@@ -64,8 +64,25 @@ router.get("/:id", authorizePermission("programs", "read"), async (req, res, nex
 router.post("/", authorizePermission("programs", "write"), validateBody(ProgramSchema), async (req, res, next) => {
   try {
     const data = req.body as z.infer<typeof ProgramSchema>;
-    const targetTenantId = data.tenantId || req.tenantId;
+    // HIGH-008: non-super-admins may only create within their own tenant
+    const isSuperAdmin = req.user?.role === "SUPER_ADMIN";
+    if (!isSuperAdmin && data.tenantId && data.tenantId !== req.tenantId) {
+      throw Errors.forbidden("You cannot create programs in another tenant");
+    }
+    const targetTenantId = isSuperAdmin ? (data.tenantId || req.tenantId) : req.tenantId;
     if (!targetTenantId) throw Errors.badRequest("Tenant ID is required");
+
+    // Hierarchy: any referenced area/clinic must belong to this tenant, and the clinic to the area.
+    if (data.areaId) {
+      const area = await prisma.area.findFirst({ where: { id: data.areaId, tenantId: targetTenantId, deletedAt: null } });
+      if (!area) throw Errors.validation("Selected area does not belong to this tenant");
+    }
+    if (data.clinicId) {
+      const clinic = await prisma.clinic.findFirst({
+        where: { id: data.clinicId, tenantId: targetTenantId, deletedAt: null, ...(data.areaId ? { areaId: data.areaId } : {}) },
+      });
+      if (!clinic) throw Errors.validation("Selected clinic does not belong to this tenant/area");
+    }
 
     const activationCode = data.activationCode ?? `${data.name.toUpperCase().replace(/\s+/g, "_").slice(0, 20)}_${Date.now()}`;
     const program = await prisma.program.create({ data: { ...data, activationCode, tenantId: targetTenantId, areaId: data.areaId, clinicId: data.clinicId } });
@@ -76,7 +93,7 @@ router.post("/", authorizePermission("programs", "write"), validateBody(ProgramS
 
 router.patch("/:id", authorizePermission("programs", "write"), validateBody(ProgramSchema.partial()), async (req, res, next) => {
   try {
-    const program = await prisma.program.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const program = await prisma.program.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!program) throw Errors.notFound("Program");
     assertTenantMatch(req, program.tenantId);
     const updated = await prisma.program.update({ where: { id: program.id }, data: req.body });
@@ -87,7 +104,7 @@ router.patch("/:id", authorizePermission("programs", "write"), validateBody(Prog
 
 router.delete("/:id", authorizePermission("programs", "write"), async (req, res, next) => {
   try {
-    const program = await prisma.program.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const program = await prisma.program.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!program) throw Errors.notFound("Program");
     assertTenantMatch(req, program.tenantId);
     await prisma.program.update({ where: { id: program.id }, data: { deletedAt: new Date() } });

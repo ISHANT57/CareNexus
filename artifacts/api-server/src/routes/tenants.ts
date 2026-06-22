@@ -43,8 +43,6 @@ router.get("/", async (req, res, next) => {
     const { skip, take, page, limit } = paginate(req.query);
     const q = req.query["q"] as string | undefined;
 
-    console.log("tenantId:", req.tenantId, "header:", req.headers["x-tenant-id"], "role:", req.user?.role);
-
     const where = {
       deletedAt: null,
       ...(req.tenantId ? { id: req.tenantId } : {}),
@@ -59,7 +57,7 @@ router.get("/", async (req, res, next) => {
         take,
         orderBy: { createdAt: "desc" },
         include: {
-          _count: { select: { users: true, patients: true, areas: true } },
+          _count: { select: { users: true, patients: true, areas: true, clinics: true } },
         },
       }),
     ]);
@@ -73,9 +71,13 @@ router.get("/", async (req, res, next) => {
 // GET /api/tenants/:id
 router.get("/:id", async (req, res, next) => {
   try {
+    // HIGH-004: non-super-admins may only read their own tenant's metadata
+    if (req.user?.role !== "SUPER_ADMIN" && req.params["id"] !== req.tenantId) {
+      throw Errors.forbidden("You do not have access to this tenant");
+    }
     const tenant = await prisma.tenant.findFirst({
       where: { id: req.params["id"] as string, deletedAt: null },
-      include: { _count: { select: { users: true, patients: true, areas: true, programs: true } } },
+      include: { _count: { select: { users: true, patients: true, areas: true, clinics: true, programs: true } } },
     });
     if (!tenant) throw Errors.notFound("Tenant");
     res.json(tenant);

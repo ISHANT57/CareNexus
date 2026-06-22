@@ -44,8 +44,8 @@ const ACTION_COLORS: Record<string, string> = {
 };
 
 const CHART_COLORS = [
-  "hsl(213,100%,45%)", "hsl(158,64%,40%)", "hsl(280,65%,55%)",
-  "hsl(38,92%,50%)", "hsl(0,72%,55%)", "hsl(190,80%,45%)",
+  "hsl(218,92%,51%)", "hsl(199,89%,48%)", "hsl(190,80%,42%)",
+  "hsl(38,92%,50%)", "hsl(265,60%,58%)", "hsl(0,72%,58%)",
 ];
 
 const STATUS_BADGE: Record<string, string> = {
@@ -177,17 +177,17 @@ function TenantDashboard() {
     : 0;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-background transition-colors duration-200">
+    <div className="flex-1 overflow-y-auto transition-colors duration-200">
       {/* ── Header banner ──────────────────────────────────────────────────────── */}
-      <div className="bg-primary/5 border-b border-border px-8 py-8 relative overflow-hidden">
-        {/* Subtle background decoration */}
-        <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-primary/10 rounded-full blur-3xl" />
-        <div className="max-w-7xl relative z-10">
-          <div className="text-sm font-medium text-muted-foreground mb-1">
+      <div className="bg-card border-b border-border px-8 py-6">
+        <div className="max-w-7xl">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
             {now.toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">{greeting} 👋</h1>
-          <p className="mt-1 text-muted-foreground text-sm">Clinical operations command centre — click any card to navigate</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            {greeting}{user?.firstName ? `, ${user.firstName}` : ""}
+          </h1>
+          <p className="mt-1 text-muted-foreground text-sm">Clinical operations overview</p>
         </div>
       </div>
 
@@ -354,7 +354,7 @@ function TenantDashboard() {
                       <XAxis dataKey="programName" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                       <Tooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--muted))" }} />
-                      <Bar dataKey="count" fill="hsl(213,100%,45%)" radius={[4, 4, 0, 0]} style={{ cursor: "pointer" }} />
+                      <Bar dataKey="count" fill="hsl(218,92%,51%)" radius={[4, 4, 0, 0]} style={{ cursor: "pointer" }} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (

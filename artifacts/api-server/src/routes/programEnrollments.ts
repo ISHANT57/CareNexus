@@ -87,7 +87,7 @@ router.post("/", authorizePermission("programs", "write"), validateBody(Enrollme
 
 router.patch("/:id", authorizePermission("programs", "write"), validateBody(UpdateEnrollmentSchema), async (req, res, next) => {
   try {
-    const enrollment = await prisma.programEnrollment.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const enrollment = await prisma.programEnrollment.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!enrollment) throw Errors.notFound("ProgramEnrollment");
     assertTenantMatch(req, enrollment.tenantId);
 
@@ -103,7 +103,7 @@ router.patch("/:id", authorizePermission("programs", "write"), validateBody(Upda
 
 router.post("/:id/complete", authorizePermission("programs", "write"), async (req, res, next) => {
   try {
-    const enrollment = await prisma.programEnrollment.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const enrollment = await prisma.programEnrollment.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!enrollment) throw Errors.notFound("ProgramEnrollment");
     assertTenantMatch(req, enrollment.tenantId);
 
@@ -119,7 +119,7 @@ router.post("/:id/complete", authorizePermission("programs", "write"), async (re
 
 router.post("/:id/cancel", authorizePermission("programs", "write"), async (req, res, next) => {
   try {
-    const enrollment = await prisma.programEnrollment.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const enrollment = await prisma.programEnrollment.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!enrollment) throw Errors.notFound("ProgramEnrollment");
     assertTenantMatch(req, enrollment.tenantId);
 

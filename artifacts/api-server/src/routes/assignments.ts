@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
 import { ADMIN_ROLES , authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant } from "../middlewares/tenantScope.js";
+import { getRoleScope } from "../middlewares/roleScope.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 import { createAuditLog } from "../lib/audit.js";
@@ -22,11 +23,18 @@ const AssignmentSchema = z.object({
 router.get("/", async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
-    const { doctorId, clinicId, areaId } = req.query as Record<string, string>;
+    const { doctorId, clinicId, areaId, patientId } = req.query as Record<string, string>;
     const where: Record<string, unknown> = { tenantId: req.tenantId!, deletedAt: null };
+    // RBAC: non-super users only see assignments for patients within their scope
+    // (a doctor therefore sees the full care team of their assigned patients, no others).
+    if (req.user?.role !== "SUPER_ADMIN") {
+      const patientScope = await getRoleScope(req, "patient");
+      where["patient"] = patientScope;
+    }
     if (doctorId) where["doctorId"] = doctorId;
     if (clinicId) where["clinicId"] = clinicId;
     if (areaId) where["areaId"] = areaId;
+    if (patientId) where["patientId"] = patientId;
 
     const [total, assignments] = await Promise.all([
       prisma.doctorPatientAssignment.count({ where }),
@@ -48,11 +56,29 @@ router.post("/", authorizePermission("tasks", "write"), validateBody(AssignmentS
   try {
     const data = req.body as z.infer<typeof AssignmentSchema>;
 
-    // Soft-delete existing active assignment for patient
-    await prisma.doctorPatientAssignment.updateMany({
-      where: { patientId: data.patientId, tenantId: req.tenantId!, deletedAt: null },
-      data: { deletedAt: new Date() },
+    // CRIT-002: A specific tenant must be selected (super-admin "ALL" mode has no tenantId)
+    if (!req.tenantId) {
+      throw Errors.validation("A specific tenant must be selected to perform this action. Please select a tenant from the switcher.");
+    }
+
+    // HIGH-005: Only users with the DOCTOR role in this tenant may be assigned as clinicians
+    const doctor = await prisma.user.findFirst({
+      where: { id: data.doctorId, tenantId: req.tenantId, deletedAt: null, role: { name: "DOCTOR" } },
     });
+    if (!doctor) throw Errors.validation("Selected clinician is not a doctor in this tenant");
+
+    // Hierarchy: the patient must belong to this tenant, and the clinic must belong to the area + tenant.
+    const patient = await prisma.patient.findFirst({ where: { id: data.patientId, tenantId: req.tenantId, deletedAt: null } });
+    if (!patient) throw Errors.validation("Selected patient does not belong to this tenant");
+    const clinic = await prisma.clinic.findFirst({ where: { id: data.clinicId, tenantId: req.tenantId, areaId: data.areaId, deletedAt: null } });
+    if (!clinic) throw Errors.validation("Selected clinic/area is invalid for this tenant");
+
+    // HIGH-002: Support multiple doctors per patient — reject only exact duplicate (patient, doctor) pairs
+    // instead of soft-deleting the patient's entire care team.
+    const existing = await prisma.doctorPatientAssignment.findFirst({
+      where: { patientId: data.patientId, doctorId: data.doctorId, tenantId: req.tenantId, deletedAt: null },
+    });
+    if (existing) throw Errors.conflict("This doctor is already assigned to this patient");
 
     const assignment = await prisma.doctorPatientAssignment.create({
       data: { ...data, tenantId: req.tenantId! },

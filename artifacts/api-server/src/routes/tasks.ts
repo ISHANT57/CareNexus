@@ -7,6 +7,7 @@ import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js"
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 import { createAuditLog } from "../lib/audit.js";
+import { getRoleScope } from "../middlewares/roleScope.js";
 
 const router = Router();
 router.use(authenticate, requireTenant);
@@ -35,6 +36,16 @@ router.get("/", authorizePermission("tasks", "read"), async (req, res, next) => 
     const overdue = req.query["overdue"] === "true";
 
     const where: Record<string, unknown> = { tenantId: req.tenantId!, deletedAt: null };
+    // RBAC: non-super users only see tasks for patients in their scope, or tasks they are
+    // assigned to / created. SUPER_ADMIN sees all tenant tasks.
+    if (req.user?.role !== "SUPER_ADMIN") {
+      const patientScope = await getRoleScope(req, "patient");
+      where["OR"] = [
+        { assignedTo: req.user!.userId },
+        { assignedBy: req.user!.userId },
+        { patient: patientScope },
+      ];
+    }
     if (patientId) where["patientId"] = patientId;
     if (assignedTo) where["assignedTo"] = assignedTo;
     if (status) where["status"] = status;
@@ -80,7 +91,16 @@ router.get("/:id", authorizePermission("tasks", "read"), async (req, res, next) 
 // POST /api/tasks
 router.post("/", authorizePermission("tasks", "write"), validateBody(TaskSchema), async (req, res, next) => {
   try {
+    if (!req.tenantId) throw Errors.validation("A specific tenant must be selected to perform this action. Please select a tenant from the switcher.");
     const data = req.body as z.infer<typeof TaskSchema>;
+
+    // MED-006: assignee must belong to this tenant (and, for scoped roles, the creator's clinics)
+    const assigneeScope = await getRoleScope(req, "user");
+    const assignee = await prisma.user.findFirst({
+      where: { id: data.assignedTo, tenantId: req.tenantId, deletedAt: null, ...assigneeScope },
+    });
+    if (!assignee) throw Errors.validation("The selected assignee is not a valid user within your scope");
+
     const task = await prisma.careTask.create({
       data: {
         tenantId: req.tenantId!,
@@ -123,7 +143,7 @@ router.patch("/:id", authorizePermission("tasks", "write"), validateBody(TaskSch
   status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "OVERDUE"]).optional(),
 })), async (req, res, next) => {
   try {
-    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!task) throw Errors.notFound("Task");
     assertTenantMatch(req, task.tenantId);
 
@@ -154,7 +174,7 @@ router.patch("/:id", authorizePermission("tasks", "write"), validateBody(TaskSch
 // PATCH /api/tasks/:id/complete
 router.patch("/:id/complete", authorizePermission("tasks", "write"), async (req, res, next) => {
   try {
-    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!task) throw Errors.notFound("Task");
     assertTenantMatch(req, task.tenantId);
 
@@ -171,7 +191,7 @@ router.patch("/:id/complete", authorizePermission("tasks", "write"), async (req,
 // PATCH /api/tasks/:id/reopen
 router.patch("/:id/reopen", authorizePermission("tasks", "write"), async (req, res, next) => {
   try {
-    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!task) throw Errors.notFound("Task");
     assertTenantMatch(req, task.tenantId);
 
@@ -188,7 +208,7 @@ router.patch("/:id/reopen", authorizePermission("tasks", "write"), async (req, r
 // DELETE /api/tasks/:id (soft-delete)
 router.delete("/:id", authorizePermission("tasks", "write"), async (req, res, next) => {
   try {
-    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!task) throw Errors.notFound("Task");
     assertTenantMatch(req, task.tenantId);
     await prisma.careTask.update({ where: { id: task.id }, data: { deletedAt: new Date() } });

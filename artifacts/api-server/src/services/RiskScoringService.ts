@@ -111,8 +111,9 @@ export async function calculateRiskScore(patientId: string, tenantId: string): P
 
 export async function calculateAndPersistRisk(patientId: string, tenantId: string): Promise<void> {
   const { score, riskLevel } = await calculateRiskScore(patientId, tenantId);
-  await prisma.patient.update({
-    where: { id: patientId },
+  // Scope the write by tenant so a mismatched patientId can never touch another tenant's row.
+  await prisma.patient.updateMany({
+    where: { id: patientId, tenantId },
     data: { riskScore: score, riskLevel, lastCalculatedAt: new Date() },
   });
 }

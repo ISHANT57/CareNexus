@@ -4,6 +4,39 @@ This document details all security, tenant isolation, RBAC, clinic boundaries, d
 
 ---
 
+## ✅ Remediation Log — 2026-06-22 (Stabilization Pass)
+
+Status of the audited items below, plus the systematic architecture/correctness pass.
+Verification after the pass: `pnpm run typecheck` ✅ · `@workspace/web build` ✅ · `@workspace/api-server build` ✅ · login + scoped endpoints 200.
+
+**Schema vs code (Critical #3) — FIXED.** `User` re-given direct `tenantId`/`roleId` + `tenant`/`role` relations; `Tenant`/`Role` given `users[]` back-relations. Prisma client regenerated; live Neon DB synced via `prisma db push` (also added the previously-missing `patients.riskScore/riskLevel/lastCalculatedAt` columns and risk/enrollment enums — additive only, no data loss). `prisma validate` clean, DB 0-drift.
+
+**roleScope.ts — REWRITTEN to match the role matrix:**
+- SUPER_ADMIN → all; AREA_ADMIN → **derived area scope** (areas of assigned clinics, expanded to every clinic in those areas); CLINIC_ADMIN → assigned clinics; DOCTOR → assigned patients + own appts/consults; OPERATOR/STAFF → assigned clinics/programs.
+- No-assignment users now get an **impossible filter (see nothing)** instead of an empty filter (which leaked the tenant). Added `area`/`program` module shapes.
+
+**Tenant isolation (Critical #2/#4/#6, High #3/#4) — FIXED + hardened.** "ALL"-mode writes now return a clean 422 (no crash) on appointments/consultations/tasks/outcomes/assignments/communications/import. Every mutation lookup (programs, programEnrollments, outcome-metrics, tasks, users, areas, outcomes, patients, consultations, notifications) now carries `tenantId`. `RiskScoringService` persist switched to tenant-scoped `updateMany`. Dashboard audit-log + SMS counts scoped; `follow-ups` (PII) scoped.
+
+**RBAC (Critical #1/#5, High #5/#8) — FIXED/verified.** Role tenant-isolation on `roles.ts`; create-user role-hierarchy + tenant-injection guard; non-super tenant-injection guards on users/clinics/areas/programs; non-doctor-as-clinician rejected; `authorizePermission` confirmed to enforce DB `role_permissions` at runtime with system-role fallbacks.
+
+**Doctor visibility (Critical #4, High #1/#6) — FIXED.** Patient detail/list/mutations, risk-scores, assignments **list**, tasks **list**, and outcomes **list** all role-scoped (clinicians no longer enumerate other patients' data).
+
+**Master-data hierarchy — enforced at create.** Patient (clinic∈area∈tenant), Program (area/clinic∈tenant, clinic∈area), Clinic (area∈tenant), Doctor-Patient assignment (patient∈tenant, clinic∈area∈tenant, assignee is a DOCTOR).
+
+**Sidebar (Medium #2/#3/#7) — FIXED.** Tenant label shows "All Tenants" for super-admin ALL mode and the user's tenant otherwise (never "Unknown"); TenantSwitcher hidden for non-super; backend `requireTenant` ignores an `x-tenant-id` header from non-super users.
+
+**Forms / dropdowns (Low #1) + missing module — FIXED.** Area→Clinic cascade confirmed in patient registration. **Added clinic-assignment multi-select to the user-create form** — without it, scoped roles had no assignments and saw nothing, making the whole RBAC model unusable.
+
+**UI bug fixes** (no redesign): consultation Edit **+ Delete** (added `DELETE /consultations/:id` to OpenAPI + codegen); roles permission matrix wrapped in horizontal scroll; design tokens aligned to NHS-blue / Plus Jakarta Sans / rounded cards.
+
+### Outstanding follow-ups (tracked, not yet done)
+- **user-detail.tsx**: no UI to add/remove clinic & program assignments *after* creation (backend `/users/:id/clinics` + `/programs` exist). Needed for ongoing RBAC maintenance.
+- Aggregate-only reports (`clinic-stats`, `outcomes-by-program`, `outcomes-by-doctor`, `consultations-by-program`) remain tenant-wide for any reader with `reports:read` — no cross-tenant leak, but a tenant admin sees org-wide aggregates. Scope by clinic/patient relation if stricter visibility is required.
+- AREA_ADMIN scope is **derived from clinic assignments** (no `UserAreaAssignment` table). If direct area assignment is desired, add that table + a frontend area multi-select.
+- Web bundle >500 kB (single chunk) — consider route-level code-splitting.
+
+---
+
 # Critical
 
 ### 1. Cross-Tenant Custom Role Modification & Deletion

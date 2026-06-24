@@ -37,7 +37,9 @@ import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { exportToCSV } from "@/lib/utils";
+import { useTenantContext } from "@/contexts/TenantContext";
 const PAGE_SIZE = 20;
 
 interface ClinicFormState {
@@ -58,6 +60,8 @@ export default function ClinicsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterTenant, setFilterTenant] = useState("");
   const [filterArea, setFilterArea] = useState("");
+  const { activeTenantId } = useTenantContext();
+  const isScopedToTenant = activeTenantId !== "ALL";
 
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 400);
@@ -71,11 +75,14 @@ export default function ClinicsPage() {
     { request: { headers: { "x-tenant-id": "ALL" } } }
   );
 
+  // Area filter options scope to the active tenant (or all tenants in Platform View),
+  // inheriting the switcher's x-tenant-id from the global API client.
   const { data: areasData, isLoading: areasLoading } = useListAreas(
     { limit: 500, tenantId: filterTenant || undefined } as any,
-    { request: { headers: { "x-tenant-id": "ALL" } } }
   );
 
+  // Main clinic list inherits the active tenant: a specific tenant shows only its own
+  // clinics; "Platform View" shows all tenants' clinics.
   const { data, isLoading } = useListClinics(
     {
       page,
@@ -83,7 +90,6 @@ export default function ClinicsPage() {
       tenantId: filterTenant || undefined,
       areaId: filterArea || undefined,
     } as any,
-    { request: { headers: { "x-tenant-id": "ALL" } } }
   );
   const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;
 
@@ -229,6 +235,7 @@ export default function ClinicsPage() {
     form,
     onChange,
     showArea = true,
+    tenantLocked = false,
     areaOptions,
     areasLoading,
     clinicOptions,
@@ -237,6 +244,7 @@ export default function ClinicsPage() {
     form: ClinicFormState;
     onChange: (f: ClinicFormState) => void;
     showArea?: boolean;
+    tenantLocked?: boolean;
     areaOptions: { label: string; value: string }[];
     areasLoading: boolean;
     clinicOptions: { label: string; value: string }[];
@@ -257,6 +265,7 @@ export default function ClinicsPage() {
             placeholder="Select hospital..."
             searchPlaceholder="Search hospitals..."
             isLoading={tenantsLoading}
+            disabled={tenantLocked}
           />
         </div>
         {showArea && (
@@ -363,7 +372,11 @@ export default function ClinicsPage() {
             <Download className="w-4 h-4 mr-2" />
             Export CSV
           </Button>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <Dialog open={isCreateOpen} onOpenChange={(open) => {
+            setIsCreateOpen(open);
+            if (open && isScopedToTenant) setCreateForm({ ...EMPTY_FORM, tenantId: activeTenantId });
+            else if (!open) setCreateForm(EMPTY_FORM);
+          }}>
             <DialogTrigger asChild>
               <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
                 <Plus className="w-4 h-4 mr-2" />
@@ -377,6 +390,7 @@ export default function ClinicsPage() {
               <ClinicFormFields
                 form={createForm}
                 onChange={setCreateForm}
+                tenantLocked={isScopedToTenant}
                 areaOptions={createFormAreaOptions}
                 areasLoading={allAreasLoading}
                 clinicOptions={createFormClinicOptions}
@@ -468,11 +482,16 @@ export default function ClinicsPage() {
                 </div>
               </div>
             ) : filteredClinics.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <Building2 className="w-12 h-12 mb-3 opacity-20" />
-                <p className="font-medium">No clinics found</p>
-                <p className="text-sm mt-1">Try adjusting your search or area filter</p>
-              </div>
+              <EmptyState
+                icon={Building2}
+                title={search || filterArea ? "No clinics match your filters" : "No clinics found"}
+                description={
+                  search || filterArea
+                    ? "Try adjusting your search or area filter to see more results."
+                    : "Create your first clinic to start managing care locations."
+                }
+                className="border-0 bg-transparent rounded-none"
+              />
             ) : (
               <>
                 <div className="overflow-x-auto">

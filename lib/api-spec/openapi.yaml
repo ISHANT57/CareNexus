@@ -768,6 +768,97 @@ paths:
               schema:
                 $ref: "#/components/schemas/OkResponse"
 
+  /users/{id}/clinics:
+    post:
+      operationId: assignUserClinic
+      tags: [users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignClinicRequest"
+      responses:
+        "201":
+          description: Clinic assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+  /users/{id}/clinics/{clinicId}:
+    delete:
+      operationId: unassignUserClinic
+      tags: [users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Clinic unassigned
+  /users/{id}/programs:
+    post:
+      operationId: assignUserProgram
+      tags: [users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignProgramRequest"
+      responses:
+        "201":
+          description: Program assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+  /users/{id}/programs/{programId}:
+    delete:
+      operationId: unassignUserProgram
+      tags: [users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: programId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Program unassigned
+
   # ── Programs ──────────────────────────────────────────────────────────────
   /programs:
     get:
@@ -1802,6 +1893,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Consultation"
+    delete:
+      operationId: deleteConsultation
+      tags: [consultations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
 
   /files:
     post:
@@ -2370,6 +2475,19 @@ components:
       properties:
         ok:
           type: boolean
+
+    AssignClinicRequest:
+      type: object
+      required: [clinicId]
+      properties:
+        clinicId:
+          type: string
+    AssignProgramRequest:
+      type: object
+      required: [programId]
+      properties:
+        programId:
+          type: string
 
     Meta:
       type: object

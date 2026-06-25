@@ -44,6 +44,11 @@ export default function NewUserPage() {
     },
   });
 
+  const selectedRoleId = form.watch("roleId");
+  const selectedRoleName = roles?.data.find((r) => r.id === selectedRoleId)?.name;
+  // Every non-super role is scoped by clinic assignment — without it they see nothing.
+  const needsClinicAssignment = !!selectedRoleName && selectedRoleName !== "SUPER_ADMIN";
+
   const onSubmit = async (data: UserForm) => {
     try {
       await createUser.mutateAsync({ data });
@@ -168,6 +173,50 @@ export default function NewUserPage() {
                     </FormItem>
                   )}
                 />
+
+                {needsClinicAssignment && (
+                  <FormField
+                    control={form.control}
+                    name="clinicIds"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Clinic Assignments</FormLabel>
+                        <CardDescription className="!mt-1">
+                          {selectedRoleName === "AREA_ADMIN"
+                            ? "Assign at least one clinic — area admins manage every clinic in that clinic's area."
+                            : "Assign the clinics this user can access. Required for the user to see any data."}
+                        </CardDescription>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-64 overflow-y-auto rounded-lg border border-border p-3 mt-2">
+                          {(clinics?.data ?? []).map((c) => {
+                            const checked = field.value?.includes(c.id) ?? false;
+                            return (
+                              <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer rounded-md px-2 py-1.5 hover:bg-muted">
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 rounded border-border accent-primary"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    const current = field.value ?? [];
+                                    field.onChange(
+                                      e.target.checked
+                                        ? [...current, c.id]
+                                        : current.filter((id) => id !== c.id),
+                                    );
+                                  }}
+                                />
+                                <span className="truncate">{c.name}</span>
+                              </label>
+                            );
+                          })}
+                          {(clinics?.data ?? []).length === 0 && (
+                            <p className="text-sm text-muted-foreground col-span-full">No clinics available — create a clinic first.</p>
+                          )}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </CardContent>
             </Card>
 

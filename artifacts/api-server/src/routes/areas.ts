@@ -51,7 +51,12 @@ router.get("/:id", authorizePermission("areas", "read"), async (req, res, next) 
 router.post("/", authorizePermission("areas", "write"), validateBody(AreaSchema), async (req, res, next) => {
   try {
     const data = req.body as z.infer<typeof AreaSchema>;
-    const targetTenantId = data.tenantId || req.tenantId;
+    // HIGH-008: non-super-admins may only create within their own tenant
+    const isSuperAdmin = req.user?.role === "SUPER_ADMIN";
+    if (!isSuperAdmin && data.tenantId && data.tenantId !== req.tenantId) {
+      throw Errors.forbidden("You cannot create areas in another tenant");
+    }
+    const targetTenantId = isSuperAdmin ? (data.tenantId || req.tenantId) : req.tenantId;
     if (!targetTenantId) throw Errors.badRequest("Tenant ID is required");
 
     const area = await prisma.area.create({
@@ -64,7 +69,7 @@ router.post("/", authorizePermission("areas", "write"), validateBody(AreaSchema)
 
 router.patch("/:id", authorizePermission("areas", "write"), validateBody(AreaSchema.partial()), async (req, res, next) => {
   try {
-    const area = await prisma.area.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const area = await prisma.area.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!area) throw Errors.notFound("Area");
     assertTenantMatch(req, area.tenantId);
     const updated = await prisma.area.update({ where: { id: area.id }, data: req.body });
@@ -75,7 +80,7 @@ router.patch("/:id", authorizePermission("areas", "write"), validateBody(AreaSch
 
 router.delete("/:id", authorizePermission("areas", "write"), async (req, res, next) => {
   try {
-    const area = await prisma.area.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const area = await prisma.area.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!area) throw Errors.notFound("Area");
     assertTenantMatch(req, area.tenantId);
     await prisma.area.update({ where: { id: area.id }, data: { deletedAt: new Date() } });

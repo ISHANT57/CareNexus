@@ -55,7 +55,10 @@ const RegisterSchema = z.object({
 });
 
 const RefreshSchema = z.object({
-  refreshToken: z.string().min(1),
+  // Optional: the refresh token is normally read from the httpOnly cookie. The body
+  // is only a fallback (e.g. non-browser clients). Requiring it here caused the SPA's
+  // cookie-based refresh (empty body) to fail validation with 422 → forced logout.
+  refreshToken: z.string().min(1).optional(),
 });
 
 const ChangePasswordSchema = z.object({

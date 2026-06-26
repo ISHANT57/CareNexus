@@ -25,6 +25,51 @@ function getXsrfToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+// ── Single-flight token refresh ──────────────────────────────────────────────
+// Query-heavy pages (e.g. patient detail) fire many requests in parallel. If the
+// access token has expired they all receive 401 at once. Because the server
+// ROTATES the refresh token, letting each 401 call /auth/refresh independently
+// means only the first succeeds and the rest fail on the now-revoked token —
+// forcing a spurious logout. We therefore dedupe: concurrent 401s await ONE
+// shared refresh and then retry with the new access token.
+let _refreshInFlight: Promise<string | null> | null = null;
+
+function refreshAccessToken(): Promise<string | null> {
+  if (!_refreshInFlight) {
+    _refreshInFlight = (async () => {
+      try {
+        // The CSRF middleware requires x-xsrf-token on every POST. The XSRF-TOKEN
+        // cookie is set by the server on the preceding GET (e.g. /api/auth/me that
+        // triggered the 401). Without this header the refresh returns 403 CSRF and
+        // the user is redirected to login even though their refresh token is valid.
+        const xsrfToken = getXsrfToken();
+        const refreshHeaders: Record<string, string> = { "Content-Type": "application/json" };
+        if (xsrfToken) refreshHeaders["x-xsrf-token"] = xsrfToken;
+
+        const res = await fetch(`${_baseUrl}/api/auth/refresh`, {
+          method: "POST",
+          headers: refreshHeaders,
+          body: JSON.stringify({}),
+          credentials: "include",
+        });
+        if (!res.ok) return null;
+        const data = await res.json().catch(() => null);
+        const token = data?.accessToken as string | undefined;
+        if (token) {
+          localStorage.setItem("access_token", token);
+          return token;
+        }
+        return null;
+      } catch {
+        return null;
+      } finally {
+        _refreshInFlight = null;
+      }
+    })();
+  }
+  return _refreshInFlight;
+}
+
 export async function customFetch<T = unknown>(
   url: string,
   options: CustomFetchOptions = {}
@@ -49,40 +94,35 @@ export async function customFetch<T = unknown>(
   });
 
   if (response.status === 401 && typeof window !== "undefined") {
-    if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
-      try {
-        // Attempt to refresh the token
-        const refreshRes = await fetch(`${_baseUrl}/api/auth/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-          credentials: "include",
-        });
+    const path = window.location.pathname;
+    if (path !== "/login" && path !== "/register") {
+      // Shared (single-flight) refresh — never rotates concurrently.
+      const newToken = await refreshAccessToken();
 
-        if (refreshRes.ok) {
-          const data = await refreshRes.json();
-          localStorage.setItem("access_token", data.accessToken);
-          headers.set("Authorization", `Bearer ${data.accessToken}`);
-          
-          // Retry original request
-          const retryRes = await fetch(`${_baseUrl}${url}`, {
-            ...options,
-            headers,
-            credentials: "include",
-          });
-
-          if (retryRes.ok) {
-            if (retryRes.status === 204) return undefined as unknown as T;
-            return retryRes.json() as Promise<T>;
-          }
+      if (newToken) {
+        headers.set("Authorization", `Bearer ${newToken}`);
+        const retryRes = await fetch(`${_baseUrl}${url}`, { ...options, headers, credentials: "include" });
+        if (retryRes.ok) {
+          if (retryRes.status === 204) return undefined as unknown as T;
+          return retryRes.json() as Promise<T>;
         }
-      } catch (err) {
-        // Fall through to logout
+        // Retry returned a non-OK status that is NOT an auth problem (e.g. 403/404
+        // on the resource itself) — surface it as a normal error, do NOT log out.
+        const retryErr = await retryRes.json().catch(() => ({ error: retryRes.statusText }));
+        throw Object.assign(new Error(retryRes.statusText), {
+          status: retryRes.status,
+          statusText: retryRes.statusText,
+          data: retryErr,
+          headers: retryRes.headers,
+        });
       }
 
-      // If refresh fails, clear everything and redirect to login
+      // Refresh genuinely failed → session is over. Clear token and redirect.
       localStorage.removeItem("access_token");
       window.location.href = "/login";
+      // Throw so the Promise rejects cleanly; the browser navigation above will
+      // complete asynchronously and this error is never actually surfaced to UI.
+      throw Object.assign(new Error("Session expired"), { status: 401 });
     }
   }
 

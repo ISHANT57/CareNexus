@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,20 +6,37 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Mail, Loader2, CheckCircle2, Shield, Lock } from "lucide-react";
 
+function getXsrf() {
+  const m = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  // Establish the XSRF-TOKEN cookie before the user submits the form.
+  // Users arriving directly from an email link skip the login page (which normally
+  // seeds the cookie via its /api/health/public-stats fetch).
+  useEffect(() => {
+    if (!getXsrf()) fetch("/api/health/public-stats", { credentials: "include" }).catch(() => {});
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
     setIsLoading(true);
     try {
+      const xsrf = getXsrf();
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(xsrf ? { "x-xsrf-token": xsrf } : {}),
+        },
+        credentials: "include",
         body: JSON.stringify({ email }),
       });
       if (!res.ok) {

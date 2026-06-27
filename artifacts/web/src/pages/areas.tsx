@@ -24,16 +24,21 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { useTenantContext } from "@/contexts/TenantContext";
 
 const PAGE_SIZE = 20;
 
 export default function AreasPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const { activeTenantId } = useTenantContext();
+  const isScopedToTenant = activeTenantId !== "ALL";
+  // Main list inherits the active tenant from the switcher (global x-tenant-id getter):
+  // a specific tenant shows only its own areas; "Platform View" shows all tenants' areas.
   const { data, isLoading } = useListAreas(
     { page, limit: PAGE_SIZE },
-    { request: { headers: { "x-tenant-id": "ALL" } } }
   );
   const { data: tenantsData, isLoading: tenantsLoading } = useListTenants(
     { limit: 500 },
@@ -145,7 +150,10 @@ export default function AreasPage() {
             <Download className="w-4 h-4 mr-2" />
             Export CSV
           </Button>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <Dialog open={isCreateOpen} onOpenChange={(open) => {
+            setIsCreateOpen(open);
+            if (open && isScopedToTenant) setNewAreaTenantId(activeTenantId);
+          }}>
             <DialogTrigger asChild>
               <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
                 <Plus className="w-4 h-4 mr-2" />
@@ -164,6 +172,7 @@ export default function AreasPage() {
                     placeholder="Select a tenant..."
                     searchPlaceholder="Search tenants..."
                     isLoading={tenantsLoading}
+                    disabled={isScopedToTenant}
                   />
                 </div>
                 <div className="grid gap-2">
@@ -243,10 +252,15 @@ export default function AreasPage() {
             {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)}
           </div>
         ) : filteredAreas.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-            <Map className="w-12 h-12 mb-3 opacity-20" />
-            <p className="font-medium">{search ? "No areas match your search" : "No areas found"}</p>
-          </div>
+          <EmptyState
+            icon={Map}
+            title={search ? "No areas match your search" : "No areas found"}
+            description={
+              search
+                ? "Try a different name or clear the search to see all areas."
+                : "Create your first geographic area to start organizing clinics and patient assignments."
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredAreas.map((area) => (

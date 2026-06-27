@@ -13,6 +13,14 @@ export interface OkResponse {
   ok: boolean;
 }
 
+export interface AssignClinicRequest {
+  clinicId: string;
+}
+
+export interface AssignProgramRequest {
+  programId: string;
+}
+
 export interface Meta {
   total: number;
   page: number;

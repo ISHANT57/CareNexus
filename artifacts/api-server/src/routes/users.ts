@@ -8,6 +8,7 @@ import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js"
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 import { createAuditLog } from "../lib/audit.js";
+import { getRoleScope } from "../middlewares/roleScope.js";
 
 const ROLE_HIERARCHY: Record<string, string[]> = {
   SUPER_ADMIN: ["SUPER_ADMIN", "AREA_ADMIN", "CLINIC_ADMIN", "DOCTOR", "OPERATOR", "STAFF"],
@@ -68,8 +69,9 @@ router.get("/", authorizePermission("users", "read"), async (req, res, next) => 
 
 router.get("/:id", authorizePermission("users", "read"), async (req, res, next) => {
   try {
+    const userScope = await getRoleScope(req, "user");
     const user = await prisma.user.findFirst({
-      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null },
+      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...userScope },
       select: {
         ...safeUser,
         tenant: { select: { id: true, name: true } },
@@ -89,20 +91,26 @@ router.post("/", authorizePermission("users", "write"), validateBody(CreateUserS
     const existing = await prisma.user.findUnique({ where: { email: data.email } });
     if (existing) throw Errors.conflict("Email already in use");
 
-    // Prevent non-super-admins from creating super admins
-    const targetRole = await prisma.role.findUnique({ where: { id: data.roleId } });
+    // HIGH-008: non-super-admins may only create users within their own tenant
+    const isSuperAdmin = req.user?.role === "SUPER_ADMIN";
+    if (!isSuperAdmin && data.tenantId && data.tenantId !== req.tenantId) {
+      throw Errors.forbidden("You cannot create users in another tenant");
+    }
+    const targetTenantId = isSuperAdmin ? (data.tenantId || req.tenantId) : req.tenantId;
+    if (!targetTenantId) throw Errors.badRequest("Tenant ID is required");
+
+    // CRIT-005: target role must exist within the target tenant (or be a system role)
+    const targetRole = await prisma.role.findFirst({ where: { id: data.roleId, OR: [{ tenantId: targetTenantId }, { isSystem: true }] } });
     if (!targetRole) throw Errors.notFound("Role");
-    
+
+    // CRIT-005: role hierarchy — cannot create a user with a role above your own
     const userRole = req.user?.role ?? "";
     const allowedRoles = ROLE_HIERARCHY[userRole] || [];
-    
     if (!allowedRoles.includes(targetRole.name)) {
       throw Errors.forbidden(`Your role (${userRole}) is not permitted to create users with the ${targetRole.name} role`);
     }
 
     const hashed = await bcrypt.hash(data.password, 12);
-    const targetTenantId = data.tenantId || req.tenantId;
-    if (!targetTenantId) throw Errors.badRequest("Tenant ID is required");
 
     const { clinicIds, programIds, tenantId, ...rest } = data;
 
@@ -128,7 +136,7 @@ router.post("/", authorizePermission("users", "write"), validateBody(CreateUserS
 
 router.patch("/:id", authorizePermission("users", "write"), validateBody(UpdateUserSchema), async (req, res, next) => {
   try {
-    const user = await prisma.user.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const user = await prisma.user.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!user) throw Errors.notFound("User");
     assertTenantMatch(req, user.tenantId);
 
@@ -159,7 +167,7 @@ router.patch("/:id", authorizePermission("users", "write"), validateBody(UpdateU
 
 router.delete("/:id", authorizePermission("users", "write"), async (req, res, next) => {
   try {
-    const user = await prisma.user.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const user = await prisma.user.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!user) throw Errors.notFound("User");
     assertTenantMatch(req, user.tenantId);
     if (user.id === req.user!.userId) throw Errors.forbidden("Cannot deactivate your own account");

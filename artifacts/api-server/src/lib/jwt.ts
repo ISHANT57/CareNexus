@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { randomUUID } from "crypto";
 import { type JwtPayload } from "../types/index.js";
 
 const ACCESS_SECRET = process.env["JWT_SECRET"] ?? "changeme-set-jwt-secret";
@@ -13,7 +14,10 @@ export function signAccessToken(payload: Omit<JwtPayload, "iat" | "exp">): strin
 }
 
 export function signRefreshToken(userId: string): string {
-  return jwt.sign({ userId }, REFRESH_SECRET, { expiresIn: REFRESH_EXPIRES });
+  // `jti` guarantees a unique token string even when two tokens are signed in the
+  // same second (e.g. login + immediate rotation), which previously collided on the
+  // refresh_tokens.token unique constraint and broke the refresh flow.
+  return jwt.sign({ userId }, REFRESH_SECRET, { expiresIn: REFRESH_EXPIRES, jwtid: randomUUID() });
 }
 
 export function verifyAccessToken(token: string): JwtPayload {

@@ -232,7 +232,7 @@ export default function PatientsPage() {
 
       <div className="space-y-4">
         {/* Search + Filter bar */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 py-2 -my-2">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -363,19 +363,17 @@ export default function PatientsPage() {
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto">
+                <div className="max-h-[62vh] overflow-auto">
                   <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/30 hover:bg-muted/30">
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">NHS Number</TableHead>
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Name</TableHead>
-                         <TableHead className="font-semibold text-xs uppercase tracking-wide">Status</TableHead>
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Risk</TableHead>
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Program</TableHead>
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Clinic</TableHead>
-                        <TableHead className="font-semibold text-xs uppercase tracking-wide text-right">
-                          Actions
-                        </TableHead>
+                    <TableHeader className="sticky top-0 z-10">
+                      <TableRow className="bg-muted hover:bg-muted">
+                        <TableHead>NHS Number</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Risk</TableHead>
+                        <TableHead>Program</TableHead>
+                        <TableHead>Clinic</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -383,22 +381,21 @@ export default function PatientsPage() {
                         <TableRow
                           key={patient.id}
                           data-testid={`row-patient-${patient.id}`}
-                          className="hover:bg-muted/20 transition-colors"
                         >
-                          <TableCell className="font-mono text-sm text-muted-foreground">
+                          <TableCell className="font-mono text-xs text-muted-foreground">
                             {patient.nhsNumber ?? "—"}
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2.5">
+                            <Link href={`/patients/${patient.id}`} className="flex items-center gap-2.5 group/name">
                               <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                                 <span className="text-xs font-bold text-primary">
                                   {patient.firstName?.[0]}
                                 </span>
                               </div>
-                              <span className="font-medium">
+                              <span className="font-medium group-hover/name:text-primary transition-colors">
                                 {patient.firstName} {patient.lastName}
                               </span>
-                            </div>
+                            </Link>
                           </TableCell>
                           <TableCell>
                             <StatusBadge status={patient.status ?? "INACTIVE"} />

@@ -67,6 +67,7 @@ router.get("/", authorizePermission("consultations", "read"), async (req, res, n
 
 router.post("/", authorizePermission("consultations", "write"), validateBody(ConsultationSchema), async (req, res, next) => {
   try {
+    if (!req.tenantId) throw Errors.validation("A specific tenant must be selected to perform this action. Please select a tenant from the switcher.");
     const { patientId, appointmentId, doctorId, clinicId, chiefComplaint, symptoms, observations, diagnosis, treatmentPlan, medications, followUpInstructions, consultationDate } = req.body;
 
     const [patient, appointment] = await Promise.all([
@@ -78,7 +79,7 @@ router.post("/", authorizePermission("consultations", "write"), validateBody(Con
     if (!appointment) throw Errors.notFound("Appointment");
 
     // Check if consultation already exists for this appointment
-    const existing = await prisma.consultation.findFirst({ where: { appointmentId } });
+    const existing = await prisma.consultation.findFirst({ where: { appointmentId, tenantId: req.tenantId! } });
     if (existing) {
       throw Errors.badRequest("A consultation already exists for this appointment");
     }

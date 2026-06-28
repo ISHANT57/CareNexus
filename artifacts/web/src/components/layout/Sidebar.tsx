@@ -24,6 +24,7 @@ import { useState } from "react";
 import { useTheme } from "@/components/ui/theme-provider";
 import { cn } from "@/lib/utils";
 import { TenantSwitcher } from "./TenantSwitcher";
+import { useTenantContext } from "@/contexts/TenantContext";
 
 const ALL_ROLES = ["SUPER_ADMIN", "AREA_ADMIN", "CLINIC_ADMIN", "DOCTOR", "OPERATOR", "STAFF"];
 const ADMIN_ROLES = ["SUPER_ADMIN", "AREA_ADMIN", "CLINIC_ADMIN"];
@@ -87,8 +88,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { data: user } = useGetMe();
   const logout = useLogout();
   const { data: notificationsData } = useListNotifications({ limit: 50 });
+  const { activeTenantId } = useTenantContext();
 
   const unreadCount = notificationsData?.data?.filter((n: any) => !n.readAt)?.length ?? 0;
+
+  // MED-002 / MED-007: never show "Unknown" or a stale cached tenant. Super admins viewing
+  // all tenants see "All Tenants"; everyone else sees their own tenant name.
+  const tenantLabel =
+    user?.role === "SUPER_ADMIN" && activeTenantId === "ALL"
+      ? "All Tenants · Platform View"
+      : user?.tenantName || "—";
 
   const filteredItems = navItems
     .filter((item) => user?.role && item.allowedRoles.includes(user.role))
@@ -126,7 +135,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-sidebar-border shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm overflow-hidden shrink-0" style={{background: "linear-gradient(135deg, #003f9e 0%, #0066ff 100%)"}}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm overflow-hidden shrink-0" style={{background: "linear-gradient(135deg, #0a3d91 0%, #0b63f6 100%)"}}>
             <svg viewBox="0 0 32 32" fill="none" className="w-5 h-5">
               <rect x="13" y="5" width="6" height="22" rx="2" fill="white" opacity="0.95"/>
               <rect x="5" y="13" width="22" height="6" rx="2" fill="white" opacity="0.95"/>
@@ -156,7 +165,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               {user?.firstName} {user?.lastName}
             </div>
             <div className="text-xs text-sidebar-foreground/50 truncate">
-              {user?.tenantName}
+              {tenantLabel}
             </div>
           </div>
         </div>

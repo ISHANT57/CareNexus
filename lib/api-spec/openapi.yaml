@@ -2823,6 +2823,8 @@ components:
           type: string
         lastLoginAt:
           type: ["string", "null"]
+        emailVerified:
+          type: boolean
         createdAt:
           type: string
         role:
@@ -2864,6 +2866,9 @@ components:
           type: string
         mobile:
           type: string
+        emailVerified:
+          type: boolean
+          description: "Manually set a user's email-verified status. SUPER_ADMIN only."
         clinicIds:
           type: array
           items:

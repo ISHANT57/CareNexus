@@ -12,6 +12,7 @@ import {
   useUnassignUserClinic,
   useAssignUserProgram,
   useUnassignUserProgram,
+  useGetMe,
   getGetUserQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -23,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Plus, X, Building2, FolderGit2 } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, X, Building2, FolderGit2, BadgeCheck, MailCheck, MailX } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const userEditSchema = z.object({
@@ -48,7 +49,23 @@ export default function UserDetailPage() {
   const { data: roles } = useListRoles();
   const { data: clinics } = useListClinics({ limit: 1000 });
   const { data: programs } = useListPrograms({ limit: 1000 });
+  const { data: me } = useGetMe();
+  const isSuperAdmin = me?.role === "SUPER_ADMIN";
   const updateUser = useUpdateUser();
+  const [verifying, setVerifying] = useState(false);
+
+  const handleToggleVerify = async (verified: boolean) => {
+    setVerifying(true);
+    try {
+      await updateUser.mutateAsync({ id, data: { emailVerified: verified } });
+      queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(id) });
+      toast({ title: verified ? "Email verified" : "Email verification revoked" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Action failed", description: err.message });
+    } finally {
+      setVerifying(false);
+    }
+  };
   const assignClinic = useAssignUserClinic();
   const unassignClinic = useUnassignUserClinic();
   const assignProgram = useAssignUserProgram();
@@ -132,16 +149,42 @@ export default function UserDetailPage() {
               Back to Team Members
             </Button>
           </Link>
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">
-                {user.firstName} {user.lastName}
-              </h1>
-              <p className="text-muted-foreground mt-1">{user.email}</p>
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">
+                  {user.firstName} {user.lastName}
+                </h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-muted-foreground">{user.email}</p>
+                  {(user as any).emailVerified ? (
+                    <Badge variant="outline" className="gap-1 text-[11px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
+                      <BadgeCheck className="w-3.5 h-3.5" /> Verified
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[11px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
+                      Unverified
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <Badge variant={user.status === "ACTIVE" ? "default" : "secondary"} className="ml-2">
+                {user.status}
+              </Badge>
             </div>
-            <Badge variant={user.status === "ACTIVE" ? "default" : "secondary"} className="ml-2">
-              {user.status}
-            </Badge>
+            {isSuperAdmin && (
+              (user as any).emailVerified ? (
+                <Button type="button" variant="outline" size="sm" onClick={() => handleToggleVerify(false)} disabled={verifying}>
+                  {verifying ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <MailX className="w-4 h-4 mr-2" />}
+                  Revoke verification
+                </Button>
+              ) : (
+                <Button type="button" size="sm" onClick={() => handleToggleVerify(true)} disabled={verifying}>
+                  {verifying ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <MailCheck className="w-4 h-4 mr-2" />}
+                  Verify email
+                </Button>
+              )
+            )}
           </div>
         </div>
 

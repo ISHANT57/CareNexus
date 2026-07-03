@@ -259,6 +259,44 @@
   }
 }
 
+/* ── Coded SVG illustration animations ─────────────────────────────── */
+.cx-illustration { overflow: visible; }
+.cx-illustration .cx-pulse { transform-box: fill-box; transform-origin: center; animation: cxPulse 3s ease-in-out infinite; }
+.cx-illustration .cx-float { transform-box: fill-box; transform-origin: center; animation: cxFloat 4s ease-in-out infinite; }
+.cx-illustration .cx-float-slow { transform-box: fill-box; transform-origin: center; animation: cxFloat 6s ease-in-out infinite; }
+.cx-illustration .cx-swing { transform-box: fill-box; transform-origin: top center; animation: cxSwing 4s ease-in-out infinite; }
+.cx-illustration .cx-draw {
+  stroke-dasharray: 120;
+  stroke-dashoffset: 120;
+  animation: cxDraw 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.cx-illustration .cx-draw-2 { animation-delay: 0.35s; }
+
+@keyframes cxPulse {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(1.08); }
+}
+@keyframes cxFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes cxSwing {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+@keyframes cxDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cx-illustration .cx-pulse,
+  .cx-illustration .cx-float,
+  .cx-illustration .cx-float-slow,
+  .cx-illustration .cx-swing,
+  .cx-illustration .cx-draw { animation: none; }
+  .cx-illustration .cx-draw { stroke-dashoffset: 0; }
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckSquare, User, Clock, ChevronLeft, ChevronRight, PlusCircle, CheckCircle, AlertCircle, Search, Loader2 } from "lucide-react";
+import { CheckSquare, User, Clock, PlusCircle, CheckCircle, AlertCircle, Search, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { GradientAvatar, Pagination } from "@/lib/ui-helpers";
+import { TasksIllustration } from "@/components/ui/illustrations";
 
 const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
   PENDING: { label: "To Do", class: "bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20" },
@@ -26,7 +28,7 @@ const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
 };
 
 const PRIORITY_CONFIG: Record<string, { label: string; icon: any; class: string }> = {
-  LOW: { label: "Low", icon: CheckCircle, class: "text-slate-500" },
+  LOW: { label: "Low", icon: CheckCircle, class: "text-muted-foreground" },
   MEDIUM: { label: "Medium", icon: Clock, class: "text-amber-500" },
   HIGH: { label: "High", icon: AlertCircle, class: "text-red-500" },
 };
@@ -115,23 +117,22 @@ export default function TasksPage() {
   };
 
   const allTasks = tasksData?.data ?? [];
-  const totalPages = tasksData?.meta ? Math.ceil(tasksData.meta.total / PAGE_SIZE) : 1;
   const paginated = allTasks;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-background">
-      <div className="bg-card border-b border-border px-8 py-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Tasks</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Manage clinical and administrative tasks.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
+    <div>
+      <div className="border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1">Clinical Workflow</p>
+              <h1 className="text-xl font-semibold tracking-tight">Tasks</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">Manage clinical and administrative tasks.</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" className="h-9">
+                <Button size="sm">
                   <PlusCircle className="w-4 h-4 mr-2" />
                   New Task
                 </Button>
@@ -198,11 +199,12 @@ export default function TasksPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="p-8 space-y-4">
+      <div className="page-container animate-in-up pt-6 pb-12 space-y-4">
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 py-2 -my-2">
           <div className="relative flex-1 max-w-xs">
@@ -239,7 +241,7 @@ export default function TasksPage() {
               </div>
             ) : paginated.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <CheckSquare className="w-12 h-12 mb-3 opacity-20" />
+                <div className="w-32 h-32 mb-1 text-primary"><TasksIllustration /></div>
                 <p className="font-medium">No tasks found</p>
                 <p className="text-sm mt-1">{filterStatus ? "Try changing the status filter" : "You have no tasks"}</p>
               </div>
@@ -290,10 +292,17 @@ export default function TasksPage() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                <User className="w-3.5 h-3.5 shrink-0" />
-                                {task.assignee ? `${task.assignee.firstName} ${task.assignee.lastName}` : "Unassigned"}
-                              </div>
+                              {task.assignee ? (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <GradientAvatar first={task.assignee.firstName} last={task.assignee.lastName} />
+                                  <span className="font-medium">{task.assignee.firstName} {task.assignee.lastName}</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                  <User className="w-3.5 h-3.5 shrink-0" />
+                                  Unassigned
+                                </div>
+                              )}
                             </TableCell>
                             <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                               {(task as any).dueDate
@@ -331,19 +340,13 @@ export default function TasksPage() {
                   </Table>
                 </div>
 
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between px-6 py-4 border-t border-border">
-                    <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
-                        <ChevronLeft className="w-4 h-4" />Prev
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
-                        Next<ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <Pagination
+                  page={page}
+                  pageSize={PAGE_SIZE}
+                  total={tasksData?.meta?.total ?? 0}
+                  onPageChange={setPage}
+                  noun="tasks"
+                />
               </>
             )}
           </CardContent>

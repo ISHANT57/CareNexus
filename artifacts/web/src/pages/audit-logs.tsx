@@ -122,25 +122,24 @@ export default function AuditLogsPage() {
   ).sort() as string[];
 
   return (
-    <div className="flex-1 overflow-y-auto bg-background">
-      {/* Header */}
-      <div className="bg-card border-b border-border px-8 py-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Audit Logs</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Immutable, append-only record of all system activity and data access.
-            </p>
-          </div>
-          {data?.meta && (
-            <Badge variant="secondary" className="text-sm px-3 py-1.5">
-              {data.meta.total.toLocaleString()} total events
-            </Badge>
-          )}
+    <div className="page-container animate-in-up">
+      <div className="page-header">
+        <div>
+          <h1 className="text-h2">Audit Logs</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Immutable, append-only record of all system activity and data access.
+          </p>
         </div>
+        {data?.meta && (
+          <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-1.5 text-sm">
+            <ScrollText className="w-4 h-4 text-primary" />
+            <span className="font-semibold text-foreground">{data.meta.total.toLocaleString()}</span>
+            <span className="text-muted-foreground">events</span>
+          </div>
+        )}
       </div>
 
-      <div className="p-8 space-y-4">
+      <div className="space-y-4">
         {/* Filters */}
         <div className="bg-card border border-border rounded-xl p-4 flex flex-wrap items-end gap-4">
           <div className="flex-1 min-w-[200px] space-y-2">

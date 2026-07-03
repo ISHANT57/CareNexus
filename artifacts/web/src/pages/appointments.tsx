@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar as CalendarIcon, User, Building2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, User, Building2, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +17,8 @@ import { useListUsers, useListClinics } from "@workspace/api-client-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Filter, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GradientAvatar, Pagination } from "@/lib/ui-helpers";
+import { CalendarIllustration } from "@/components/ui/illustrations";
 const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
   SCHEDULED: { label: "Scheduled", class: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20" },
   COMPLETED: { label: "Completed", class: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20" },
@@ -87,27 +89,28 @@ export default function AppointmentsPage() {
   const clinicOptions = (clinicsData?.data ?? []).map((c: any) => ({ label: c.name, value: c.id }));
 
   const allAppointments = appointmentsData?.data ?? [];
-  const totalPages = appointmentsData?.meta ? Math.ceil(appointmentsData.meta.total / PAGE_SIZE) : 1;
   const activeFilterCount = [filterStatus, filterDoctor, filterClinic].filter(Boolean).length;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-background">
-      <div className="bg-card border-b border-border px-8 py-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Appointments</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              {isDoctor ? "Your scheduled appointments" : "All clinical appointments across the trust"}.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CalendarIcon className="w-4 h-4" />
-            {appointmentsData?.meta?.total ?? 0} total
+    <div>
+      <div className="border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1">Clinical Schedule</p>
+              <h1 className="text-xl font-semibold tracking-tight">Appointments</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{isDoctor ? "Your scheduled appointments" : "All clinical appointments across the trust"}.</p>
+            </div>
+            <div className="flex items-center gap-1.5 border border-border rounded-lg px-3 py-1.5 shrink-0 bg-muted/40">
+              <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+              <span className="font-semibold text-sm tabular-nums">{appointmentsData?.meta?.total ?? 0}</span>
+              <span className="text-muted-foreground text-xs">total</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="p-8 space-y-4">
+      <div className="page-container animate-in-up pt-6 pb-12 space-y-4">
         <div className="flex items-center gap-3 sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 py-2 -my-2">
           <Button
             variant={showFilters ? "default" : "outline"}
@@ -195,7 +198,7 @@ export default function AppointmentsPage() {
               </div>
             ) : allAppointments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <CalendarIcon className="w-12 h-12 mb-3 opacity-20" />
+                <div className="w-32 h-32 mb-1 text-primary"><CalendarIllustration /></div>
                 <p className="font-medium">No appointments found</p>
                 <p className="text-sm mt-1">{filterStatus ? "Try changing the status filter" : "No appointments scheduled yet"}</p>
               </div>
@@ -224,8 +227,9 @@ export default function AppointmentsPage() {
                               <div className="text-xs text-muted-foreground">{format(new Date(appt.appointmentDate), "HH:mm")}</div>
                             </TableCell>
                             <TableCell>
-                              <Link href={`/patients/${appt.patientId}`}>
-                                <span className="text-sm font-medium text-primary hover:underline cursor-pointer">
+                              <Link href={`/patients/${appt.patientId}`} className="flex items-center gap-2.5 group/name">
+                                <GradientAvatar first={appt.patient?.firstName} last={appt.patient?.lastName} />
+                                <span className="text-sm font-medium group-hover/name:text-primary transition-colors cursor-pointer">
                                   {appt.patient?.firstName} {appt.patient?.lastName}
                                 </span>
                               </Link>
@@ -313,19 +317,13 @@ export default function AppointmentsPage() {
                   </Table>
                 </div>
 
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between px-6 py-4 border-t border-border">
-                    <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
-                        <ChevronLeft className="w-4 h-4" />Prev
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
-                        Next<ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <Pagination
+                  page={page}
+                  pageSize={PAGE_SIZE}
+                  total={appointmentsData?.meta?.total ?? 0}
+                  onPageChange={setPage}
+                  noun="appointments"
+                />
               </>
             )}
           </CardContent>
@@ -334,3 +332,4 @@ export default function AppointmentsPage() {
     </div>
   );
 }
+

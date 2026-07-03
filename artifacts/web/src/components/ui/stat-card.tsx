@@ -17,31 +17,30 @@ interface StatCardProps {
   href?: string;
 }
 
-// Flat, restrained icon tiles — soft tint + saturated glyph, no gradients or glow.
 const variantStyles = {
   default: {
-    card: "bg-card border-border",
-    icon: "bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-300",
+    card: "bg-card border-border border-l-4 border-l-slate-300 dark:border-l-slate-600",
+    icon: "bg-slate-100 text-slate-600 dark:bg-slate-500/20 dark:text-slate-300",
     value: "text-foreground",
   },
   primary: {
-    card: "bg-card border-border",
-    icon: "bg-primary/10 text-primary",
+    card: "bg-card border-border border-l-4 border-l-blue-500",
+    icon: "bg-blue-50 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400",
     value: "text-foreground",
   },
   success: {
-    card: "bg-card border-border",
-    icon: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400",
+    card: "bg-card border-border border-l-4 border-l-emerald-500",
+    icon: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400",
     value: "text-foreground",
   },
   warning: {
-    card: "bg-card border-border",
-    icon: "bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400",
+    card: "bg-card border-border border-l-4 border-l-amber-500",
+    icon: "bg-amber-50 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400",
     value: "text-foreground",
   },
   destructive: {
-    card: "bg-card border-border",
-    icon: "bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400",
+    card: "bg-card border-border border-l-4 border-l-rose-500",
+    icon: "bg-rose-50 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400",
     value: "text-foreground",
   },
 };
@@ -61,9 +60,9 @@ function StatCardInner({
   return (
     <div
       className={cn(
-        "rounded-xl border p-5 flex flex-col gap-3 transition-colors duration-200",
+        "rounded-xl border p-5 flex flex-col gap-3 transition-all duration-200",
         href
-          ? "cursor-pointer hover:border-primary/40 hover:shadow-sm group"
+          ? "cursor-pointer hover:shadow-md hover:translate-y-[-1px] group"
           : "",
         styles.card,
         className

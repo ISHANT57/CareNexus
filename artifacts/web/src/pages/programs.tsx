@@ -19,7 +19,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { FolderGit2, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Search, Users, Building2, Activity } from "lucide-react";
+import { FolderGit2, Plus, Pencil, Trash2, Search, Users, Building2, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -30,17 +30,10 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { Filter, X } from "lucide-react";
 import { Download } from "lucide-react";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { getProgramGlyph, Pagination } from "@/lib/ui-helpers";
+import { ProgramsIllustration } from "@/components/ui/illustrations";
 
 const PAGE_SIZE = 20;
-
-const PROGRAM_COLORS = [
-  "bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  "bg-purple-500/10 text-purple-700 dark:text-purple-400",
-  "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  "bg-rose-500/10 text-rose-700 dark:text-rose-400",
-  "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
-];
 
 interface ProgramFormFieldsProps {
   tenantId: string;
@@ -179,7 +172,6 @@ export default function ProgramsPage() {
     return (tenantsData?.data ?? []).map((t: any) => ({ label: t.name, value: t.id }));
   }, [tenantsData]);
 
-  const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;
   const activeFilterCount = [filterTenant, filterArea, filterClinic].filter(Boolean).length;
   const createProgram = useCreateProgram();
   const updateProgram = useUpdateProgram();
@@ -274,22 +266,23 @@ export default function ProgramsPage() {
   };
 
   return (
-    <div className="page-container animate-in-up">
-      <div className="page-header">
-        <div>
-          <h1 className="text-h2">Clinical Programs</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {data?.meta?.total ? `${data.meta.total} ` : ""}Care pathways and treatment programs.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !filteredPrograms.length}>
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" onClick={openCreate} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
+    <div>
+      <div className="border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1">Care Pathways</p>
+              <h1 className="text-xl font-semibold tracking-tight">Clinical Programs</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{data?.meta?.total ? `${data.meta.total} programs · ` : ""}Care pathways and treatment programs.</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !filteredPrograms.length}>
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </Button>
+              <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" onClick={openCreate}>
                 <Plus className="w-4 h-4 mr-2" />Create Program
               </Button>
             </DialogTrigger>
@@ -311,7 +304,9 @@ export default function ProgramsPage() {
                 <Button onClick={handleCreate} disabled={createProgram.isPending || !name.trim() || !tenantId}>Create</Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+              </Dialog>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -336,7 +331,7 @@ export default function ProgramsPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="p-8 space-y-4">
+      <div className="page-container animate-in-up pt-6 pb-12 space-y-4">
         {/* Search + Filter bar */}
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-sm">
@@ -430,6 +425,7 @@ export default function ProgramsPage() {
           </div>
         ) : filteredPrograms.length === 0 ? (
           <EmptyState
+            illustration={<ProgramsIllustration />}
             icon={FolderGit2}
             title={search ? "No programs match your search" : "No programs yet"}
             description={
@@ -447,8 +443,9 @@ export default function ProgramsPage() {
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPrograms.map((program, index) => {
-              const colorClass = PROGRAM_COLORS[index % PROGRAM_COLORS.length];
+            {filteredPrograms.map((program) => {
+              const glyph = getProgramGlyph(program.name);
+              const GlyphIcon = glyph.icon;
               return (
                 <Card
                   key={program.id}
@@ -457,8 +454,8 @@ export default function ProgramsPage() {
                 >
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between mb-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorClass.split(" ").slice(0, 2).join(" ")}`}>
-                        <FolderGit2 className={`w-5 h-5 ${colorClass.split(" ").slice(2).join(" ")}`} />
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${glyph.color}1a` }}>
+                        <GlyphIcon className="w-5 h-5" style={{ color: glyph.color }} />
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(program)}>
@@ -507,18 +504,15 @@ export default function ProgramsPage() {
           </div>
         )}
 
-        {totalPages > 1 && !search && (
-          <div className="flex items-center justify-between pt-2">
-            <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
-                <ChevronLeft className="w-4 h-4" />Prev
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
-                Next<ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
+        {!search && (
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={data?.meta?.total ?? 0}
+            onPageChange={setPage}
+            noun="programmes"
+            className="px-0"
+          />
         )}
       </div>
     </div>

@@ -1,5 +1,4 @@
 import { useListNotifications, useMarkNotificationRead, useMarkAllNotificationsRead } from "@workspace/api-client-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -62,23 +61,28 @@ export default function NotificationsPage() {
       ) : notifications.length === 0 ? (
         <EmptyState icon={Bell} title="You're all caught up" description="New alerts and task updates will appear here." />
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {notifications.map((n) => (
-            <Card key={n.id} className={n.isRead ? "opacity-75" : "border-primary/30 bg-primary/[0.04]"}>
-              <CardContent className="p-4 flex gap-4">
-                <div className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.isRead ? "bg-transparent" : "bg-primary"}`} />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm">{n.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{n.message}</p>
-                  <p className="text-xs text-muted-foreground/70 mt-2">{new Date(n.createdAt).toLocaleString()}</p>
-                </div>
-                {!n.isRead && (
-                  <Button variant="ghost" size="icon" onClick={() => handleMarkRead(n.id)} disabled={markRead.isPending} aria-label="Mark as read">
-                    <Check className="w-4 h-4" />
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+            <div
+              key={n.id}
+              className={`rounded-xl border p-4 flex gap-4 transition-colors ${
+                n.isRead
+                  ? "bg-card border-border opacity-70"
+                  : "bg-blue-50/60 dark:bg-primary/[0.06] border-blue-200 dark:border-primary/30"
+              }`}
+            >
+              <div className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full transition-colors ${n.isRead ? "bg-border" : "bg-primary"}`} />
+              <div className="flex-1 min-w-0">
+                <h3 className={`font-semibold text-sm ${n.isRead ? "text-foreground/80" : "text-foreground"}`}>{n.title}</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">{n.message}</p>
+                <p className="text-xs text-muted-foreground/60 mt-2">{new Date(n.createdAt).toLocaleString("en-GB")}</p>
+              </div>
+              {!n.isRead && (
+                <Button variant="ghost" size="icon" onClick={() => handleMarkRead(n.id)} disabled={markRead.isPending} aria-label="Mark as read" className="hover:bg-primary/10 hover:text-primary">
+                  <Check className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           ))}
         </div>
       )}

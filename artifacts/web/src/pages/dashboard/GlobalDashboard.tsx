@@ -77,13 +77,33 @@ export function GlobalDashboard() {
     .slice().sort((a: any, b: any) => b.count - a.count).slice(0, 8);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Platform Overview</h1>
-        <p className="text-muted-foreground mt-1">
-          Aggregated metrics across all registered tenants.
-        </p>
+    <div>
+      {/* Header banner */}
+      <div className="border-b border-border px-8 py-6 relative overflow-hidden bg-background">
+        {/* AI-style mesh grid — theme-adaptive */}
+        <div
+          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]"
+          style={{
+            backgroundImage: "radial-gradient(circle, hsl(265 60% 58%) 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+          }}
+        />
+        <div className="absolute -top-12 -right-12 w-80 h-64 rounded-full bg-violet-500/10 dark:bg-violet-500/20 blur-3xl pointer-events-none" />
+
+        <div className="relative flex items-center justify-between max-w-7xl">
+          <div>
+            <div className="text-xs font-semibold text-violet-500 uppercase tracking-widest mb-1">Super Admin · Platform View</div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Platform Overview</h1>
+            <p className="mt-1 text-muted-foreground text-sm">Aggregated metrics across all registered tenants</p>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 bg-card border border-border rounded-xl px-4 py-2">
+            <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+            <span className="text-xs font-semibold text-muted-foreground">All Tenants</span>
+          </div>
+        </div>
       </div>
+
+      <div className="page-container animate-in-up space-y-6">
 
       {/* ── KPI tiles ──────────────────────────────────────────────────────── */}
       {isLoading ? (
@@ -231,6 +251,7 @@ export function GlobalDashboard() {
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

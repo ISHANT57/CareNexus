@@ -1,13 +1,17 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { useListUsers, useGetMe, useListRoles } from "@workspace/api-client-react";
+import { useListUsers, useGetMe, useListRoles, useUpdateUser, getListUsersQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, ChevronLeft, ChevronRight, UserCircle, Download, X, Mail, Phone, MoreVertical, Clock, CalendarDays } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Search, Plus, UserCircle, Download, X, Mail, Phone, MoreVertical, Clock, CalendarDays, BadgeCheck, MailCheck, MailX, ExternalLink, Loader2 } from "lucide-react";
 import { cn, exportToCSV } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
+import { GradientAvatar, Pagination } from "@/lib/ui-helpers";
+import { PatientsIllustration } from "@/components/ui/illustrations";
 import { useToast } from "@/hooks/use-toast";
 
 const PAGE_SIZE = 12;
@@ -34,6 +38,22 @@ export default function UsersPage() {
   const { data: me } = useGetMe();
   const isSuperAdmin = me?.role === "SUPER_ADMIN";
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const updateUser = useUpdateUser();
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
+
+  const handleVerifyEmail = async (userId: string, verified: boolean) => {
+    setVerifyingId(userId);
+    try {
+      await updateUser.mutateAsync({ id: userId, data: { emailVerified: verified } });
+      queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
+      toast({ title: verified ? "Email verified" : "Email verification revoked" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Action failed", description: err.message });
+    } finally {
+      setVerifyingId(null);
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 400);
@@ -57,7 +77,6 @@ export default function UsersPage() {
     ? (data?.data ?? []).filter((u: any) => u.status === filterStatus)
     : (data?.data ?? []);
 
-  const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;
 
   const handleExport = () => {
     if (!data?.data || data.data.length === 0) {
@@ -79,29 +98,32 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="page-container animate-in-up">
-      <div className="page-header">
-        <div>
-          <h1 className="text-h2">Team Members</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {data?.meta?.total ? `${data.meta.total} ` : ""}Manage access and roles for clinical and admin staff.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !data?.data?.length}>
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-          <Link href="/users/new">
-            <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm" data-testid="button-new-user">
-              <Plus className="w-4 h-4 mr-2" />
-              Invite Member
-            </Button>
-          </Link>
+    <div>
+      <div className="border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1">People & Access</p>
+              <h1 className="text-xl font-semibold tracking-tight">Team Members</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{data?.meta?.total ? `${data.meta.total} members · ` : ""}Clinical and admin staff access management.</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !data?.data?.length}>
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </Button>
+              <Link href="/users/new">
+                <Button size="sm" data-testid="button-new-user">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Invite Member
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="p-8 space-y-4">
+      <div className="page-container animate-in-up pt-6 pb-12 space-y-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -149,6 +171,7 @@ export default function UsersPage() {
           </div>
         ) : displayedUsers.length === 0 ? (
           <EmptyState
+            illustration={<PatientsIllustration />}
             icon={UserCircle}
             title="No team members found"
             description={
@@ -172,7 +195,6 @@ export default function UsersPage() {
               {displayedUsers.map((user: any) => {
                 const roleName = (user as any).systemRole ?? user.role?.name ?? "";
                 const roleClass = ROLE_BADGE[roleName] ?? "bg-muted text-muted-foreground border-border";
-                const initials = `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`;
                 const shortId = String(user.id).slice(0, 8).toUpperCase();
                 return (
                   <div
@@ -187,20 +209,41 @@ export default function UsersPage() {
                     <span className="absolute top-3 left-3 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-background/70 backdrop-blur text-muted-foreground border border-border/50">
                       #{shortId}
                     </span>
-                    <Link href={`/users/${user.id}`}>
-                      <button className="absolute top-3 right-3 w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-background/70 hover:text-foreground transition-colors" aria-label="Open member">
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                    </Link>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="absolute top-3 right-3 w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:bg-background/70 hover:text-foreground transition-colors" aria-label="Member actions">
+                          {verifyingId === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreVertical className="w-4 h-4" />}
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <Link href={`/users/${user.id}`}>
+                          <DropdownMenuItem className="gap-2 cursor-pointer">
+                            <ExternalLink className="w-4 h-4" /> Open profile
+                          </DropdownMenuItem>
+                        </Link>
+                        {isSuperAdmin && (
+                          <>
+                            <DropdownMenuSeparator />
+                            {(user as any).emailVerified ? (
+                              <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleVerifyEmail(user.id, false)}>
+                                <MailX className="w-4 h-4" /> Revoke verification
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleVerifyEmail(user.id, true)}>
+                                <MailCheck className="w-4 h-4 text-emerald-600" /> Verify email
+                              </DropdownMenuItem>
+                            )}
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
 
                     {/* Avatar */}
                     <div className="px-5 -mt-8">
                       {user.avatarUrl ? (
                         <img src={user.avatarUrl} alt="" className="w-16 h-16 rounded-full object-cover ring-4 ring-card shadow-md" />
                       ) : (
-                        <div className="w-16 h-16 rounded-full bg-primary/10 ring-4 ring-card shadow-md flex items-center justify-center">
-                          <span className="text-lg font-bold text-primary">{initials || <UserCircle className="w-7 h-7" />}</span>
-                        </div>
+                        <GradientAvatar first={user.firstName} last={user.lastName} className="!w-16 !h-16 !text-lg ring-4 ring-card shadow-md" />
                       )}
                     </div>
 
@@ -243,9 +286,17 @@ export default function UsersPage() {
 
                     {/* Contact */}
                     <div className="px-5 py-4 mt-3 border-t border-border/60 space-y-1.5">
-                      <a href={`mailto:${user.email}`} className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors truncate">
-                        <Mail className="w-3.5 h-3.5 shrink-0" /><span className="truncate">{user.email}</span>
-                      </a>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
+                        <Mail className="w-3.5 h-3.5 shrink-0" />
+                        <a href={`mailto:${user.email}`} className="truncate hover:text-primary transition-colors">{user.email}</a>
+                        {(user as any).emailVerified ? (
+                          <span title="Email verified" className="shrink-0 inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+                            <BadgeCheck className="w-3.5 h-3.5" />
+                          </span>
+                        ) : (
+                          <span title="Email not verified" className="shrink-0 text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1">Unverified</span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Phone className="w-3.5 h-3.5 shrink-0" /><span>{user.mobile || "No phone on file"}</span>
                       </div>
@@ -258,19 +309,14 @@ export default function UsersPage() {
               })}
             </div>
 
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-sm text-muted-foreground">Page {page} of {totalPages} · {data?.meta?.total} members</span>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
-                    <ChevronLeft className="w-4 h-4" />Prev
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
-                    Next<ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
+            <Pagination
+              page={page}
+              pageSize={PAGE_SIZE}
+              total={data?.meta?.total ?? 0}
+              onPageChange={setPage}
+              noun="members"
+              className="px-0"
+            />
           </>
         )}
       </div>

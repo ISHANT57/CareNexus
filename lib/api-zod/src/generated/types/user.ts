@@ -19,6 +19,7 @@ export interface User {
   status: string;
   /** @nullable */
   lastLoginAt?: string | null;
+  emailVerified?: boolean;
   createdAt: string;
   role?: Role;
 }

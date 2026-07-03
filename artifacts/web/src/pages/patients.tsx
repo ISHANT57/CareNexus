@@ -8,21 +8,23 @@ import {
   useListClinics,
   getListPatientsQueryKey,
 } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Loader2, ChevronLeft, ChevronRight, Upload, Filter, X, User, Download } from "lucide-react";
+import { Search, Plus, Loader2, Upload, Filter, X, User, Download, Eye, MoreHorizontal, Building2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { cn, exportToCSV } from "@/lib/utils";
+import { exportToCSV } from "@/lib/utils";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { GradientAvatar, ProgramIcon, StatusBadge, RiskBadge, Pagination } from "@/lib/ui-helpers";
+import { PatientsIllustration, SearchIllustration } from "@/components/ui/illustrations";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 const STATUS_OPTIONS = [
   { value: "ACTIVE", label: "Active" },
@@ -33,25 +35,6 @@ const STATUS_OPTIONS = [
   { value: "MEDICATION_REQUIRED", label: "Medication Required" },
   { value: "CONSULTATION_COMPLETED", label: "Consultation Completed" },
 ];
-
-const STATUS_BADGE: Record<string, { label: string; class: string }> = {
-  ACTIVE: { label: "Active", class: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20" },
-  INACTIVE: { label: "Inactive", class: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20" },
-  DISCHARGE: { label: "Discharged", class: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20" },
-  NEW: { label: "New", class: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20" },
-  PSI: { label: "PSI", class: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20" },
-  MEDICATION_REQUIRED: { label: "Medication Req.", class: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20" },
-  CONSULTATION_COMPLETED: { label: "Consultation Done", class: "bg-primary/10 text-primary border-primary/20" },
-};
-
-function StatusBadge({ status }: { status: string }) {
-  const config = STATUS_BADGE[status] ?? { label: status, class: "bg-muted text-muted-foreground border-border" };
-  return (
-    <Badge variant="outline" className={cn("text-xs font-medium", config.class)}>
-      {config.label}
-    </Badge>
-  );
-}
 
 export default function PatientsPage() {
   const [search, setSearch] = useState("");
@@ -129,7 +112,6 @@ export default function PatientsPage() {
     limit: PAGE_SIZE,
   });
 
-  const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;
   const activeFilterCount = [filterStatus, filterProgram, filterArea, filterClinic].filter(Boolean).length;
 
   const handleImport = async () => {
@@ -171,68 +153,74 @@ export default function PatientsPage() {
   };
 
   return (
-    <div className="page-container animate-in-up">
-      <div className="page-header">
-        <div>
-          <h1 className="text-h2">Patients</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Manage patient records, demographics, and care assignments.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !data?.data?.length}>
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-
-          <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Upload className="w-4 h-4 mr-2" />
-                Import CSV
+    <div>
+      {/* ── Page header ──────────────────────────────────────────────────────── */}
+      <div className="border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1">Clinical Records</p>
+              <h1 className="text-xl font-semibold tracking-tight">Patients</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {data?.meta?.total ? `${data.meta.total.toLocaleString()} patients · ` : ""}Manage records, demographics, and care assignments.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !data?.data?.length}>
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
               </Button>
-            </DialogTrigger>
-            <DialogContent aria-describedby={undefined}>
-              <DialogHeader>
-                <DialogTitle>Bulk Import Patients</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label>CSV File</Label>
-                  <input
-                    type="file"
-                    accept=".csv"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
-                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Required columns: firstName, lastName. Optional: email, mobile, dateOfBirth, nhsNumber.
-                  </p>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => { setIsImportOpen(false); setImportFile(null); }}>
-                  Cancel
-                </Button>
-                <Button onClick={handleImport} disabled={!importFile || importPatients.isPending}>
-                  {importPatients.isPending ? "Importing..." : "Import"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
 
-          <Link href="/patients/new">
-            <Button data-testid="button-new-patient" size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
-              <Plus className="w-4 h-4 mr-2" />
-              New Patient
-            </Button>
-          </Link>
+              <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Import CSV
+                  </Button>
+                </DialogTrigger>
+                <DialogContent aria-describedby={undefined}>
+                  <DialogHeader>
+                    <DialogTitle>Bulk Import Patients</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label>CSV File</Label>
+                      <input
+                        type="file"
+                        accept=".csv"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
+                        onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Required columns: firstName, lastName. Optional: email, mobile, dateOfBirth, nhsNumber.
+                      </p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => { setIsImportOpen(false); setImportFile(null); }}>Cancel</Button>
+                    <Button onClick={handleImport} disabled={!importFile || importPatients.isPending}>
+                      {importPatients.isPending ? "Importing..." : "Import"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Link href="/patients/new">
+                <Button data-testid="button-new-patient" size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Patient
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="space-y-4">
+      {/* ── Content ──────────────────────────────────────────────────────────── */}
+      <div className="page-container animate-in-up pt-6 pb-12 space-y-4">
+
         {/* Search + Filter bar */}
-        <div className="flex items-center gap-3 sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 py-2 -my-2">
+        <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -262,7 +250,7 @@ export default function PatientsPage() {
           {activeFilterCount > 0 && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
               <X className="w-3.5 h-3.5" />
-              Clear
+              Clear filters
             </Button>
           )}
 
@@ -273,13 +261,11 @@ export default function PatientsPage() {
           )}
         </div>
 
-        {/* Expanded Filter panel */}
+        {/* Filter panel */}
         {showFilters && (
           <div className="bg-card border border-border rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in-up">
             <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Status
-              </Label>
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</Label>
               <SearchableSelect
                 options={STATUS_OPTIONS}
                 value={filterStatus}
@@ -290,9 +276,7 @@ export default function PatientsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Program
-              </Label>
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Program</Label>
               <SearchableSelect
                 options={programOptions}
                 value={filterProgram}
@@ -304,9 +288,7 @@ export default function PatientsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Area
-              </Label>
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Area</Label>
               <SearchableSelect
                 options={areaOptions}
                 value={filterArea}
@@ -345,8 +327,10 @@ export default function PatientsPage() {
               </div>
             ) : !data?.data || data.data.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <User className="w-12 h-12 mb-3 opacity-20" />
-                <p className="font-medium">No patients found</p>
+                <div className="w-32 h-32 mb-1 text-primary">
+                  {search || activeFilterCount > 0 ? <SearchIllustration /> : <PatientsIllustration />}
+                </div>
+                <p className="font-semibold text-foreground">No patients found</p>
                 <p className="text-sm mt-1">
                   {search || activeFilterCount > 0
                     ? "Try adjusting your search or filters"
@@ -354,7 +338,7 @@ export default function PatientsPage() {
                 </p>
                 {!search && !activeFilterCount && (
                   <Link href="/patients/new">
-                    <Button size="sm" className="mt-4">
+                    <Button size="sm" className="mt-5">
                       <Plus className="w-4 h-4 mr-2" />
                       Add Patient
                     </Button>
@@ -363,35 +347,35 @@ export default function PatientsPage() {
               </div>
             ) : (
               <>
-                <div className="max-h-[62vh] overflow-auto">
-                  <Table>
-                    <TableHeader className="sticky top-0 z-10">
-                      <TableRow className="bg-muted hover:bg-muted">
-                        <TableHead>NHS Number</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Risk</TableHead>
-                        <TableHead>Program</TableHead>
-                        <TableHead>Clinic</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.data.map((patient) => (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40 hover:bg-muted/40 border-b border-border">
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground w-36">NHS Number</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Patient</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Risk</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Program</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Clinic</TableHead>
+                      <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.data.map((patient) => {
+                      const riskLevel = (patient as any).riskLevel as string | undefined;
+                      const riskScore = (patient as any).riskScore as number | undefined;
+                      const programName = (patient as any).program?.name as string | undefined;
+                      return (
                         <TableRow
                           key={patient.id}
                           data-testid={`row-patient-${patient.id}`}
+                          className="group/row hover:bg-muted/30 transition-colors border-b border-border/50"
                         >
                           <TableCell className="font-mono text-xs text-muted-foreground">
                             {patient.nhsNumber ?? "—"}
                           </TableCell>
                           <TableCell>
-                            <Link href={`/patients/${patient.id}`} className="flex items-center gap-2.5 group/name">
-                              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                <span className="text-xs font-bold text-primary">
-                                  {patient.firstName?.[0]}
-                                </span>
-                              </div>
+                            <Link href={`/patients/${patient.id}`} className="flex items-center gap-3 group/name">
+                              <GradientAvatar first={patient.firstName} last={patient.lastName} />
                               <span className="font-medium group-hover/name:text-primary transition-colors">
                                 {patient.firstName} {patient.lastName}
                               </span>
@@ -401,60 +385,74 @@ export default function PatientsPage() {
                             <StatusBadge status={patient.status ?? "INACTIVE"} />
                           </TableCell>
                           <TableCell>
-                            {(patient as any).riskLevel ? (
-                              <Badge variant={(patient as any).riskLevel === 'HIGH' || (patient as any).riskLevel === 'CRITICAL' ? 'destructive' : (patient as any).riskLevel === 'MEDIUM' ? 'default' : 'secondary'} className="uppercase font-medium text-[10px]">
-                                {(patient as any).riskLevel} ({(patient as any).riskScore ?? 0})
-                              </Badge>
+                            <RiskBadge level={riskLevel} score={riskScore} />
+                          </TableCell>
+                          <TableCell>
+                            {programName ? (
+                              <div className="flex items-center gap-1.5 text-sm">
+                                <ProgramIcon name={programName} />
+                                <span className="text-foreground/80 truncate max-w-[140px]">{programName}</span>
+                              </div>
                             ) : (
                               <span className="text-muted-foreground text-xs">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {(patient as any).program?.name ?? "—"}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {patient.clinic?.name ?? "—"}
+                          <TableCell>
+                            {patient.clinic?.name ? (
+                              <div className="flex items-center gap-1.5 text-sm">
+                                <Building2 className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
+                                <span className="text-muted-foreground truncate max-w-[140px]">{patient.clinic.name}</span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
-                            <Link href={`/patients/${patient.id}`}>
-                              <Button variant="ghost" size="sm" className="h-8 text-xs">
-                                View →
-                              </Button>
-                            </Link>
+                            <div className="flex items-center justify-end gap-1">
+                              <Link href={`/patients/${patient.id}`}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/10 opacity-0 group-hover/row:opacity-100 transition-opacity"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  View Details
+                                </Button>
+                              </Link>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                  >
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-44">
+                                  <Link href={`/patients/${patient.id}`}>
+                                    <DropdownMenuItem className="gap-2 cursor-pointer">
+                                      <Eye className="w-4 h-4" />
+                                      View Details
+                                    </DropdownMenuItem>
+                                  </Link>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
 
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between px-6 py-4 border-t border-border">
-                    <span className="text-sm text-muted-foreground">
-                      Page {page} of {totalPages} · {data.meta?.total?.toLocaleString()} total
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        disabled={page <= 1}
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        Prev
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                        disabled={page >= totalPages}
-                      >
-                        Next
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <Pagination
+                  page={page}
+                  pageSize={PAGE_SIZE}
+                  total={data.meta?.total ?? 0}
+                  onPageChange={setPage}
+                  noun="patients"
+                />
               </>
             )}
           </CardContent>

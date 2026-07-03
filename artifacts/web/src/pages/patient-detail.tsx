@@ -556,114 +556,133 @@ export default function PatientDetailPage() {
     : null;
 
   return (
-    <div className="page-container animate-in-up">
-      {/* ── Patient Header (always visible) ──────────────────────────────────── */}
-      <Link href="/patients">
-        <Button variant="ghost" size="sm" className="mb-4 -ml-3 text-muted-foreground">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Patients
-        </Button>
-      </Link>
+    <div>
+      {/* ── Patient record header ───────────────────────────────────────────── */}
+      <div className="border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-0">
+          {/* Back nav */}
+          <Link href="/patients">
+            <button className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Patients
+            </button>
+          </Link>
 
-      {/* Hero profile card */}
-      <div className="relative rounded-3xl border border-border bg-card shadow-sm overflow-hidden mb-6">
-        <div className="h-24 bg-gradient-to-r from-blue-700 via-blue-600 to-sky-500" />
-        <div className="px-6 pb-6 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-          {/* Left: avatar + identity */}
-          <div className="min-w-0">
-            <div className="w-24 h-24 rounded-2xl bg-card ring-4 ring-card shadow-md flex items-center justify-center shrink-0 -mt-12 mb-3 overflow-hidden">
-              <div className="w-full h-full bg-primary/10 flex items-center justify-center">
-                <User className="w-10 h-10 text-primary" />
+          {/* Patient identity row */}
+          <div className="flex items-start justify-between gap-6 pb-5">
+            <div className="flex items-start gap-4">
+              {/* Initials avatar */}
+              <div
+                className="w-16 h-16 rounded-xl shrink-0 flex items-center justify-center text-xl font-bold text-white shadow-md"
+                style={{ background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)" }}
+              >
+                {((patient.firstName?.[0] ?? "") + (patient.lastName?.[0] ?? "")).toUpperCase()}
               </div>
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl lg:text-3xl font-bold tracking-tight truncate">
-                  {patient.title ? `${patient.title} ` : ''}{patient.firstName} {patient.lastName}
-                </h1>
-                {isRiskLoading ? (
-                  <Skeleton className="h-6 w-16" />
-                ) : riskScore ? (
-                  <Badge variant={riskScore.riskLevel === 'HIGH' || riskScore.riskLevel === 'CRITICAL' ? 'destructive' : riskScore.riskLevel === 'MEDIUM' ? 'default' : 'secondary'} className="uppercase">
-                    {riskScore.riskLevel || "UNKNOWN"}
-                  </Badge>
-                ) : null}
-              </div>
-              <div className="flex items-center gap-2 mt-3 flex-wrap text-sm">
-                <span className="inline-flex items-center gap-1.5 font-mono bg-muted px-2.5 py-1 rounded-lg text-foreground">
-                  <FileText className="w-3.5 h-3.5 text-muted-foreground" />{patient.nhsNumber}
-                </span>
-                <span className="inline-flex items-center gap-1.5 bg-muted/60 px-2.5 py-1 rounded-lg text-muted-foreground">
-                  {patientAge != null ? `${patientAge} yrs` : 'Age —'} · {patient.gender || 'Unknown'}
-                </span>
-                <span className="inline-flex items-center gap-1.5 bg-muted/60 px-2.5 py-1 rounded-lg text-muted-foreground">
-                  <Calendar className="w-3.5 h-3.5" />DOB: {patient.dob || 'Unknown'}
-                </span>
-                {patient.program?.name && (
-                  <span className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1 rounded-lg font-medium">
-                    <Activity className="w-3.5 h-3.5" />{patient.program.name}
+
+              <div>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h1 className="text-2xl font-bold tracking-tight">
+                    {patient.title ? `${patient.title} ` : ""}{patient.firstName} {patient.lastName}
+                  </h1>
+                  {!isRiskLoading && riskScore ? (
+                    <Badge variant="outline" className={cn(
+                      "text-[11px] font-semibold uppercase",
+                      riskScore.riskLevel === "CRITICAL" || riskScore.riskLevel === "HIGH"
+                        ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30"
+                        : riskScore.riskLevel === "MEDIUM"
+                        ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30"
+                        : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30"
+                    )}>
+                      {riskScore.riskLevel || "LOW"} RISK
+                    </Badge>
+                  ) : null}
+                </div>
+
+                {/* Demographics chips */}
+                <div className="flex items-center gap-2.5 mt-2 flex-wrap text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5" />
+                    {patient.nhsNumber || "No NHS number"}
                   </span>
-                )}
+                  <span className="text-border">·</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" />
+                    {patientAge != null ? `${patientAge} yrs` : "—"} · {patient.gender || "Unknown"}
+                  </span>
+                  <span className="text-border">·</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" />
+                    DOB: {patient.dob ? format(new Date(patient.dob), "d MMM yyyy") : "Unknown"}
+                  </span>
+                  {patient.program?.name && (
+                    <>
+                      <span className="text-border">·</span>
+                      <span className="inline-flex items-center gap-1.5 text-primary font-medium">
+                        <Activity className="w-3.5 h-3.5" />
+                        {patient.program.name}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Right: actions */}
-          <div className="flex items-center gap-3 shrink-0">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 px-3 shadow-sm bg-card" disabled={updatePatient.isPending}>
-                  <Badge variant={patient.status === 'ACTIVE' ? 'default' : 'secondary'} className="pointer-events-none">
+            {/* Status + Actions */}
+            <div className="flex items-center gap-2 shrink-0">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2" disabled={updatePatient.isPending}>
+                    <div className={cn("w-2 h-2 rounded-full", patient.status === "ACTIVE" ? "bg-emerald-500" : "bg-slate-400")} />
                     {patient.status}
-                  </Badge>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleStatusChange('ACTIVE')}>Set to ACTIVE</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleStatusChange('INACTIVE')}>Set to INACTIVE</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleStatusChange("ACTIVE")}>Set to ACTIVE</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleStatusChange("INACTIVE")}>Set to INACTIVE</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
-                  Quick Actions <ChevronDown className="w-4 h-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => setIsAppointmentDialogOpen(true)}>
-                  <Calendar className="w-4 h-4 mr-2" /> New Appointment
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsConsultationDialogOpen(true)}>
-                  <ClipboardList className="w-4 h-4 mr-2" /> Record Consultation
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsJourneyDialogOpen(true)}>
-                  <Activity className="w-4 h-4 mr-2" /> Log Journey Event
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsSmsDialogOpen(true)}>
-                  <MessageSquare className="w-4 h-4 mr-2" /> Send Message
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" className="gap-2">
+                    Actions <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem onClick={() => setIsAppointmentDialogOpen(true)}>
+                    <Calendar className="w-4 h-4 mr-2" /> New Appointment
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsConsultationDialogOpen(true)}>
+                    <ClipboardList className="w-4 h-4 mr-2" /> Record Consultation
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsJourneyDialogOpen(true)}>
+                    <Activity className="w-4 h-4 mr-2" /> Log Journey Event
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsSmsDialogOpen(true)}>
+                    <MessageSquare className="w-4 h-4 mr-2" /> Send Message
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
 
-        {/* Vital / clinical metric tiles (Medlink-style) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border border-t border-border">
+        {/* ── Stats bar ────────────────────────────────────────────────────────── */}
+        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-border border-t border-border">
           {[
-            { label: "Risk Score", value: riskScore?.riskScore ?? "—", sub: riskScore?.riskLevel ?? "Not scored", icon: AlertCircle, chip: "bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400" },
-            { label: "Active Programs", value: (enrollments?.data ?? []).filter((e: any) => e.status === "ACTIVE").length, sub: `${enrollments?.data?.length ?? 0} total`, icon: Activity, chip: "bg-primary/10 text-primary" },
-            { label: "Appointments", value: appointmentsData?.data?.length ?? 0, sub: `${(appointmentsData?.data ?? []).filter((a: any) => a.status === "SCHEDULED").length} upcoming`, icon: Calendar, chip: "bg-primary/10 text-primary" },
-            { label: "Consultations", value: consultationsData?.data?.length ?? 0, sub: "On record", icon: Stethoscope, chip: "bg-primary/10 text-primary" },
+            { label: "Risk Score", value: riskScore?.riskScore ?? 0, sub: riskScore?.riskLevel ?? "Not scored", icon: AlertCircle, chipCls: "bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400" },
+            { label: "Active Programs", value: (enrollments?.data ?? []).filter((e: any) => e.status === "ACTIVE").length, sub: `${enrollments?.data?.length ?? 0} total`, icon: Activity, chipCls: "bg-primary/10 text-primary" },
+            { label: "Appointments", value: appointmentsData?.data?.length ?? 0, sub: `${(appointmentsData?.data ?? []).filter((a: any) => a.status === "SCHEDULED").length} upcoming`, icon: Calendar, chipCls: "bg-primary/10 text-primary" },
+            { label: "Consultations", value: consultationsData?.data?.length ?? 0, sub: "On record", icon: Stethoscope, chipCls: "bg-primary/10 text-primary" },
           ].map((m) => (
-            <div key={m.label} className="bg-card px-5 py-4 flex items-center gap-3">
-              <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", m.chip)}>
-                <m.icon className="w-5 h-5" />
+            <div key={m.label} className="px-5 py-3.5 flex items-center gap-3">
+              <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", m.chipCls)}>
+                <m.icon className="w-4.5 h-4.5" />
               </div>
               <div className="min-w-0">
-                <div className="text-2xl font-bold leading-none">{m.value}</div>
-                <div className="text-xs font-medium text-foreground mt-1">{m.label}</div>
+                <div className="text-xl font-bold leading-none tabular-nums">{m.value}</div>
+                <div className="text-xs font-medium text-foreground mt-0.5">{m.label}</div>
                 <div className="text-[11px] text-muted-foreground truncate">{m.sub}</div>
               </div>
             </div>
@@ -752,19 +771,26 @@ export default function PatientDetailPage() {
       </Dialog>
 
       {/* ── Tabs ─────────────────────────────────────────────────────────────── */}
+      <div className="page-container animate-in-up pt-6 pb-12">
       <Tabs defaultValue="overview" className="flex flex-col md:flex-row gap-6 lg:gap-10 items-start">
-        <div className="w-full md:w-56 shrink-0 md:sticky md:top-6">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 px-2">Clinical Record</div>
-          <TabsList className="flex flex-row md:flex-col justify-start bg-transparent space-y-1 w-full h-auto p-0 border-r-0 md:border-r border-border/50 rounded-none pr-4 overflow-x-auto md:overflow-visible">
-            <TabsTrigger value="overview" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><User className="w-4 h-4 mr-2" />Overview</TabsTrigger>
-            <TabsTrigger value="journey" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><Activity className="w-4 h-4 mr-2" />Journey</TabsTrigger>
-            <TabsTrigger value="appointments" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><Calendar className="w-4 h-4 mr-2" />Appointments</TabsTrigger>
-            <TabsTrigger value="consultations" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><ClipboardList className="w-4 h-4 mr-2" />Consultations</TabsTrigger>
-            <TabsTrigger value="outcomes" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><Activity className="w-4 h-4 mr-2" />Outcomes</TabsTrigger>
-            <TabsTrigger value="tasks" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><ClipboardList className="w-4 h-4 mr-2" />Tasks</TabsTrigger>
-            <TabsTrigger value="files" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><FileText className="w-4 h-4 mr-2" />Files</TabsTrigger>
-            <TabsTrigger value="communications" className="justify-start px-4 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left"><MessageSquare className="w-4 h-4 mr-2" />Communications</TabsTrigger>
+        <div className="w-full md:w-56 shrink-0 md:sticky md:top-6 flex flex-col gap-3">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1 px-2">Clinical Record</div>
+          <TabsList className="flex flex-row md:flex-col justify-start bg-transparent gap-0.5 w-full h-auto p-0 rounded-none overflow-x-auto md:overflow-visible">
+            <TabsTrigger value="overview" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><User className="w-4 h-4 shrink-0" />Overview</TabsTrigger>
+            <TabsTrigger value="journey" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><Activity className="w-4 h-4 shrink-0" />Journey</TabsTrigger>
+            <TabsTrigger value="appointments" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><Calendar className="w-4 h-4 shrink-0" />Appointments</TabsTrigger>
+            <TabsTrigger value="consultations" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><ClipboardList className="w-4 h-4 shrink-0" />Consultations</TabsTrigger>
+            <TabsTrigger value="outcomes" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><Activity className="w-4 h-4 shrink-0" />Outcomes</TabsTrigger>
+            <TabsTrigger value="tasks" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><ClipboardList className="w-4 h-4 shrink-0" />Tasks</TabsTrigger>
+            <TabsTrigger value="files" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><FileText className="w-4 h-4 shrink-0" />Files</TabsTrigger>
+            <TabsTrigger value="communications" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><MessageSquare className="w-4 h-4 shrink-0" />Communications</TabsTrigger>
           </TabsList>
+          <div className="border-t border-border pt-3 mt-1">
+            <button className="inline-flex items-center gap-2 px-3 py-2 w-full text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors">
+              <Download className="w-4 h-4 shrink-0" />
+              Export Patient Record
+            </button>
+          </div>
         </div>
         <div className="flex-1 min-w-0 w-full">
 
@@ -959,14 +985,16 @@ export default function PatientDetailPage() {
               </Card>
             </div>
 
-            {/* Care Team sidebar */}
-            <div className="space-y-6">
+            {/* Right sidebar */}
+            <div className="space-y-5">
+
+              {/* Care Team card */}
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-lg">Care Team</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                  <CardTitle className="text-base font-semibold">Care Team</CardTitle>
                   <Dialog open={isAssignDialogOpen} onOpenChange={(open) => { setIsAssignDialogOpen(open); if (!open) { setSelectedDoctorId(""); } }}>
                     <DialogTrigger asChild>
-                      <Button size="sm" variant="outline" className="h-8"><UserPlus className="w-4 h-4 mr-1" /> Assign Doctor</Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs"><UserPlus className="w-3.5 h-3.5 mr-1" /> Assign</Button>
                     </DialogTrigger>
                     <DialogContent aria-describedby={undefined}>
                       <DialogHeader><DialogTitle>Assign Doctor to Patient</DialogTitle></DialogHeader>
@@ -990,38 +1018,107 @@ export default function PatientDetailPage() {
                     </DialogContent>
                   </Dialog>
                 </CardHeader>
-                <CardContent>
-                  {isAssignmentsLoading ? <Skeleton className="h-10 w-full" /> : assignmentsData?.data?.length ? (
+                <CardContent className="pt-0">
+                  {isAssignmentsLoading ? <Skeleton className="h-14 w-full" /> : assignmentsData?.data?.length ? (
                     <div className="space-y-3">
-                      {assignmentsData.data.map((assignment) => (
-                        <div key={assignment.id} className="flex items-center justify-between gap-2 py-2 border-b border-border last:border-0">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                              <User className="w-4 h-4 text-primary" />
+                      {assignmentsData.data.map((assignment) => {
+                        const initials = ((assignment.doctor?.firstName?.[0] ?? "") + (assignment.doctor?.lastName?.[0] ?? "")).toUpperCase();
+                        return (
+                          <div key={assignment.id} className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div
+                                className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-xs font-bold text-white"
+                                style={{ background: "linear-gradient(135deg, #0b63f6 0%, #4f46e5 100%)" }}
+                              >
+                                {initials || <User className="w-4 h-4" />}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium truncate">{assignment.doctor?.firstName} {assignment.doctor?.lastName}</div>
+                                <div className="text-xs text-muted-foreground truncate">{assignment.doctor?.role?.name ?? "Doctor"}{assignment.clinic?.name ? ` · ${assignment.clinic.name}` : ""}</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="text-sm font-medium">{assignment.doctor?.firstName} {assignment.doctor?.lastName}</div>
-                              <div className="text-xs text-muted-foreground">{assignment.doctor?.role?.name ?? "Doctor"} {assignment.clinic?.name ? `• ${assignment.clinic.name}` : ""}</div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => setIsSmsDialogOpen(true)}>
+                                <MessageSquare className="w-3.5 h-3.5" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader><AlertDialogTitle>Remove Assignment</AlertDialogTitle><AlertDialogDescription>Remove {assignment.doctor?.firstName} {assignment.doctor?.lastName} from this patient's care team?</AlertDialogDescription></AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleUnassign(assignment.id)}>Remove</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </div>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader><AlertDialogTitle>Remove Assignment</AlertDialogTitle><AlertDialogDescription>Remove {assignment.doctor?.firstName} {assignment.doctor?.lastName} from this patient's care team?</AlertDialogDescription></AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleUnassign(assignment.id)}>Remove</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
-                  ) : <div className="text-sm text-muted-foreground py-2 text-center">No care team members assigned.</div>}
+                  ) : <div className="text-sm text-muted-foreground py-3 text-center">No care team members assigned.</div>}
                 </CardContent>
               </Card>
+
+              {/* Patient Summary card */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold">Patient Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-2.5">
+                  {[
+                    { label: "Age", value: patientAge != null ? `${patientAge} years` : "—" },
+                    { label: "Gender", value: patient.gender || "—" },
+                    { label: "Blood Group", value: (patient as any).bloodGroup || "—" },
+                    { label: "Marital Status", value: (patient as any).maritalStatus || "—" },
+                    { label: "Language", value: (patient as any).preferredLanguage || "English" },
+                    { label: "Emergency Contact", value: (patient as any).emergencyContactName || "—" },
+                  ].map((row) => (
+                    <div key={row.label} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="text-muted-foreground shrink-0">{row.label}</span>
+                      <span className="font-medium text-right truncate">{row.value}</span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Recent Activity card */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                  <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
+                  <Link href="/audit-logs">
+                    <span className="text-xs text-primary hover:underline cursor-pointer">View all</span>
+                  </Link>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  {isJourneyLoading ? (
+                    <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</div>
+                  ) : journeyList?.data?.length ? (
+                    <div className="space-y-3">
+                      {journeyList.data.slice(0, 4).map((event) => {
+                        const cfg = getJourneyEventConfig(event.status);
+                        return (
+                          <div key={event.id} className="flex items-start gap-2.5">
+                            <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px]", cfg.bg, cfg.color)}>
+                              {cfg.icon}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-semibold">{cfg.label}</div>
+                              {event.notes && <div className="text-[11px] text-muted-foreground truncate">{event.notes}</div>}
+                              <div className="text-[11px] text-muted-foreground/70 mt-0.5">{format(new Date(event.createdAt), "d MMM yyyy")}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground py-2 text-center">No activity yet.</div>
+                  )}
+                </CardContent>
+              </Card>
+
             </div>
           </div>
         </TabsContent>
@@ -1875,6 +1972,7 @@ export default function PatientDetailPage() {
         </TabsContent>
         </div>
       </Tabs>
+      </div>
     </div>
   );
 }

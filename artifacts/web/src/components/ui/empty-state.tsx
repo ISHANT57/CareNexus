@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 
 interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
   icon?: LucideIcon;
+  /** Optional coded SVG illustration (from components/ui/illustrations). Overrides `icon` when set. */
+  illustration?: React.ReactNode;
   title: string;
   description?: string;
   /** Optional call-to-action (e.g. a <Button>) rendered below the description. */
@@ -16,6 +18,7 @@ interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
  */
 export function EmptyState({
   icon: Icon = Inbox,
+  illustration,
   title,
   description,
   action,
@@ -30,9 +33,13 @@ export function EmptyState({
       )}
       {...props}
     >
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-        <Icon className="h-7 w-7" aria-hidden="true" />
-      </div>
+      {illustration ? (
+        <div className="mb-1 h-32 w-32 text-primary">{illustration}</div>
+      ) : (
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Icon className="h-7 w-7" aria-hidden="true" />
+        </div>
+      )}
       <div className="space-y-1">
         <h3 className="font-heading text-base font-semibold text-foreground">{title}</h3>
         {description ? (

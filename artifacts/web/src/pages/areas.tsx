@@ -9,7 +9,9 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Map, Plus, ChevronLeft, ChevronRight, Pencil, Trash2, Search, Building2, Download } from "lucide-react";
+import { Map, Plus, Pencil, Trash2, Search, Building2, Download } from "lucide-react";
+import { Pagination } from "@/lib/ui-helpers";
+import { MapIllustration } from "@/components/ui/illustrations";
 import { Button } from "@/components/ui/button";
 import { cn, exportToCSV } from "@/lib/utils";
 import {
@@ -59,7 +61,6 @@ export default function AreasPage() {
     return uniqueNames.map(name => ({ label: name as string, value: name as string })).sort((a, b) => a.label.localeCompare(b.label));
   }, [allAreasData]);
 
-  const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const createArea = useCreateArea({ request: { headers: { "x-tenant-id": "ALL" } } });
@@ -137,25 +138,26 @@ export default function AreasPage() {
   };
 
   return (
-    <div className="page-container animate-in-up">
-      <div className="page-header">
-        <div>
-          <h1 className="text-h2">Geographic Areas</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {data?.meta?.total?.toLocaleString() ?? "—"} service regions managing clinics and patient assignments.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !filteredAreas.length}>
+    <div>
+      <div className="border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1">Service Geography</p>
+              <h1 className="text-xl font-semibold tracking-tight">Geographic Areas</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{data?.meta?.total?.toLocaleString() ?? "—"} service regions managing clinics and patient assignments.</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !filteredAreas.length}>
             <Download className="w-4 h-4 mr-2" />
             Export CSV
           </Button>
-          <Dialog open={isCreateOpen} onOpenChange={(open) => {
-            setIsCreateOpen(open);
-            if (open && isScopedToTenant) setNewAreaTenantId(activeTenantId);
-          }}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
+              <Dialog open={isCreateOpen} onOpenChange={(open) => {
+                setIsCreateOpen(open);
+                if (open && isScopedToTenant) setNewAreaTenantId(activeTenantId);
+              }}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Area
               </Button>
@@ -196,7 +198,9 @@ export default function AreasPage() {
                 <Button onClick={handleCreateArea} disabled={createArea.isPending || !newAreaName.trim() || !newAreaTenantId}>Create</Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+              </Dialog>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -238,7 +242,7 @@ export default function AreasPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="p-8 space-y-4">
+      <div className="page-container animate-in-up pt-6 pb-12 space-y-4">
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -253,6 +257,7 @@ export default function AreasPage() {
           </div>
         ) : filteredAreas.length === 0 ? (
           <EmptyState
+            illustration={<MapIllustration />}
             icon={Map}
             title={search ? "No areas match your search" : "No areas found"}
             description={
@@ -308,18 +313,15 @@ export default function AreasPage() {
           </div>
         )}
 
-        {totalPages > 1 && !search && (
-          <div className="flex items-center justify-between pt-2">
-            <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
-                <ChevronLeft className="w-4 h-4" />Prev
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
-                Next<ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
+        {!search && (
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={data?.meta?.total ?? 0}
+            onPageChange={setPage}
+            noun="areas"
+            className="px-0"
+          />
         )}
       </div>
     </div>

@@ -4,8 +4,9 @@ import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { StatusBadge } from "@/lib/ui-helpers";
+import { BuildingsIllustration } from "@/components/ui/illustrations";
 import { customFetch } from "@workspace/api-client-react";
 import { Link } from "wouter";
 
@@ -35,25 +36,31 @@ export default function TenantsPage() {
   });
 
   return (
-    <div className="page-container animate-in-up">
-      <div className="page-header">
-        <div>
-          <h1 className="text-h2">Tenants</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {data?.length ? `${data.length} organizations · ` : ""}Platform governance and tenant isolation management.
-          </p>
+    <div>
+      <div className="border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1">Platform Admin</p>
+              <h1 className="text-xl font-semibold tracking-tight">Tenants</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{data?.length ? `${data.length} organizations · ` : ""}Platform governance and tenant isolation management.</p>
+            </div>
+            <div className="shrink-0">
+              <Link href="/onboarding">
+                <Button size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Register Tenant
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
-        <Link href="/onboarding">
-          <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
-            <Plus className="w-4 h-4 mr-2" />
-            Register Tenant
-          </Button>
-        </Link>
       </div>
 
-      <div className="p-8">
+      <div className="page-container animate-in-up pt-6 pb-12">
       {!isLoading && (!data || data.length === 0) ? (
         <EmptyState
+          illustration={<BuildingsIllustration />}
           icon={Building2}
           title="No tenants yet"
           description="Register your first healthcare organization to begin onboarding areas, clinics, and staff."
@@ -87,9 +94,7 @@ export default function TenantsPage() {
                       <Building2 className="w-5 h-5 text-primary" />
                       {tenant.name}
                     </CardTitle>
-                    <Badge variant={tenant.isActive ? "default" : "destructive"}>
-                      {tenant.isActive ? "Active" : "Inactive"}
-                    </Badge>
+                    <StatusBadge status={tenant.isActive ? "ACTIVE" : "INACTIVE"} />
                   </div>
                   <CardDescription className="font-mono text-xs mt-1">
                     {tenant.domain}

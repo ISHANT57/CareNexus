@@ -31,9 +31,11 @@ const CreateUserSchema = z.object({
   programIds: z.array(z.string().uuid()).optional(),
 });
 
-const UpdateUserSchema = CreateUserSchema.omit({ password: true, email: true }).partial();
+const UpdateUserSchema = CreateUserSchema.omit({ password: true, email: true }).partial().extend({
+  emailVerified: z.boolean().optional(),
+});
 
-const safeUser = { id: true, email: true, firstName: true, lastName: true, mobile: true, avatarUrl: true, status: true, lastLoginAt: true, createdAt: true };
+const safeUser = { id: true, email: true, firstName: true, lastName: true, mobile: true, avatarUrl: true, status: true, lastLoginAt: true, emailVerified: true, createdAt: true };
 
 router.get("/", authorizePermission("users", "read"), async (req, res, next) => {
   try {
@@ -142,6 +144,14 @@ router.patch("/:id", authorizePermission("users", "write"), validateBody(UpdateU
 
     const { clinicIds, programIds, ...rest } = req.body as z.infer<typeof UpdateUserSchema>;
 
+    // Only SUPER_ADMIN may manually change a user's email-verified status.
+    if (rest.emailVerified !== undefined && req.user?.role !== "SUPER_ADMIN") {
+      throw Errors.forbidden("Only a Super Admin can change email verification status");
+    }
+    // Clearing the verification token alongside mirrors the token-based verify flow.
+    const verificationPatch =
+      rest.emailVerified === true ? { verificationToken: null } : {};
+
     // Prevent non-super-admins from assigning SUPER_ADMIN role
     if (rest.roleId) {
       const targetRole = await prisma.role.findUnique({ where: { id: rest.roleId } });
@@ -156,7 +166,7 @@ router.patch("/:id", authorizePermission("users", "write"), validateBody(UpdateU
     }
     const updated = await prisma.user.update({
       where: { id: user.id },
-      data: rest,
+      data: { ...rest, ...verificationPatch },
       select: { ...safeUser, role: { select: { id: true, name: true } } },
     });
 

@@ -11,7 +11,9 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Building2, Plus, ChevronLeft, ChevronRight, Pencil, Trash2, Search, X, Phone, Mail, MapPin, Download } from "lucide-react";
+import { Pagination } from "@/lib/ui-helpers";
+import { BuildingsIllustration } from "@/components/ui/illustrations";
+import { Building2, Plus, Pencil, Trash2, Search, X, Phone, Mail, MapPin, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -91,7 +93,6 @@ export default function ClinicsPage() {
       areaId: filterArea || undefined,
     } as any,
   );
-  const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -359,26 +360,27 @@ export default function ClinicsPage() {
   };
 
   return (
-    <div className="page-container animate-in-up">
-      <div className="page-header">
-        <div>
-          <h1 className="text-h2">Clinics</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {data?.meta?.total?.toLocaleString() ?? "—"} clinic locations across all areas.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !filteredClinics.length}>
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-          <Dialog open={isCreateOpen} onOpenChange={(open) => {
-            setIsCreateOpen(open);
-            if (open && isScopedToTenant) setCreateForm({ ...EMPTY_FORM, tenantId: activeTenantId });
-            else if (!open) setCreateForm(EMPTY_FORM);
-          }}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
+    <div>
+      <div className="border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1">Clinical Locations</p>
+              <h1 className="text-xl font-semibold tracking-tight">Clinics</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{data?.meta?.total?.toLocaleString() ?? "—"} clinic locations across all areas.</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !filteredClinics.length}>
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </Button>
+              <Dialog open={isCreateOpen} onOpenChange={(open) => {
+                setIsCreateOpen(open);
+                if (open && isScopedToTenant) setCreateForm({ ...EMPTY_FORM, tenantId: activeTenantId });
+                else if (!open) setCreateForm(EMPTY_FORM);
+              }}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Clinic
               </Button>
@@ -408,7 +410,9 @@ export default function ClinicsPage() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+              </Dialog>
+            </div>
+          </div>
         </div>
       </div>
       {/* Edit dialog */}
@@ -435,7 +439,7 @@ export default function ClinicsPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="p-8 space-y-4">
+      <div className="page-container animate-in-up pt-6 pb-12 space-y-4">
         {/* Search + filter bar */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
@@ -483,6 +487,7 @@ export default function ClinicsPage() {
               </div>
             ) : filteredClinics.length === 0 ? (
               <EmptyState
+                illustration={<BuildingsIllustration />}
                 icon={Building2}
                 title={search || filterArea ? "No clinics match your filters" : "No clinics found"}
                 description={
@@ -596,23 +601,13 @@ export default function ClinicsPage() {
                   </Table>
                 </div>
 
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between px-6 py-4 border-t border-border">
-                    <span className="text-sm text-muted-foreground">
-                      Page {page} of {totalPages} · {data?.meta?.total?.toLocaleString()} clinics
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
-                        <ChevronLeft className="w-4 h-4" />
-                        Prev
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
-                        Next
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <Pagination
+                  page={page}
+                  pageSize={PAGE_SIZE}
+                  total={data?.meta?.total ?? 0}
+                  onPageChange={setPage}
+                  noun="clinics"
+                />
               </>
             )}
           </CardContent>

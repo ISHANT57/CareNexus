@@ -41,8 +41,12 @@ router.get("/", authorizePermission("outcomes", "read"), async (req, res, next) 
   try {
     const { skip, take, page, limit } = paginate(req.query);
     const { patientId, programId, outcomeMetricId } = req.query as Record<string, string>;
-    const roleScope = await getRoleScope(req, "outcome");
-    const where: Record<string, unknown> = { tenantId: req.tenantId!, deletedAt: null, ...roleScope };
+    const where: Record<string, unknown> = { tenantId: req.tenantId!, deletedAt: null };
+    // RBAC: non-super users only see outcomes for patients in their scope, or ones they recorded.
+    if (req.user?.role !== "SUPER_ADMIN") {
+      const patientScope = await getRoleScope(req, "patient");
+      where["OR"] = [{ doctorId: req.user!.userId }, { patient: patientScope }];
+    }
     if (patientId) where["patientId"] = patientId;
     if (programId) where["programId"] = programId;
     if (outcomeMetricId) where["outcomeMetricId"] = outcomeMetricId;
@@ -74,9 +78,8 @@ router.get("/", authorizePermission("outcomes", "read"), async (req, res, next) 
 // GET /api/outcomes/:id
 router.get("/:id", authorizePermission("outcomes", "read"), async (req, res, next) => {
   try {
-    const roleScope = await getRoleScope(req, "outcome");
     const outcome = await prisma.patientOutcome.findFirst({
-      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope },
+      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null },
       include: {
         patient: { select: { id: true, firstName: true, lastName: true, nhsNumber: true } },
         program: { select: { id: true, name: true } },
@@ -92,17 +95,14 @@ router.get("/:id", authorizePermission("outcomes", "read"), async (req, res, nex
 // POST /api/outcomes
 router.post("/", authorizePermission("outcomes", "write"), validateBody(OutcomeSchema), async (req, res, next) => {
   try {
+    if (!req.tenantId) throw Errors.validation("A specific tenant must be selected to perform this action. Please select a tenant from the switcher.");
     const data = req.body as z.infer<typeof OutcomeSchema>;
 
-    const patientRoleScope = await getRoleScope(req, "patient");
-    const patient = await prisma.patient.findFirst({ where: { id: data.patientId, tenantId: req.tenantId!, deletedAt: null, ...patientRoleScope } });
-    if (!patient) throw Errors.notFound("Patient");
-
-    const program = await prisma.program.findFirst({ where: { id: data.programId, tenantId: req.tenantId!, deletedAt: null } });
-    if (!program) throw Errors.notFound("Program");
-
-    const metric = await prisma.outcomeMetric.findFirst({ where: { id: data.outcomeMetricId, tenantId: req.tenantId!, isActive: true } });
-    if (!metric) throw Errors.notFound("OutcomeMetric");
+    // HIGH-007: a doctorId supplied in the body must belong to the current tenant
+    if (data.doctorId) {
+      const doctor = await prisma.user.findFirst({ where: { id: data.doctorId, tenantId: req.tenantId, deletedAt: null } });
+      if (!doctor) throw Errors.validation("The specified doctor does not belong to this tenant");
+    }
 
     const outcome = await prisma.patientOutcome.create({
       data: {
@@ -147,9 +147,9 @@ router.post("/", authorizePermission("outcomes", "write"), validateBody(OutcomeS
 // PATCH /api/outcomes/:id
 router.patch("/:id", authorizePermission("outcomes", "write"), validateBody(OutcomeSchema.partial()), async (req, res, next) => {
   try {
-    const roleScope = await getRoleScope(req, "outcome");
-    const outcome = await prisma.patientOutcome.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
+    const outcome = await prisma.patientOutcome.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!outcome) throw Errors.notFound("Outcome");
+    assertTenantMatch(req, outcome.tenantId);
 
     const data = req.body as Partial<z.infer<typeof OutcomeSchema>>;
     const updated = await prisma.patientOutcome.update({
@@ -178,9 +178,9 @@ router.patch("/:id", authorizePermission("outcomes", "write"), validateBody(Outc
 // DELETE /api/outcomes/:id (soft-delete)
 router.delete("/:id", authorizePermission("outcomes", "write"), async (req, res, next) => {
   try {
-    const roleScope = await getRoleScope(req, "outcome");
-    const outcome = await prisma.patientOutcome.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
+    const outcome = await prisma.patientOutcome.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!outcome) throw Errors.notFound("Outcome");
+    assertTenantMatch(req, outcome.tenantId);
     await prisma.patientOutcome.update({ where: { id: outcome.id }, data: { deletedAt: new Date() } });
     await createAuditLog({ req, entityType: "PatientOutcome", entityId: outcome.id, action: "DELETE", before: outcome });
     res.status(204).send();

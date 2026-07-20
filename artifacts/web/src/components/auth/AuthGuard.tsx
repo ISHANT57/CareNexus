@@ -18,7 +18,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   const { data: user, isLoading, error } = useGetMe({
     query: {
-      retry: false,
+      // Retry on 5xx / network errors (up to 2 times) but not on auth failures
+      // (4xx) — those should redirect immediately, not loop endlessly.
+      retry: (failureCount, err) => {
+        const status = (err as any)?.status as number | undefined;
+        if (status && status >= 400 && status < 500) return false;
+        return failureCount < 2;
+      },
       queryKey: ["getMe"],
       // Only fire the query when we actually have a token stored.
       enabled: hasToken.current,
@@ -26,8 +32,19 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    if (!hasToken.current || error) {
+    if (!hasToken.current) {
       setLocation("/login");
+      return;
+    }
+    if (error) {
+      // Only redirect to login on definitive auth failures (4xx).
+      // Transient server errors (5xx) or network failures should not log the user
+      // out — they may recover on retry. The 401 case is already handled by
+      // customFetch (which silently refreshes + retries before this error fires).
+      const status = (error as any)?.status as number | undefined;
+      if (!status || (status >= 400 && status < 500)) {
+        setLocation("/login");
+      }
     }
   }, [error, setLocation]);
 
@@ -44,8 +61,28 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (error || !user) {
-    return null; // useEffect will redirect
+  // 4xx → useEffect already scheduled the redirect; render nothing while navigating.
+  // 5xx / network error → show a minimal retry prompt rather than a blank screen.
+  if (error) {
+    const status = (error as any)?.status as number | undefined;
+    if (status && status >= 500) {
+      return (
+        <div className="min-h-screen w-full flex flex-col items-center justify-center gap-4 bg-background text-foreground">
+          <p className="text-sm text-muted-foreground">Unable to reach the server. Please try again.</p>
+          <button
+            className="text-sm underline text-primary"
+            onClick={() => window.location.reload()}
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return null; // 4xx — useEffect redirect in progress
+  }
+
+  if (!user) {
+    return null; // still loading or redirect in progress
   }
 
   return <>{children}</>;

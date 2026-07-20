@@ -19,24 +19,29 @@ interface StatCardProps {
 
 const variantStyles = {
   default: {
-    card: "bg-card border-border/60",
-    icon: "bg-muted-foreground/80 text-white",
+    card: "bg-card border-border border-l-4 border-l-slate-300 dark:border-l-slate-600",
+    icon: "bg-slate-100 text-slate-600 dark:bg-slate-500/20 dark:text-slate-300",
+    value: "text-foreground",
   },
   primary: {
-    card: "bg-card border-border/60",
-    icon: "bg-primary text-primary-foreground",
+    card: "bg-card border-border border-l-4 border-l-blue-500",
+    icon: "bg-blue-50 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400",
+    value: "text-foreground",
   },
   success: {
-    card: "bg-card border-border/60",
-    icon: "bg-success text-success-foreground",
+    card: "bg-card border-border border-l-4 border-l-emerald-500",
+    icon: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400",
+    value: "text-foreground",
   },
   warning: {
-    card: "bg-card border-border/60",
-    icon: "bg-warning text-warning-foreground",
+    card: "bg-card border-border border-l-4 border-l-amber-500",
+    icon: "bg-amber-50 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400",
+    value: "text-foreground",
   },
   destructive: {
-    card: "bg-card border-border/60",
-    icon: "bg-destructive text-destructive-foreground",
+    card: "bg-card border-border border-l-4 border-l-rose-500",
+    icon: "bg-rose-50 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400",
+    value: "text-foreground",
   },
 };
 
@@ -55,26 +60,28 @@ function StatCardInner({
   return (
     <div
       className={cn(
-        "rounded-2xl border shadow-sm p-5 flex flex-col gap-3 transition-all duration-200",
+        "rounded-xl border p-5 flex flex-col gap-3 transition-all duration-200",
         href
-          ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5 group"
-          : "hover:shadow-md",
+          ? "cursor-pointer hover:shadow-md hover:translate-y-[-1px] group"
+          : "",
         styles.card,
         className
       )}
     >
       <div className="flex items-center justify-between">
-        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", styles.icon)}>
-          <Icon className="w-6 h-6" />
+        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        <div className="flex items-center gap-1.5">
+          <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", styles.icon)}>
+            <Icon className="w-5 h-5" />
+          </div>
+          {href && (
+            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          )}
         </div>
-        {href && (
-          <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-        )}
       </div>
 
       <div>
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <p className="text-3xl font-bold tracking-tight text-foreground mt-1">
+        <p className={cn("text-3xl font-bold tracking-tight", styles.value)}>
           {value}
         </p>
         {subtitle && (

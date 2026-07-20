@@ -13,6 +13,14 @@ export interface OkResponse {
   ok: boolean;
 }
 
+export interface AssignClinicRequest {
+  clinicId: string;
+}
+
+export interface AssignProgramRequest {
+  programId: string;
+}
+
 export interface Meta {
   total: number;
   page: number;
@@ -50,14 +58,9 @@ export interface AuthUser {
   lastName: string;
   /** @nullable */
   avatarUrl?: string | null;
-  role?: string;
-  tenantId?: string;
-  tenantAssignments: {
-    tenantId: string;
-    tenantName: string;
-    role: string;
-    status: string;
-  }[];
+  role: string;
+  tenantId: string;
+  tenantName?: string;
 }
 
 export interface AuthResponse {
@@ -207,15 +210,9 @@ export interface User {
   status: string;
   /** @nullable */
   lastLoginAt?: string | null;
+  emailVerified?: boolean;
   createdAt: string;
   role?: Role;
-  tenantAssignments?: {
-    tenantId: string;
-    roleId: string;
-    status: string;
-    role?: Role;
-    tenant?: Tenant;
-  }[];
 }
 
 export interface UserInput {
@@ -234,6 +231,8 @@ export interface UserUpdate {
   firstName?: string;
   lastName?: string;
   mobile?: string;
+  /** Manually set a user's email-verified status. SUPER_ADMIN only. */
+  emailVerified?: boolean;
   clinicIds?: string[];
   programIds?: string[];
 }

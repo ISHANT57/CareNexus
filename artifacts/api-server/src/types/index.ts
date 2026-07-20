@@ -3,9 +3,9 @@ export { AppError, Errors } from "../lib/errors.js";
 
 export interface JwtPayload {
   userId: string;
+  tenantId: string;
   email: string;
-  tenantId?: string;
-  role?: string;
+  role: string;
   iat?: number;
   exp?: number;
 }

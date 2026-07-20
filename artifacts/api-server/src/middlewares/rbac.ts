@@ -30,7 +30,6 @@ const SYSTEM_ROLE_FALLBACKS: Record<string, boolean | Record<string, string[]>> 
     programs: ["read", "write"],
     communications: ["read", "write"],
     consultations: ["read", "write"],
-    reports: ["read"],
   },
   OPERATOR: {
     patients: ["read", "write"],
@@ -39,7 +38,6 @@ const SYSTEM_ROLE_FALLBACKS: Record<string, boolean | Record<string, string[]>> 
     programs: ["read", "write"],
     communications: ["read", "write"],
     consultations: ["read"],
-    reports: ["read"],
   },
   STAFF: {
     patients: ["read"],
@@ -48,7 +46,6 @@ const SYSTEM_ROLE_FALLBACKS: Record<string, boolean | Record<string, string[]>> 
     programs: ["read"],
     communications: ["read"],
     consultations: ["read"],
-    reports: ["read"],
   }
 };
 

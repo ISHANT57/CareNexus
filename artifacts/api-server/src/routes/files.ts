@@ -18,7 +18,6 @@ import { authenticate } from "../middlewares/auth.js";
 import { authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant } from "../middlewares/tenantScope.js";
 import { Errors } from "../lib/errors.js";
-import { getRoleScope } from "../middlewares/roleScope.js";
 import { storage } from "../lib/storage.js";
 
 const router = Router();
@@ -57,10 +56,6 @@ router.post("/", authenticate, requireTenant, authorizePermission("files", "writ
     const patientId = req.body.patientId as string;
     if (!patientId) throw Errors.validation("patientId is required");
 
-    const roleScope = await getRoleScope(req, "patient");
-    const patient = await prisma.patient.findFirst({ where: { id: patientId, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
-    if (!patient) throw Errors.notFound("Patient");
-
     const originalFilename = req.file.originalname;
 
     // Save to disk via storage abstraction
@@ -96,8 +91,7 @@ router.post("/", authenticate, requireTenant, authorizePermission("files", "writ
 router.get("/", authenticate, requireTenant, authorizePermission("files", "read"), async (req, res, next) => {
   try {
     const patientId = req.query["patientId"] as string;
-    const roleScope = await getRoleScope(req, "patient");
-    const where: any = { tenantId: req.tenantId!, deletedAt: null, patient: roleScope };
+    const where: any = { tenantId: req.tenantId!, deletedAt: null };
     if (patientId) where.patientId = patientId;
 
     const files = await prisma.fileUpload.findMany({
@@ -126,9 +120,8 @@ router.get("/", authenticate, requireTenant, authorizePermission("files", "read"
 router.get("/:id/download", authenticate, requireTenant, authorizePermission("files", "read"), async (req, res, next) => {
   try {
     const id = req.params["id"] as string;
-    const roleScope = await getRoleScope(req, "patient");
     const fileRecord = await prisma.fileUpload.findFirst({
-      where: { id, tenantId: req.tenantId!, deletedAt: null, patient: roleScope },
+      where: { id, tenantId: req.tenantId!, deletedAt: null },
     });
     if (!fileRecord) throw Errors.notFound("File");
 
@@ -151,9 +144,8 @@ router.get("/:id/download", authenticate, requireTenant, authorizePermission("fi
 router.get("/:id", authenticate, requireTenant, authorizePermission("files", "read"), async (req, res, next) => {
   try {
     const id = req.params["id"] as string;
-    const roleScope = await getRoleScope(req, "patient");
     const fileRecord = await prisma.fileUpload.findFirst({
-      where: { id, tenantId: req.tenantId!, deletedAt: null, patient: roleScope },
+      where: { id, tenantId: req.tenantId!, deletedAt: null },
     });
     if (!fileRecord) throw Errors.notFound("File");
     res.json({
@@ -170,9 +162,8 @@ router.get("/:id", authenticate, requireTenant, authorizePermission("files", "re
 router.delete("/:id", authenticate, requireTenant, authorizePermission("files", "write"), async (req, res, next) => {
   try {
     const id = req.params["id"] as string;
-    const roleScope = await getRoleScope(req, "patient");
     const fileRecord = await prisma.fileUpload.findFirst({
-      where: { id, tenantId: req.tenantId!, deletedAt: null, patient: roleScope },
+      where: { id, tenantId: req.tenantId!, deletedAt: null },
     });
     if (!fileRecord) throw Errors.notFound("File");
 

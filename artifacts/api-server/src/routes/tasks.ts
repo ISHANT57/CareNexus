@@ -35,8 +35,17 @@ router.get("/", authorizePermission("tasks", "read"), async (req, res, next) => 
     const { patientId, assignedTo, status } = req.query as Record<string, string>;
     const overdue = req.query["overdue"] === "true";
 
-    const roleScope = await getRoleScope(req, "task");
-    const where: Record<string, unknown> = { tenantId: req.tenantId!, deletedAt: null, ...roleScope };
+    const where: Record<string, unknown> = { tenantId: req.tenantId!, deletedAt: null };
+    // RBAC: non-super users only see tasks for patients in their scope, or tasks they are
+    // assigned to / created. SUPER_ADMIN sees all tenant tasks.
+    if (req.user?.role !== "SUPER_ADMIN") {
+      const patientScope = await getRoleScope(req, "patient");
+      where["OR"] = [
+        { assignedTo: req.user!.userId },
+        { assignedBy: req.user!.userId },
+        { patient: patientScope },
+      ];
+    }
     if (patientId) where["patientId"] = patientId;
     if (assignedTo) where["assignedTo"] = assignedTo;
     if (status) where["status"] = status;
@@ -66,9 +75,8 @@ router.get("/", authorizePermission("tasks", "read"), async (req, res, next) => 
 // GET /api/tasks/:id
 router.get("/:id", authorizePermission("tasks", "read"), async (req, res, next) => {
   try {
-    const roleScope = await getRoleScope(req, "task");
     const task = await prisma.careTask.findFirst({
-      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope },
+      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null },
       include: {
         patient: { select: { id: true, firstName: true, lastName: true, nhsNumber: true } },
         creator: { select: { id: true, firstName: true, lastName: true } },
@@ -83,14 +91,15 @@ router.get("/:id", authorizePermission("tasks", "read"), async (req, res, next) 
 // POST /api/tasks
 router.post("/", authorizePermission("tasks", "write"), validateBody(TaskSchema), async (req, res, next) => {
   try {
+    if (!req.tenantId) throw Errors.validation("A specific tenant must be selected to perform this action. Please select a tenant from the switcher.");
     const data = req.body as z.infer<typeof TaskSchema>;
-    
-    const patientRoleScope = await getRoleScope(req, "patient");
-    const patient = await prisma.patient.findFirst({ where: { id: data.patientId, tenantId: req.tenantId!, deletedAt: null, ...patientRoleScope } });
-    if (!patient) throw Errors.notFound("Patient");
 
-    const assignee = await prisma.user.findFirst({ where: { id: data.assignedTo, tenantAssignments: { some: { tenantId: req.tenantId! } }, deletedAt: null } });
-    if (!assignee) throw Errors.notFound("Assignee");
+    // MED-006: assignee must belong to this tenant (and, for scoped roles, the creator's clinics)
+    const assigneeScope = await getRoleScope(req, "user");
+    const assignee = await prisma.user.findFirst({
+      where: { id: data.assignedTo, tenantId: req.tenantId, deletedAt: null, ...assigneeScope },
+    });
+    if (!assignee) throw Errors.validation("The selected assignee is not a valid user within your scope");
 
     const task = await prisma.careTask.create({
       data: {
@@ -134,9 +143,9 @@ router.patch("/:id", authorizePermission("tasks", "write"), validateBody(TaskSch
   status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "OVERDUE"]).optional(),
 })), async (req, res, next) => {
   try {
-    const roleScope = await getRoleScope(req, "task");
-    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
+    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!task) throw Errors.notFound("Task");
+    assertTenantMatch(req, task.tenantId);
 
     const body = req.body as Partial<z.infer<typeof TaskSchema> & { status: string }>;
     const updated = await prisma.careTask.update({
@@ -165,9 +174,9 @@ router.patch("/:id", authorizePermission("tasks", "write"), validateBody(TaskSch
 // PATCH /api/tasks/:id/complete
 router.patch("/:id/complete", authorizePermission("tasks", "write"), async (req, res, next) => {
   try {
-    const roleScope = await getRoleScope(req, "task");
-    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
+    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!task) throw Errors.notFound("Task");
+    assertTenantMatch(req, task.tenantId);
 
     const updated = await prisma.careTask.update({
       where: { id: task.id },
@@ -182,9 +191,9 @@ router.patch("/:id/complete", authorizePermission("tasks", "write"), async (req,
 // PATCH /api/tasks/:id/reopen
 router.patch("/:id/reopen", authorizePermission("tasks", "write"), async (req, res, next) => {
   try {
-    const roleScope = await getRoleScope(req, "task");
-    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
+    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!task) throw Errors.notFound("Task");
+    assertTenantMatch(req, task.tenantId);
 
     const updated = await prisma.careTask.update({
       where: { id: task.id },
@@ -199,9 +208,9 @@ router.patch("/:id/reopen", authorizePermission("tasks", "write"), async (req, r
 // DELETE /api/tasks/:id (soft-delete)
 router.delete("/:id", authorizePermission("tasks", "write"), async (req, res, next) => {
   try {
-    const roleScope = await getRoleScope(req, "task");
-    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
+    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!task) throw Errors.notFound("Task");
+    assertTenantMatch(req, task.tenantId);
     await prisma.careTask.update({ where: { id: task.id }, data: { deletedAt: new Date() } });
     await createAuditLog({ req, entityType: "CareTask", entityId: task.id, action: "DELETE", before: task });
     res.status(204).send();

@@ -454,6 +454,7 @@ export const ListUsersResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -497,6 +498,7 @@ export const GetUserResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -517,6 +519,7 @@ export const UpdateUserBody = zod.object({
   "firstName": zod.string().optional(),
   "lastName": zod.string().optional(),
   "mobile": zod.string().optional(),
+  "emailVerified": zod.boolean().optional().describe('Manually set a user\'s email-verified status. SUPER_ADMIN only.'),
   "clinicIds": zod.array(zod.string()).optional(),
   "programIds": zod.array(zod.string()).optional()
 })
@@ -530,6 +533,7 @@ export const UpdateUserResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -547,6 +551,36 @@ export const DeleteUserParams = zod.object({
 
 export const DeleteUserResponse = zod.object({
   "ok": zod.boolean()
+})
+
+
+export const AssignUserClinicParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const AssignUserClinicBody = zod.object({
+  "clinicId": zod.string()
+})
+
+
+export const UnassignUserClinicParams = zod.object({
+  "id": zod.coerce.string(),
+  "clinicId": zod.coerce.string()
+})
+
+
+export const AssignUserProgramParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const AssignUserProgramBody = zod.object({
+  "programId": zod.string()
+})
+
+
+export const UnassignUserProgramParams = zod.object({
+  "id": zod.coerce.string(),
+  "programId": zod.coerce.string()
 })
 
 
@@ -871,6 +905,7 @@ export const GetPatientJourneyResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -982,6 +1017,7 @@ export const ListAssignmentsResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -1200,6 +1236,7 @@ export const ListAuditLogsResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -1300,6 +1337,7 @@ export const GetRecentActivityResponseItem = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -1522,6 +1560,7 @@ export const ListAppointmentsResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -1640,6 +1679,7 @@ export const GetAppointmentResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -1747,6 +1787,7 @@ export const UpdateAppointmentResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -1848,6 +1889,7 @@ export const CompleteAppointmentResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -1949,6 +1991,7 @@ export const CancelAppointmentResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -2050,6 +2093,7 @@ export const NoShowAppointmentResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -2161,6 +2205,7 @@ export const ListConsultationsResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -2255,6 +2300,7 @@ export const ListConsultationsResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -2385,6 +2431,7 @@ export const GetConsultationResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -2479,6 +2526,7 @@ export const GetConsultationResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -2596,6 +2644,7 @@ export const UpdateConsultationResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -2690,6 +2739,7 @@ export const UpdateConsultationResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -2758,6 +2808,7 @@ export const ListFilesResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),
@@ -2802,6 +2853,7 @@ export const GetFileResponse = zod.object({
   "avatarUrl": zod.string().nullish(),
   "status": zod.string(),
   "lastLoginAt": zod.string().nullish(),
+  "emailVerified": zod.boolean().optional(),
   "createdAt": zod.string(),
   "role": zod.object({
   "id": zod.string(),

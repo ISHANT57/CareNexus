@@ -11,6 +11,8 @@ export interface UserUpdate {
   firstName?: string;
   lastName?: string;
   mobile?: string;
+  /** Manually set a user's email-verified status. SUPER_ADMIN only. */
+  emailVerified?: boolean;
   clinicIds?: string[];
   programIds?: string[];
 }

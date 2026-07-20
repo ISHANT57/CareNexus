@@ -23,7 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, MapPin, Phone, Mail, Calendar, Building2, Activity, ArrowLeft, ChevronDown, Plus, Trash2, UserPlus, MessageSquare, Send, Upload, FileText, Download, CheckCircle, XCircle, Pencil, ClipboardList, Clock, TrendingUp, TrendingDown, AlertCircle, Stethoscope, Pill, LogOut, PlayCircle, StopCircle, UserCheck, CalendarCheck, FileEdit } from "lucide-react";
+import { User, MapPin, Phone, Mail, Calendar, Building2, Activity, ArrowLeft, ChevronDown, Plus, Trash2, UserPlus, MessageSquare, Send, Upload, FileText, Download, CheckCircle, XCircle, Pencil, ClipboardList, Clock, TrendingUp, AlertCircle, Stethoscope, Pill, LogOut, PlayCircle, StopCircle, UserCheck, CalendarCheck, FileEdit } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -47,36 +47,36 @@ const ConsultationFormFields = ({ form, setForm }: { form: typeof emptyConsultat
     <div className="grid grid-cols-2 gap-4">
       <div className="grid gap-2">
         <label className="text-sm font-medium">Chief Complaint</label>
-        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.chiefComplaint} onChange={e => setForm({ ...form, chiefComplaint: e.target.value })} placeholder="Main reason for visit..." />
+        <Textarea className="min-h-[80px]" value={form.chiefComplaint} onChange={e => setForm({ ...form, chiefComplaint: e.target.value })} placeholder="Main reason for visit..." />
       </div>
       <div className="grid gap-2">
         <label className="text-sm font-medium">Symptoms</label>
-        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.symptoms} onChange={e => setForm({ ...form, symptoms: e.target.value })} placeholder="Patient reported symptoms..." />
+        <Textarea className="min-h-[80px]" value={form.symptoms} onChange={e => setForm({ ...form, symptoms: e.target.value })} placeholder="Patient reported symptoms..." />
       </div>
     </div>
     <div className="grid grid-cols-2 gap-4">
       <div className="grid gap-2">
         <label className="text-sm font-medium">Observations</label>
-        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.observations} onChange={e => setForm({ ...form, observations: e.target.value })} placeholder="Clinical observations..." />
+        <Textarea className="min-h-[80px]" value={form.observations} onChange={e => setForm({ ...form, observations: e.target.value })} placeholder="Clinical observations..." />
       </div>
       <div className="grid gap-2">
         <label className="text-sm font-medium">Diagnosis</label>
-        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.diagnosis} onChange={e => setForm({ ...form, diagnosis: e.target.value })} placeholder="Primary and secondary diagnosis..." />
+        <Textarea className="min-h-[80px]" value={form.diagnosis} onChange={e => setForm({ ...form, diagnosis: e.target.value })} placeholder="Primary and secondary diagnosis..." />
       </div>
     </div>
     <div className="grid grid-cols-2 gap-4">
       <div className="grid gap-2">
         <label className="text-sm font-medium">Treatment Plan</label>
-        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.treatmentPlan} onChange={e => setForm({ ...form, treatmentPlan: e.target.value })} placeholder="Recommended treatments..." />
+        <Textarea className="min-h-[80px]" value={form.treatmentPlan} onChange={e => setForm({ ...form, treatmentPlan: e.target.value })} placeholder="Recommended treatments..." />
       </div>
       <div className="grid gap-2">
         <label className="text-sm font-medium">Medications</label>
-        <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.medications} onChange={e => setForm({ ...form, medications: e.target.value })} placeholder="Prescribed medications..." />
+        <Textarea className="min-h-[80px]" value={form.medications} onChange={e => setForm({ ...form, medications: e.target.value })} placeholder="Prescribed medications..." />
       </div>
     </div>
     <div className="grid gap-2">
       <label className="text-sm font-medium">Follow-up Instructions</label>
-      <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.followUpInstructions} onChange={e => setForm({ ...form, followUpInstructions: e.target.value })} placeholder="Instructions for patient..." />
+      <Textarea className="min-h-[80px]" value={form.followUpInstructions} onChange={e => setForm({ ...form, followUpInstructions: e.target.value })} placeholder="Instructions for patient..." />
     </div>
   </div>
 );
@@ -85,9 +85,9 @@ const getJourneyEventConfig = (status: string) => {
   switch (status) {
     case "REGISTERED":
     case "NEW":
-      return { icon: <UserPlus className="w-4 h-4" />, color: "text-primary", bg: "bg-primary/10 border-primary/20", label: "Registered" };
+      return { icon: <UserPlus className="w-4 h-4" />, color: "text-blue-500", bg: "bg-blue-500/10 border-blue-500/20", label: "Registered" };
     case "ONBOARDED":
-      return { icon: <UserCheck className="w-4 h-4" />, color: "text-success", bg: "bg-success/10 border-success/20", label: "Onboarded" };
+      return { icon: <UserCheck className="w-4 h-4" />, color: "text-emerald-500", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Onboarded" };
     case "APPOINTMENT_COMPLETED":
       return { icon: <CalendarCheck className="w-4 h-4" />, color: "text-indigo-500", bg: "bg-indigo-500/10 border-indigo-500/20", label: "Appointment" };
     case "CONSULTATION_COMPLETED":
@@ -97,7 +97,7 @@ const getJourneyEventConfig = (status: string) => {
     case "DISCHARGE":
       return { icon: <LogOut className="w-4 h-4" />, color: "text-rose-500", bg: "bg-rose-500/10 border-rose-500/20", label: "Discharged" };
     case "ENROLLED":
-      return { icon: <PlayCircle className="w-4 h-4" />, color: "text-teal-500", bg: "bg-teal-500/10 border-teal-500/20", label: "Enrolled" };
+      return { icon: <PlayCircle className="w-4 h-4" />, color: "text-blue-500", bg: "bg-blue-500/10 border-blue-500/20", label: "Enrolled" };
     case "UNENROLLED":
       return { icon: <StopCircle className="w-4 h-4" />, color: "text-orange-500", bg: "bg-orange-500/10 border-orange-500/20", label: "Unenrolled" };
     case "PSI":
@@ -177,7 +177,6 @@ export default function PatientDetailPage() {
   // ── Consultations ─────────────────────────────────────────────────────────────
   const createConsultation = useCreateConsultation();
   const updateConsultation = useUpdateConsultation();
-  const deleteConsultation = useDeleteConsultation();
   const [isConsultationDialogOpen, setIsConsultationDialogOpen] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState("");
   const [consultationForm, setConsultationForm] = useState(emptyConsultationForm);
@@ -524,11 +523,12 @@ export default function PatientDetailPage() {
     }
   };
 
-  const handleDeleteConsultation = async (id: string) => {
+  const deleteConsultation = useDeleteConsultation();
+  const handleDeleteConsultation = async (consultationId: string) => {
     try {
-      await deleteConsultation.mutateAsync({ id });
+      await deleteConsultation.mutateAsync({ id: consultationId });
       queryClient.invalidateQueries({ queryKey: consultationsKey });
-      toast({ title: "Success", description: "Consultation note deleted." });
+      toast({ title: "Consultation deleted" });
     } catch (err: any) {
       toast({ title: "Error", description: err.response?.data?.message || err.message, variant: "destructive" });
     }
@@ -551,104 +551,147 @@ export default function PatientDetailPage() {
 
   if (!patient) return <div className="p-8">Patient not found</div>;
 
-  return (
-    <div className="page-container animate-in-up">
-      {/* ── Patient Header (Premium Redesign) ──────────────────────────────────── */}
-      <div className="relative mb-8 pt-2">
-        <Link href="/patients">
-          <Button variant="ghost" size="sm" className="absolute -top-10 -left-4 text-muted-foreground hover:text-foreground transition-colors group">
-            <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-            Back to Registry
-          </Button>
-        </Link>
-        <div className="flex flex-col md:flex-row w-full justify-between items-start md:items-end gap-6 bg-card/40 backdrop-blur-xl border border-border/50 p-6 rounded-3xl shadow-sm glass-card">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl flex items-center justify-center border border-primary/20 shadow-inner">
-                <span className="text-3xl font-bold text-primary">
-                  {patient.firstName?.[0]}{patient.lastName?.[0]}
-                </span>
-              </div>
-              <div className="absolute -bottom-2 -right-2 bg-background rounded-full p-1 border border-border/50 shadow-sm">
-                <Badge variant={patient.status === 'ACTIVE' ? 'default' : 'secondary'} className="w-3 h-3 p-0 rounded-full flex items-center justify-center shadow-none border-none">
-                  <span className="sr-only">{patient.status}</span>
-                </Badge>
-              </div>
-            </div>
-            
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                  {patient.title ? `${patient.title} ` : ''}{patient.firstName} {patient.lastName}
-                </h1>
-                {isRiskLoading ? (
-                  <Skeleton className="h-6 w-16 rounded-full" />
-                ) : riskScore ? (
-                  <Badge variant={riskScore.riskLevel === 'HIGH' || riskScore.riskLevel === 'CRITICAL' ? 'destructive' : riskScore.riskLevel === 'MEDIUM' ? 'default' : 'secondary'} className="uppercase text-[10px] font-bold tracking-wider px-2.5 py-0.5 shadow-sm">
-                    {riskScore.riskLevel || "UNKNOWN RISK"}
-                  </Badge>
-                ) : null}
-              </div>
-              
-              <div className="flex items-center gap-2 mt-1">
-                <span className="font-mono text-xs bg-muted/60 text-muted-foreground px-2 py-1 rounded-md border border-border/50 font-medium">
-                  NHS: {patient.nhsNumber ?? "—"}
-                </span>
-                <span className="text-muted-foreground/60">•</span>
-                <span className="text-sm font-medium text-muted-foreground">{patient.gender || 'Unknown gender'}</span>
-                <span className="text-muted-foreground/60">•</span>
-                <span className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5" />
-                  DOB: {patient.dob ? format(new Date(patient.dob), "dd MMM yyyy") : 'Unknown'}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 h-10 px-4 rounded-xl border-border/60 hover:bg-muted/50 transition-colors shadow-sm" disabled={updatePatient.isPending}>
-                  <Badge variant={patient.status === 'ACTIVE' ? 'default' : 'secondary'} className="pointer-events-none rounded-md px-1.5 py-0">
-                    {patient.status}
-                  </Badge>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-xl">
-                <DropdownMenuItem onClick={() => handleStatusChange('ACTIVE')} className="rounded-lg cursor-pointer">Set to ACTIVE</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleStatusChange('INACTIVE')} className="rounded-lg cursor-pointer">Set to INACTIVE</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+  const patientAge = patient.dob
+    ? Math.max(0, Math.floor((Date.now() - new Date(patient.dob).getTime()) / 31557600000))
+    : null;
 
-            {/* Action Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="h-10 px-6 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm shadow-primary/20 transition-all font-medium">
-                  Quick Actions <ChevronDown className="w-4 h-4 ml-2 opacity-70" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 rounded-xl p-2">
-                <DropdownMenuItem onClick={() => setIsAppointmentDialogOpen(true)} className="rounded-lg cursor-pointer py-2">
-                  <Calendar className="w-4 h-4 mr-3 text-primary/70" /> Schedule Appointment
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsConsultationDialogOpen(true)} className="rounded-lg cursor-pointer py-2">
-                  <ClipboardList className="w-4 h-4 mr-3 text-primary/70" /> Record Consultation
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsJourneyDialogOpen(true)} className="rounded-lg cursor-pointer py-2">
-                  <Activity className="w-4 h-4 mr-3 text-primary/70" /> Log Journey Event
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsSmsDialogOpen(true)} className="rounded-lg cursor-pointer py-2">
-                  <MessageSquare className="w-4 h-4 mr-3 text-primary/70" /> Send Message
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+  return (
+    <div>
+      {/* ── Patient record header ───────────────────────────────────────────── */}
+      <div className="border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-0">
+          {/* Back nav */}
+          <Link href="/patients">
+            <button className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Patients
+            </button>
+          </Link>
+
+          {/* Patient identity row */}
+          <div className="flex items-start justify-between gap-6 pb-5">
+            <div className="flex items-start gap-4">
+              {/* Initials avatar */}
+              <div
+                className="w-16 h-16 rounded-xl shrink-0 flex items-center justify-center text-xl font-bold text-white shadow-md"
+                style={{ background: "linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)" }}
+              >
+                {((patient.firstName?.[0] ?? "") + (patient.lastName?.[0] ?? "")).toUpperCase()}
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h1 className="text-2xl font-bold tracking-tight">
+                    {patient.title ? `${patient.title} ` : ""}{patient.firstName} {patient.lastName}
+                  </h1>
+                  {!isRiskLoading && riskScore ? (
+                    <Badge variant="outline" className={cn(
+                      "text-[11px] font-semibold uppercase",
+                      riskScore.riskLevel === "CRITICAL" || riskScore.riskLevel === "HIGH"
+                        ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30"
+                        : riskScore.riskLevel === "MEDIUM"
+                        ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30"
+                        : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30"
+                    )}>
+                      {riskScore.riskLevel || "LOW"} RISK
+                    </Badge>
+                  ) : null}
+                </div>
+
+                {/* Demographics chips */}
+                <div className="flex items-center gap-2.5 mt-2 flex-wrap text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5" />
+                    {patient.nhsNumber || "No NHS number"}
+                  </span>
+                  <span className="text-border">·</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" />
+                    {patientAge != null ? `${patientAge} yrs` : "—"} · {patient.gender || "Unknown"}
+                  </span>
+                  <span className="text-border">·</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" />
+                    DOB: {patient.dob ? format(new Date(patient.dob), "d MMM yyyy") : "Unknown"}
+                  </span>
+                  {patient.program?.name && (
+                    <>
+                      <span className="text-border">·</span>
+                      <span className="inline-flex items-center gap-1.5 text-primary font-medium">
+                        <Activity className="w-3.5 h-3.5" />
+                        {patient.program.name}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Status + Actions */}
+            <div className="flex items-center gap-2 shrink-0">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2" disabled={updatePatient.isPending}>
+                    <div className={cn("w-2 h-2 rounded-full", patient.status === "ACTIVE" ? "bg-emerald-500" : "bg-slate-400")} />
+                    {patient.status}
+                    <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleStatusChange("ACTIVE")}>Set to ACTIVE</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleStatusChange("INACTIVE")}>Set to INACTIVE</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" className="gap-2">
+                    Actions <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem onClick={() => setIsAppointmentDialogOpen(true)}>
+                    <Calendar className="w-4 h-4 mr-2" /> New Appointment
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsConsultationDialogOpen(true)}>
+                    <ClipboardList className="w-4 h-4 mr-2" /> Record Consultation
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsJourneyDialogOpen(true)}>
+                    <Activity className="w-4 h-4 mr-2" /> Log Journey Event
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsSmsDialogOpen(true)}>
+                    <MessageSquare className="w-4 h-4 mr-2" /> Send Message
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
+        </div>
+
+        {/* ── Stats bar ────────────────────────────────────────────────────────── */}
+        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-border border-t border-border">
+          {[
+            { label: "Risk Score", value: riskScore?.riskScore ?? 0, sub: riskScore?.riskLevel ?? "Not scored", icon: AlertCircle, chipCls: "bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400" },
+            { label: "Active Programs", value: (enrollments?.data ?? []).filter((e: any) => e.status === "ACTIVE").length, sub: `${enrollments?.data?.length ?? 0} total`, icon: Activity, chipCls: "bg-primary/10 text-primary" },
+            { label: "Appointments", value: appointmentsData?.data?.length ?? 0, sub: `${(appointmentsData?.data ?? []).filter((a: any) => a.status === "SCHEDULED").length} upcoming`, icon: Calendar, chipCls: "bg-primary/10 text-primary" },
+            { label: "Consultations", value: consultationsData?.data?.length ?? 0, sub: "On record", icon: Stethoscope, chipCls: "bg-primary/10 text-primary" },
+          ].map((m) => (
+            <div key={m.label} className="px-5 py-3.5 flex items-center gap-3">
+              <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", m.chipCls)}>
+                <m.icon className="w-4.5 h-4.5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xl font-bold leading-none tabular-nums">{m.value}</div>
+                <div className="text-xs font-medium text-foreground mt-0.5">{m.label}</div>
+                <div className="text-[11px] text-muted-foreground truncate">{m.sub}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* ── Record Consultation Dialog ─────────────────────────────────────────── */}
-      <Dialog open={isConsultationDialogOpen} onOpenChange={setIsConsultationDialogOpen}>
+      <Dialog open={isConsultationDialogOpen} onOpenChange={(open) => { setIsConsultationDialogOpen(open); if (!open) { setSelectedAppointmentId(""); setConsultationForm(emptyConsultationForm); } }}>
         <DialogContent aria-describedby={undefined} className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Record Consultation</DialogTitle>
@@ -697,7 +740,7 @@ export default function PatientDetailPage() {
       </Dialog>
 
       {/* ── Edit Appointment Dialog ───────────────────────────────────────────── */}
-      <Dialog open={isEditApptDialogOpen} onOpenChange={setIsEditApptDialogOpen}>
+      <Dialog open={isEditApptDialogOpen} onOpenChange={(open) => { setIsEditApptDialogOpen(open); if (!open) { setEditApptDate(""); setEditApptTime(""); setEditApptDuration(30); setEditApptNotes(""); } }}>
         <DialogContent aria-describedby={undefined}>
           <DialogHeader><DialogTitle>Edit Appointment</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
@@ -728,35 +771,26 @@ export default function PatientDetailPage() {
       </Dialog>
 
       {/* ── Tabs ─────────────────────────────────────────────────────────────── */}
+      <div className="page-container animate-in-up pt-6 pb-12">
       <Tabs defaultValue="overview" className="flex flex-col md:flex-row gap-6 lg:gap-10 items-start">
-        <div className="w-full md:w-64 shrink-0 md:sticky md:top-6">
-          <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mb-4 px-4">Clinical Record</div>
-          <TabsList className="flex flex-row md:flex-col justify-start bg-transparent space-y-2 w-full h-auto p-0 rounded-none overflow-x-auto md:overflow-visible scrollbar-none">
-            <TabsTrigger value="overview" className="justify-start px-4 py-3 w-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/20 rounded-xl text-left font-semibold text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all">
-              <User className="w-4 h-4 mr-3" />Overview
-            </TabsTrigger>
-            <TabsTrigger value="journey" className="justify-start px-4 py-3 w-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/20 rounded-xl text-left font-semibold text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all">
-              <Activity className="w-4 h-4 mr-3" />Journey Timeline
-            </TabsTrigger>
-            <TabsTrigger value="appointments" className="justify-start px-4 py-3 w-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/20 rounded-xl text-left font-semibold text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all">
-              <Calendar className="w-4 h-4 mr-3" />Appointments
-            </TabsTrigger>
-            <TabsTrigger value="consultations" className="justify-start px-4 py-3 w-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/20 rounded-xl text-left font-semibold text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all">
-              <Stethoscope className="w-4 h-4 mr-3" />Consultations
-            </TabsTrigger>
-            <TabsTrigger value="outcomes" className="justify-start px-4 py-3 w-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/20 rounded-xl text-left font-semibold text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all">
-              <TrendingUp className="w-4 h-4 mr-3" />Clinical Outcomes
-            </TabsTrigger>
-            <TabsTrigger value="tasks" className="justify-start px-4 py-3 w-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/20 rounded-xl text-left font-semibold text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all">
-              <ClipboardList className="w-4 h-4 mr-3" />Care Tasks
-            </TabsTrigger>
-            <TabsTrigger value="files" className="justify-start px-4 py-3 w-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/20 rounded-xl text-left font-semibold text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all">
-              <FileText className="w-4 h-4 mr-3" />Documents
-            </TabsTrigger>
-            <TabsTrigger value="communications" className="justify-start px-4 py-3 w-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/20 rounded-xl text-left font-semibold text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all">
-              <MessageSquare className="w-4 h-4 mr-3" />Communications
-            </TabsTrigger>
+        <div className="w-full md:w-56 shrink-0 md:sticky md:top-6 flex flex-col gap-3">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1 px-2">Clinical Record</div>
+          <TabsList className="flex flex-row md:flex-col justify-start bg-transparent gap-0.5 w-full h-auto p-0 rounded-none overflow-x-auto md:overflow-visible">
+            <TabsTrigger value="overview" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><User className="w-4 h-4 shrink-0" />Overview</TabsTrigger>
+            <TabsTrigger value="journey" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><Activity className="w-4 h-4 shrink-0" />Journey</TabsTrigger>
+            <TabsTrigger value="appointments" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><Calendar className="w-4 h-4 shrink-0" />Appointments</TabsTrigger>
+            <TabsTrigger value="consultations" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><ClipboardList className="w-4 h-4 shrink-0" />Consultations</TabsTrigger>
+            <TabsTrigger value="outcomes" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><Activity className="w-4 h-4 shrink-0" />Outcomes</TabsTrigger>
+            <TabsTrigger value="tasks" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><ClipboardList className="w-4 h-4 shrink-0" />Tasks</TabsTrigger>
+            <TabsTrigger value="files" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><FileText className="w-4 h-4 shrink-0" />Files</TabsTrigger>
+            <TabsTrigger value="communications" className="justify-start px-3 py-2 w-full data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none rounded-lg text-left text-sm gap-2"><MessageSquare className="w-4 h-4 shrink-0" />Communications</TabsTrigger>
           </TabsList>
+          <div className="border-t border-border pt-3 mt-1">
+            <button className="inline-flex items-center gap-2 px-3 py-2 w-full text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors">
+              <Download className="w-4 h-4 shrink-0" />
+              Export Patient Record
+            </button>
+          </div>
         </div>
         <div className="flex-1 min-w-0 w-full">
 
@@ -764,152 +798,120 @@ export default function PatientDetailPage() {
         <TabsContent value="overview" className="space-y-6 animate-in-up">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="glass-card bg-gradient-to-br from-card/50 to-muted/20 border-border/50 hover:border-primary/20 transition-all shadow-sm">
-                  <CardHeader className="pb-4"><CardTitle className="text-lg font-bold flex items-center gap-2"><Phone className="w-4 h-4 text-primary" />Contact</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <Phone className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Primary Mobile</div>
-                        <div className="text-sm font-medium">{patient.mobile || '—'}</div>
+              <Card className="glass-card">
+                <CardHeader><CardTitle className="text-lg">Contact Information</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4">
+                  <div className="flex items-start gap-3">
+                    <Phone className="w-4 h-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <div className="text-sm font-medium">Primary Mobile</div>
+                      <div className="text-sm text-muted-foreground">{patient.mobile || '-'}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Mail className="w-4 h-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <div className="text-sm font-medium">Email</div>
+                      <div className="text-sm text-muted-foreground">{patient.email || '-'}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 col-span-2">
+                    <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <div className="text-sm font-medium">Address</div>
+                      <div className="text-sm text-muted-foreground">
+                        {[patient.address, patient.city, patient.postalCode, patient.country].filter(Boolean).join(', ') || '-'}
                       </div>
                     </div>
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <Mail className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email Address</div>
-                        <div className="text-sm font-medium break-all">{patient.email || '—'}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <MapPin className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Home Address</div>
-                        <div className="text-sm font-medium leading-relaxed">
-                          {[patient.address, patient.city, patient.postalCode, patient.country].filter(Boolean).join(', ') || '—'}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card className="glass-card bg-gradient-to-bl from-card/50 to-muted/20 border-border/50 hover:border-primary/20 transition-all shadow-sm">
-                  <CardHeader className="pb-4"><CardTitle className="text-lg font-bold flex items-center gap-2"><Activity className="w-4 h-4 text-primary" />Care Details</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <Activity className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active Program</div>
-                        <div className="text-sm font-medium">{patient.program?.name || 'Unassigned'}</div>
-                      </div>
+              <Card className="glass-card">
+                <CardHeader><CardTitle className="text-lg">Care Details</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <div className="text-sm font-medium mb-1 text-muted-foreground">Program</div>
+                      <div className="flex items-center gap-2"><Activity className="w-4 h-4 text-primary" />{patient.program?.name || 'Unassigned'}</div>
                     </div>
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <Building2 className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Primary Clinic</div>
-                        <div className="text-sm font-medium">{patient.clinic?.name || 'Unassigned'}</div>
-                      </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1 text-muted-foreground">Clinic</div>
+                      <div className="flex items-center gap-2"><Building2 className="w-4 h-4 text-primary" />{patient.clinic?.name || 'Unassigned'}</div>
                     </div>
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <Calendar className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Registration Date</div>
-                        <div className="text-sm font-medium">{format(new Date(patient.createdAt), 'MMMM d, yyyy')}</div>
-                      </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1 text-muted-foreground">Area</div>
+                      <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" />{patient.area?.name || 'Unassigned'}</div>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                    <div>
+                      <div className="text-sm font-medium mb-1 text-muted-foreground">Registered</div>
+                      <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-primary" />{new Date(patient.createdAt).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Risk Profile */}
-              <Card className="glass-card border-border/50 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2" />
+              <Card className="glass-card">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-bold flex items-center gap-2">
+                    <CardTitle className="text-lg flex items-center gap-2">
                       <AlertCircle className="w-5 h-5 text-primary" />
-                      Clinical Risk Profile
+                      Risk Profile
                     </CardTitle>
                     {isRiskLoading ? (
-                      <Skeleton className="h-6 w-20 rounded-full" />
+                      <Skeleton className="h-6 w-16" />
                     ) : riskScore ? (
-                      <Badge variant={riskScore.riskLevel === 'HIGH' || riskScore.riskLevel === 'CRITICAL' ? 'destructive' : riskScore.riskLevel === 'MEDIUM' ? 'default' : 'secondary'} className="uppercase font-bold tracking-wider px-3 shadow-sm">
+                      <Badge variant={riskScore.riskLevel === 'HIGH' || riskScore.riskLevel === 'CRITICAL' ? 'destructive' : riskScore.riskLevel === 'MEDIUM' ? 'default' : 'secondary'} className="uppercase">
                         {riskScore.riskLevel || "UNKNOWN"}
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="font-semibold text-muted-foreground">Not Scored</Badge>
+                      <Badge variant="outline">Not Scored</Badge>
                     )}
                   </div>
                 </CardHeader>
                 <CardContent>
                   {isRiskLoading ? (
-                    <Skeleton className="h-24 w-full rounded-xl mt-4" />
+                    <Skeleton className="h-10 w-full" />
                   ) : riskScore ? (
-                    <div className="space-y-6 mt-4">
-                      <div className="flex items-center gap-6">
-                        <div className="flex flex-col items-center justify-center w-24 h-24 rounded-full border-[6px] border-primary/20 shadow-inner bg-card">
-                          <span className="text-4xl font-black text-primary tracking-tighter">{riskScore.riskScore ?? "N/A"}</span>
-                        </div>
-                        <div className="space-y-1">
-                          <h4 className="text-xl font-bold tracking-tight">Overall Risk Score</h4>
-                          <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">Calculated automatically based on demographic factors, clinical history, and recent outcome metrics.</p>
-                        </div>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4 pt-2">
+                        <div className="text-4xl font-bold tracking-tight text-primary">{riskScore.riskScore ?? "N/A"}</div>
+                        <div className="text-sm text-muted-foreground leading-tight">Total<br />Risk Score</div>
                       </div>
                       {riskScore.factors && riskScore.factors.length > 0 && (
-                        <div className="space-y-3 pt-6 border-t border-border/50">
-                          <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Contributing Factors</h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {riskScore.factors.map((f: any, idx: number) => (
-                              <div key={idx} className="flex items-start justify-between p-3 rounded-xl bg-card/50 border border-border/50 hover:border-border transition-colors">
-                                <div className="flex items-start gap-3">
-                                  <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-                                  <span className="text-sm font-medium text-foreground/90">{f.reason}</span>
-                                </div>
-                                <span className="font-bold text-destructive bg-destructive/10 px-2 py-0.5 rounded-md text-xs whitespace-nowrap">+{f.scoreContribution}</span>
-                              </div>
-                            ))}
-                          </div>
+                        <div className="space-y-2 mt-4 pt-4 border-t border-border">
+                          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Contributing Factors</h4>
+                          {riskScore.factors.map((f: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50 border border-border/50">
+                              <span className="flex items-center gap-2 font-medium">
+                                <AlertCircle className="w-3.5 h-3.5 text-muted-foreground" />
+                                {f.reason}
+                              </span>
+                              <span className="font-bold text-destructive">+{f.scoreContribution}</span>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-muted/20 rounded-2xl border border-dashed border-border/50 mt-4">
-                      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                        <Activity className="w-8 h-8 text-muted-foreground/50" />
-                      </div>
-                      <h4 className="text-base font-semibold text-foreground mb-1">No risk score available</h4>
-                      <p className="text-sm text-muted-foreground max-w-sm">Risk scores are automatically calculated nightly based on new clinical data and outcomes.</p>
+                    <div className="text-sm text-muted-foreground py-2 text-center bg-muted/30 rounded-lg p-4 border border-dashed border-border mt-2">
+                      <Activity className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                      No risk score calculated for this patient yet.<br/>Scores are updated nightly based on outcomes.
                     </div>
                   )}
                 </CardContent>
               </Card>
 
               {/* Program Enrollments */}
-              <Card className="glass-card border-border/50 shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50 mb-4">
-                  <CardTitle className="text-lg font-bold flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-primary" /> Active Programs
-                  </CardTitle>
-                  <Dialog open={isEnrollDialogOpen} onOpenChange={setIsEnrollDialogOpen}>
+              <Card className="glass-card">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-lg">Program Enrollments</CardTitle>
+                  <Dialog open={isEnrollDialogOpen} onOpenChange={(open) => { setIsEnrollDialogOpen(open); if (!open) { setEnrollProgramId(""); } }}>
                     <DialogTrigger asChild>
-                      <Button size="sm" variant="outline" className="h-8 rounded-full px-4 border-primary/20 text-primary hover:bg-primary/5 font-semibold">
-                        <Plus className="w-4 h-4 mr-1.5" /> Enroll Patient
-                      </Button>
+                      <Button size="sm" variant="outline" className="h-8"><Plus className="w-4 h-4 mr-1" /> Enroll</Button>
                     </DialogTrigger>
-                    <DialogContent aria-describedby={undefined} className="rounded-2xl">
+                    <DialogContent aria-describedby={undefined}>
                       <DialogHeader><DialogTitle>Enroll in Program</DialogTitle></DialogHeader>
                       <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
@@ -926,58 +928,46 @@ export default function PatientDetailPage() {
                       </div>
                       <DialogFooter>
                         <Button variant="outline" onClick={() => { setIsEnrollDialogOpen(false); setEnrollProgramId(""); }}>Cancel</Button>
-                        <Button onClick={handleEnroll} disabled={!enrollProgramId || createEnrollment.isPending}>Enroll Patient</Button>
+                        <Button onClick={handleEnroll} disabled={!enrollProgramId || createEnrollment.isPending}>Enroll</Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
                 </CardHeader>
                 <CardContent>
-                  {isEnrollmentsLoading ? <Skeleton className="h-32 w-full rounded-2xl" /> : enrollments?.data?.length ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {isEnrollmentsLoading ? <Skeleton className="h-20 w-full" /> : enrollments?.data?.length ? (
+                    <div className="space-y-4">
                       {enrollments.data.map((enrollment) => (
-                        <div key={enrollment.id} className="group relative flex flex-col p-4 rounded-2xl bg-card border border-border/60 hover:border-primary/30 hover:shadow-md transition-all">
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <Activity className="w-5 h-5 text-primary" />
-                              </div>
-                              <h4 className="font-bold text-foreground">{enrollment.program?.name}</h4>
+                        <div key={enrollment.id} className="flex flex-col gap-3 p-4 border rounded-md border-border bg-background">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Activity className="w-5 h-5 text-primary" />
+                              <span className="font-medium">{enrollment.program?.name}</span>
                             </div>
-                            <Badge variant={enrollment.status === "ACTIVE" ? "default" : "secondary"} className="shadow-sm">{enrollment.status}</Badge>
+                            <Badge variant={enrollment.status === "ACTIVE" ? "default" : "secondary"}>{enrollment.status}</Badge>
                           </div>
-                          
-                          <div className="space-y-2 mb-6">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground font-medium">Enrolled</span>
-                              <span className="text-foreground font-medium">{format(new Date(enrollment.enrolledAt), 'MMM d, yyyy')}</span>
-                            </div>
-                            {enrollment.completedAt && (
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground font-medium">Ended</span>
-                                <span className="text-foreground font-medium">{format(new Date(enrollment.completedAt), 'MMM d, yyyy')}</span>
-                              </div>
-                            )}
+                          <div className="text-sm text-muted-foreground flex items-center justify-between">
+                            <span>Enrolled: {format(new Date(enrollment.enrolledAt), 'MMM d, yyyy')}</span>
+                            {enrollment.completedAt && <span>Ended: {format(new Date(enrollment.completedAt), 'MMM d, yyyy')}</span>}
                           </div>
-                          
                           {enrollment.status === "ACTIVE" && (
-                            <div className="mt-auto grid grid-cols-2 gap-2 pt-4 border-t border-border/50">
+                            <div className="flex justify-end gap-2 pt-2 border-t border-border mt-1">
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <Button size="sm" variant="ghost" className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"><XCircle className="w-4 h-4 mr-2" /> Cancel</Button>
+                                  <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-destructive"><XCircle className="w-4 h-4 mr-1" /> Cancel</Button>
                                 </AlertDialogTrigger>
-                                <AlertDialogContent className="rounded-2xl">
+                                <AlertDialogContent>
                                   <AlertDialogHeader><AlertDialogTitle>Cancel Enrollment</AlertDialogTitle><AlertDialogDescription>Are you sure you want to cancel the enrollment in {enrollment.program?.name}?</AlertDialogDescription></AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Close</AlertDialogCancel>
-                                    <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => handleCancelEnrollment(enrollment.id)}>Yes, Cancel</AlertDialogAction>
+                                    <AlertDialogAction onClick={() => handleCancelEnrollment(enrollment.id)}>Yes, Cancel</AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <Button size="sm" variant="ghost" className="w-full text-primary hover:text-primary hover:bg-primary/10"><CheckCircle className="w-4 h-4 mr-2" /> Complete</Button>
+                                  <Button size="sm" variant="ghost" className="h-8 text-primary hover:text-primary"><CheckCircle className="w-4 h-4 mr-1" /> Complete</Button>
                                 </AlertDialogTrigger>
-                                <AlertDialogContent className="rounded-2xl">
+                                <AlertDialogContent>
                                   <AlertDialogHeader><AlertDialogTitle>Complete Enrollment</AlertDialogTitle><AlertDialogDescription>Mark the enrollment in {enrollment.program?.name} as successfully completed?</AlertDialogDescription></AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Close</AlertDialogCancel>
@@ -990,34 +980,24 @@ export default function PatientDetailPage() {
                         </div>
                       ))}
                     </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-muted/20 rounded-2xl border border-dashed border-border/50">
-                      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                        <Activity className="w-8 h-8 text-muted-foreground/50" />
-                      </div>
-                      <h4 className="text-base font-semibold text-foreground mb-1">No active programs</h4>
-                      <p className="text-sm text-muted-foreground max-w-sm">Patient is not currently enrolled in any long-term care programs.</p>
-                    </div>
-                  )}
+                  ) : <div className="text-sm text-muted-foreground py-2 text-center">No program enrollments found.</div>}
                 </CardContent>
               </Card>
             </div>
 
-            {/* Care Team sidebar */}
-            <div className="space-y-6">
-              <Card className="glass-card border-border/50 shadow-sm sticky top-6">
-                <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50 mb-2">
-                  <CardTitle className="text-lg font-bold flex items-center gap-2">
-                    <UserPlus className="w-4 h-4 text-primary" /> Care Team
-                  </CardTitle>
-                  <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+            {/* Right sidebar */}
+            <div className="space-y-5">
+
+              {/* Care Team card */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                  <CardTitle className="text-base font-semibold">Care Team</CardTitle>
+                  <Dialog open={isAssignDialogOpen} onOpenChange={(open) => { setIsAssignDialogOpen(open); if (!open) { setSelectedDoctorId(""); } }}>
                     <DialogTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary">
-                        <Plus className="w-4 h-4" />
-                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs"><UserPlus className="w-3.5 h-3.5 mr-1" /> Assign</Button>
                     </DialogTrigger>
-                    <DialogContent aria-describedby={undefined} className="rounded-2xl">
-                      <DialogHeader><DialogTitle>Assign Team Member</DialogTitle></DialogHeader>
+                    <DialogContent aria-describedby={undefined}>
+                      <DialogHeader><DialogTitle>Assign Doctor to Patient</DialogTitle></DialogHeader>
                       <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
                           <Label>Select Team Member</Label>
@@ -1038,47 +1018,107 @@ export default function PatientDetailPage() {
                     </DialogContent>
                   </Dialog>
                 </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  {isAssignmentsLoading ? <Skeleton className="h-48 w-full rounded-2xl" /> : assignmentsData?.data?.length ? (
+                <CardContent className="pt-0">
+                  {isAssignmentsLoading ? <Skeleton className="h-14 w-full" /> : assignmentsData?.data?.length ? (
                     <div className="space-y-3">
-                      {assignmentsData.data.map((assignment) => (
-                        <div key={assignment.id} className="group flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-transparent hover:border-border hover:bg-card transition-all">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20 shadow-sm shrink-0">
-                              <span className="font-bold text-primary text-sm">{assignment.doctor?.firstName?.[0]}{assignment.doctor?.lastName?.[0]}</span>
+                      {assignmentsData.data.map((assignment) => {
+                        const initials = ((assignment.doctor?.firstName?.[0] ?? "") + (assignment.doctor?.lastName?.[0] ?? "")).toUpperCase();
+                        return (
+                          <div key={assignment.id} className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div
+                                className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-xs font-bold text-white"
+                                style={{ background: "linear-gradient(135deg, #0b63f6 0%, #4f46e5 100%)" }}
+                              >
+                                {initials || <User className="w-4 h-4" />}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium truncate">{assignment.doctor?.firstName} {assignment.doctor?.lastName}</div>
+                                <div className="text-xs text-muted-foreground truncate">{assignment.doctor?.role?.name ?? "Doctor"}{assignment.clinic?.name ? ` · ${assignment.clinic.name}` : ""}</div>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <div className="text-sm font-bold truncate text-foreground">Dr. {assignment.doctor?.firstName} {assignment.doctor?.lastName}</div>
-                              <div className="text-xs font-medium text-muted-foreground truncate">{assignment.doctor?.role?.name ?? "Clinician"}</div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => setIsSmsDialogOpen(true)}>
+                                <MessageSquare className="w-3.5 h-3.5" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader><AlertDialogTitle>Remove Assignment</AlertDialogTitle><AlertDialogDescription>Remove {assignment.doctor?.firstName} {assignment.doctor?.lastName} from this patient's care team?</AlertDialogDescription></AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleUnassign(assignment.id)}>Remove</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </div>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-muted-foreground/50 opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all shrink-0">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="rounded-2xl">
-                              <AlertDialogHeader><AlertDialogTitle>Remove Assignment</AlertDialogTitle><AlertDialogDescription>Remove {assignment.doctor?.firstName} {assignment.doctor?.lastName} from this patient's care team?</AlertDialogDescription></AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => handleUnassign(assignment.id)}>Remove</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      ))}
+                        );
+                      })}
+                    </div>
+                  ) : <div className="text-sm text-muted-foreground py-3 text-center">No care team members assigned.</div>}
+                </CardContent>
+              </Card>
+
+              {/* Patient Summary card */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold">Patient Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-2.5">
+                  {[
+                    { label: "Age", value: patientAge != null ? `${patientAge} years` : "—" },
+                    { label: "Gender", value: patient.gender || "—" },
+                    { label: "Blood Group", value: (patient as any).bloodGroup || "—" },
+                    { label: "Marital Status", value: (patient as any).maritalStatus || "—" },
+                    { label: "Language", value: (patient as any).preferredLanguage || "English" },
+                    { label: "Emergency Contact", value: (patient as any).emergencyContactName || "—" },
+                  ].map((row) => (
+                    <div key={row.label} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="text-muted-foreground shrink-0">{row.label}</span>
+                      <span className="font-medium text-right truncate">{row.value}</span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Recent Activity card */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                  <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
+                  <Link href="/audit-logs">
+                    <span className="text-xs text-primary hover:underline cursor-pointer">View all</span>
+                  </Link>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  {isJourneyLoading ? (
+                    <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-9 w-full" />)}</div>
+                  ) : journeyList?.data?.length ? (
+                    <div className="space-y-3">
+                      {journeyList.data.slice(0, 4).map((event) => {
+                        const cfg = getJourneyEventConfig(event.status);
+                        return (
+                          <div key={event.id} className="flex items-start gap-2.5">
+                            <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px]", cfg.bg, cfg.color)}>
+                              {cfg.icon}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-semibold">{cfg.label}</div>
+                              {event.notes && <div className="text-[11px] text-muted-foreground truncate">{event.notes}</div>}
+                              <div className="text-[11px] text-muted-foreground/70 mt-0.5">{format(new Date(event.createdAt), "d MMM yyyy")}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
-                        <User className="w-6 h-6 text-muted-foreground/50" />
-                      </div>
-                      <p className="text-sm text-muted-foreground font-medium">No care team assigned.</p>
-                    </div>
+                    <div className="text-sm text-muted-foreground py-2 text-center">No activity yet.</div>
                   )}
                 </CardContent>
               </Card>
+
             </div>
           </div>
         </TabsContent>
@@ -1088,7 +1128,7 @@ export default function PatientDetailPage() {
           <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg">Patient Journey</CardTitle>
-              <Dialog open={isJourneyDialogOpen} onOpenChange={setIsJourneyDialogOpen}>
+              <Dialog open={isJourneyDialogOpen} onOpenChange={(open) => { setIsJourneyDialogOpen(open); if (!open) { setJourneyStatus("NEW"); setJourneyNotes(""); } }}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline" className="h-8"><Plus className="w-4 h-4 mr-1" /> Record Event</Button>
                 </DialogTrigger>
@@ -1160,22 +1200,14 @@ export default function PatientDetailPage() {
 
         {/* ── APPOINTMENTS TAB ──────────────────────────────────────────────── */}
         <TabsContent value="appointments" className="animate-in-up">
-          <Card className="glass-card border-border/50 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2" />
-            <CardHeader className="flex flex-row items-center justify-between pb-6 border-b border-border/50 mb-6">
-              <CardTitle className="text-xl font-bold flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-primary" />
-                </div>
-                Appointments
-              </CardTitle>
+          <Card className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg flex items-center gap-2"><Calendar className="w-4 h-4" /> Appointments</CardTitle>
               <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="h-10 rounded-xl px-6 bg-primary hover:bg-primary/90 shadow-sm font-semibold">
-                    <Plus className="w-4 h-4 mr-2" /> Schedule New
-                  </Button>
+                  <Button size="sm" variant="outline" className="h-8"><Plus className="w-4 h-4 mr-1" /> Schedule</Button>
                 </DialogTrigger>
-                <DialogContent aria-describedby={undefined} className="rounded-2xl">
+                <DialogContent aria-describedby={undefined}>
                   <DialogHeader><DialogTitle>Schedule Appointment</DialogTitle></DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
@@ -1238,57 +1270,42 @@ export default function PatientDetailPage() {
               </Dialog>
             </CardHeader>
             <CardContent>
-              {isAppointmentsLoading ? <Skeleton className="h-48 w-full rounded-2xl" /> : appointmentsData?.data?.length ? (
-                <div className="relative pl-6 space-y-6 before:absolute before:inset-0 before:ml-[31px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border/60 before:to-transparent">
+              {isAppointmentsLoading ? <Skeleton className="h-10 w-full" /> : appointmentsData?.data?.length ? (
+                <div className="space-y-3">
                   {appointmentsData.data.map((appt) => {
                     const apptConsultation = consultationsData?.data?.find(c => c.appointmentId === appt.id);
-                    const isCompleted = appt.status === "COMPLETED";
-                    const isCancelled = appt.status === "CANCELLED";
-                    const dotColor = isCompleted ? "bg-secondary border-secondary/20" : isCancelled ? "bg-destructive border-destructive/20" : "bg-primary border-primary/20";
                     return (
-                      <div key={appt.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                        <div className={`flex items-center justify-center w-6 h-6 rounded-full border-4 ring-4 ring-background ${dotColor} absolute left-0 md:left-1/2 -translate-x-1/2 -translate-y-4 sm:translate-y-0 transform transition-transform group-hover:scale-125 z-10`} />
-                        <div className="w-[calc(100%-3rem)] md:w-[calc(50%-2rem)] p-4 rounded-2xl bg-card border border-border/50 shadow-sm hover:shadow-md transition-all">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                            <div className="flex items-center gap-3">
-                              <Badge variant={appt.status === "SCHEDULED" ? "default" : appt.status === "COMPLETED" ? "secondary" : "destructive"} className="text-[10px] font-bold tracking-wider px-2 shadow-sm">
-                                {appt.status}
-                              </Badge>
-                              <span className="text-sm font-bold text-foreground">
-                                {format(new Date(appt.appointmentDate), "MMM d, yyyy")}
-                              </span>
-                              <span className="text-sm text-muted-foreground font-medium">
-                                {format(new Date(appt.appointmentDate), "h:mm a")}
-                              </span>
-                            </div>
+                      <div key={appt.id} className="flex flex-col gap-2 py-3 border-b border-border last:border-0">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={appt.status === "SCHEDULED" ? "default" : appt.status === "COMPLETED" ? "secondary" : "destructive"} className="text-xs">
+                              {appt.status}
+                            </Badge>
+                            <span className="text-sm font-medium">{format(new Date(appt.appointmentDate), "MMM d, yyyy 'at' HH:mm")}</span>
                           </div>
-                          
-                          <div className="flex items-center gap-4 mb-4 bg-muted/30 p-3 rounded-xl border border-border/50">
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                              <User className="w-5 h-5 text-primary" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="text-sm font-bold text-foreground truncate">Dr. {appt.doctor?.firstName} {appt.doctor?.lastName}</div>
-                              <div className="text-xs text-muted-foreground flex items-center gap-1.5 truncate mt-0.5">
-                                <Building2 className="w-3.5 h-3.5" /> {appt.clinic?.name}
-                                {appt.durationMinutes && <><span className="mx-1 opacity-50">•</span><Clock className="w-3.5 h-3.5" /> {appt.durationMinutes} min</>}
-                              </div>
-                            </div>
-                          </div>
-
-                          {appt.notes && <p className="text-sm text-muted-foreground italic bg-muted/20 p-3 rounded-xl mb-4 border border-dashed border-border/50">{appt.notes}</p>}
-
-                          <div className="flex flex-wrap gap-2 pt-3 border-t border-border/50">
+                          <div className="flex gap-2">
                             {appt.status === "SCHEDULED" && (
                               <>
-                                <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-primary rounded-lg" onClick={() => openEditAppointment(appt)}>
-                                  <Pencil className="w-4 h-4 mr-1.5" /> Edit
+                                <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-primary" onClick={() => openEditAppointment(appt)}>
+                                  <Pencil className="w-4 h-4 mr-1" /> Edit
                                 </Button>
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                    <Button size="sm" variant="ghost" className="h-8 text-primary hover:text-primary hover:bg-primary/10 rounded-lg"><CheckCircle className="w-4 h-4 mr-1.5" /> Complete</Button>
+                                    <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-destructive"><XCircle className="w-4 h-4 mr-1" /> Cancel</Button>
                                   </AlertDialogTrigger>
-                                  <AlertDialogContent className="rounded-2xl">
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader><AlertDialogTitle>Cancel Appointment</AlertDialogTitle><AlertDialogDescription>Are you sure you want to cancel this appointment?</AlertDialogDescription></AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Close</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleAppointmentAction(appt.id, "cancel")}>Yes, Cancel</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button size="sm" variant="ghost" className="h-8 text-primary hover:text-primary"><CheckCircle className="w-4 h-4 mr-1" /> Complete</Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
                                     <AlertDialogHeader><AlertDialogTitle>Complete Appointment</AlertDialogTitle><AlertDialogDescription>Mark this appointment as successfully completed?</AlertDialogDescription></AlertDialogHeader>
                                     <AlertDialogFooter>
                                       <AlertDialogCancel>Close</AlertDialogCancel>
@@ -1296,256 +1313,153 @@ export default function PatientDetailPage() {
                                     </AlertDialogFooter>
                                   </AlertDialogContent>
                                 </AlertDialog>
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg"><XCircle className="w-4 h-4 mr-1.5" /> Cancel</Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent className="rounded-2xl">
-                                    <AlertDialogHeader><AlertDialogTitle>Cancel Appointment</AlertDialogTitle><AlertDialogDescription>Are you sure you want to cancel this appointment?</AlertDialogDescription></AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Close</AlertDialogCancel>
-                                      <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => handleAppointmentAction(appt.id, "cancel")}>Yes, Cancel</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
                               </>
                             )}
+                            {/* KI-004: Record Consultation shortcut on completed appointments */}
                             {appt.status === "COMPLETED" && !apptConsultation && (
-                              <Button size="sm" variant="outline" className="h-8 border-primary/30 text-primary hover:bg-primary/5 rounded-lg font-medium" onClick={() => openRecordConsultation(appt.id)}>
-                                <ClipboardList className="w-4 h-4 mr-1.5" /> Record Consultation
+                              <Button size="sm" variant="outline" className="h-8 border-primary/40 text-primary hover:bg-primary/5" onClick={() => openRecordConsultation(appt.id)}>
+                                <ClipboardList className="w-4 h-4 mr-1" /> Record Consultation
                               </Button>
                             )}
                             {appt.status === "COMPLETED" && apptConsultation && (
-                              <span className="text-xs font-semibold text-success bg-success/10 px-3 py-1.5 rounded-lg flex items-center gap-1.5 border border-success/20">
-                                <CheckCircle className="w-3.5 h-3.5" /> Consultation recorded
+                              <span className="text-xs text-muted-foreground flex items-center gap-1 px-2">
+                                <CheckCircle className="w-3 h-3 text-emerald-500" /> Consultation recorded
                               </span>
                             )}
                           </div>
                         </div>
+                        <div className="text-xs text-muted-foreground grid grid-cols-2 gap-1 mt-1">
+                          <span className="flex items-center gap-1"><User className="w-3 h-3" /> Dr. {appt.doctor?.firstName} {appt.doctor?.lastName}</span>
+                          <span className="flex items-center gap-1"><Building2 className="w-3 h-3" /> {appt.clinic?.name}</span>
+                          {appt.durationMinutes && <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {appt.durationMinutes} min</span>}
+                        </div>
+                        {appt.notes && <p className="text-sm mt-1 bg-muted/50 p-2 rounded-md">{appt.notes}</p>}
                       </div>
                     );
                   })}
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-muted/20 rounded-2xl border border-dashed border-border/50">
-                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <Calendar className="w-8 h-8 text-muted-foreground/50" />
-                  </div>
-                  <h4 className="text-base font-semibold text-foreground mb-1">No appointments yet</h4>
-                  <p className="text-sm text-muted-foreground max-w-sm">Schedule the first appointment to begin the patient's care journey.</p>
-                </div>
-              )}
+              ) : <div className="text-sm text-muted-foreground py-2 text-center">No appointments found.</div>}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* ── CONSULTATIONS TAB ─────────────────────────────────────────────── */}
         <TabsContent value="consultations" className="animate-in-up">
-          <Card className="glass-card border-border/50 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2" />
-            <CardHeader className="flex flex-row items-center justify-between pb-6 border-b border-border/50 mb-6">
-              <CardTitle className="text-xl font-bold flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <ClipboardList className="w-5 h-5 text-primary" />
-                </div>
-                Consultation History
-              </CardTitle>
-              <div className="flex gap-3">
+          <Card className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg flex items-center gap-2"><ClipboardList className="w-4 h-4" /> Consultation History</CardTitle>
+              <div className="flex gap-2">
                 <Select value={filterConsDoctor} onValueChange={setFilterConsDoctor}>
-                  <SelectTrigger className="w-40 h-10 rounded-xl bg-background border-border/60">
+                  <SelectTrigger className="w-32 h-8 text-xs">
                     <SelectValue placeholder="All Doctors" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl">
+                  <SelectContent>
                     <SelectItem value="ALL">All Doctors</SelectItem>
                     {consDoctorOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <div className="relative">
-                  <input 
-                    type="date" 
-                    value={filterConsDate} 
-                    onChange={e => setFilterConsDate(e.target.value)} 
-                    className="flex h-10 rounded-xl border border-border/60 bg-background px-3 text-sm w-40"
-                  />
-                </div>
-                <Button size="sm" className="h-10 rounded-xl px-6 bg-primary hover:bg-primary/90 shadow-sm font-semibold" onClick={() => openRecordConsultation()}>
-                  <Plus className="w-4 h-4 mr-2" /> Record
+                <input 
+                  type="date" 
+                  value={filterConsDate} 
+                  onChange={e => setFilterConsDate(e.target.value)} 
+                  className="flex h-8 rounded-md border border-input bg-background px-2 text-xs w-32"
+                />
+                <Button size="sm" variant="outline" className="h-8" onClick={() => openRecordConsultation()}>
+                  <Plus className="w-4 h-4 mr-1" /> Record
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
-              {isConsultationsLoading ? (
+              {isConsultationsLoading ? <Skeleton className="h-10 w-full" /> : filteredConsultations.length ? (
                 <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-2xl" />)}
-                </div>
-              ) : filteredConsultations.length ? (
-                <div className="space-y-6">
                   {filteredConsultations.map(cons => (
-                    <div key={cons.id} className="group relative rounded-2xl bg-card border border-border/60 shadow-sm hover:shadow-md transition-all overflow-hidden">
-                      <div className="absolute top-0 left-0 w-1 h-full bg-primary/40 group-hover:bg-primary transition-colors" />
-                      
-                      <div className="p-4 md:p-6">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex flex-col items-center justify-center text-primary shrink-0 border border-primary/20">
-                              <span className="text-sm font-bold leading-none mb-0.5">{cons.consultationDate ? format(new Date(cons.consultationDate), "d") : "-"}</span>
-                              <span className="text-[10px] uppercase font-semibold leading-none">{cons.consultationDate ? format(new Date(cons.consultationDate), "MMM") : "-"}</span>
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-bold text-foreground">
-                                {cons.consultationDate ? format(new Date(cons.consultationDate), "EEEE, MMMM d, yyyy") : "Consultation"}
-                              </h3>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="flex items-center gap-1.5 text-sm font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-md">
-                                  <User className="w-3.5 h-3.5" /> Dr. {cons.doctor?.lastName}
-                                </span>
-                                <span className="text-muted-foreground/40">•</span>
-                                <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                  <MapPin className="w-3.5 h-3.5" /> {cons.clinic?.name}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* KI-002: Edit button */}
-                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button size="sm" variant="outline" className="h-9 rounded-lg hover:bg-primary/5 hover:text-primary hover:border-primary/30" onClick={() => openEditConsultation(cons)}>
-                              <Pencil className="w-4 h-4 mr-2" /> Edit Record
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="icon" variant="ghost" className="h-9 w-9 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10">
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="rounded-2xl">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Consultation</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete this consultation note? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => handleDeleteConsultation(cons.id!)}>
-                                    Yes, Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                    <div key={cons.id} className="p-4 border rounded-lg bg-card/50 text-sm space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-semibold text-base">{cons.consultationDate ? format(new Date(cons.consultationDate), "MMMM d, yyyy") : ""}</div>
+                          <div className="text-muted-foreground flex gap-3 mt-1">
+                            <span>Dr. {cons.doctor?.lastName}</span>
+                            <span>•</span>
+                            <span>{cons.clinic?.name}</span>
                           </div>
                         </div>
-                        
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 bg-muted/20 p-4 rounded-xl border border-border/50">
-                          <div className="space-y-4">
-                            <div>
-                              <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                                <AlertCircle className="w-3.5 h-3.5" /> Chief Complaint
-                              </span>
-                              <p className="text-sm font-medium text-foreground bg-background border border-border/50 p-3 rounded-lg leading-relaxed shadow-sm">
-                                {cons.chiefComplaint || <span className="text-muted-foreground italic">No details provided</span>}
-                              </p>
-                            </div>
-                            <div>
-                              <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                                <Stethoscope className="w-3.5 h-3.5" /> Diagnosis
-                              </span>
-                              <p className="text-sm font-medium text-foreground bg-background border border-border/50 p-3 rounded-lg leading-relaxed shadow-sm border-l-4 border-l-indigo-500">
-                                {cons.diagnosis || <span className="text-muted-foreground italic">No details provided</span>}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                                  Symptoms
-                                </span>
-                                <p className="text-sm text-foreground">
-                                  {cons.symptoms || <span className="text-muted-foreground italic">None noted</span>}
-                                </p>
-                              </div>
-                              <div>
-                                <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                                  Observations
-                                </span>
-                                <p className="text-sm text-foreground">
-                                  {cons.observations || <span className="text-muted-foreground italic">None noted</span>}
-                                </p>
-                              </div>
-                            </div>
-                            
-                            <div className="pt-2 border-t border-border/50">
-                              <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                                Treatment & Medications
-                              </span>
-                              <p className="text-sm text-foreground leading-relaxed">
-                                {cons.treatmentPlan || <span className="text-muted-foreground italic">No treatment plan</span>}
-                              </p>
-                              {cons.medications && (
-                                <div className="mt-2.5 flex items-start gap-2 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-300 p-2.5 rounded-lg border border-indigo-100 dark:border-indigo-900">
-                                  <Pill className="w-4 h-4 mt-0.5 shrink-0" />
-                                  <p className="text-sm font-medium italic">Rx: {cons.medications}</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {cons.followUpInstructions && (
-                            <div className="lg:col-span-2 mt-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex gap-3 shadow-sm">
-                              <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                                <Calendar className="w-4 h-4" />
-                              </div>
-                              <div>
-                                <span className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-1 block">Follow-up Instructions</span>
-                                <p className="text-sm font-medium text-amber-900 dark:text-amber-200 leading-relaxed">
-                                  {cons.followUpInstructions}
-                                </p>
-                              </div>
-                            </div>
-                          )}
+                        {/* MED-004: Edit + Delete consultation actions */}
+                        <div className="flex items-center gap-1">
+                          <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-primary" onClick={() => openEditConsultation(cons)}>
+                            <Pencil className="w-4 h-4 mr-1" /> Edit
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="ghost" className="h-8 text-muted-foreground hover:text-destructive">
+                                <Trash2 className="w-4 h-4 mr-1" /> Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete consultation?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will remove the consultation recorded on {cons.consultationDate ? format(new Date(cons.consultationDate), "MMMM d, yyyy") : "this date"}. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => cons.id && handleDeleteConsultation(cons.id)}>Delete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-3 pt-2">
+                        <div>
+                          <span className="font-medium text-xs uppercase text-muted-foreground">Complaint:</span>
+                          <p className="mt-0.5">{cons.chiefComplaint}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-xs uppercase text-muted-foreground">Diagnosis:</span>
+                          <p className="mt-0.5">{cons.diagnosis}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-xs uppercase text-muted-foreground">Symptoms:</span>
+                          <p className="mt-0.5">{cons.symptoms}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-xs uppercase text-muted-foreground">Observations:</span>
+                          <p className="mt-0.5">{cons.observations}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="font-medium text-xs uppercase text-muted-foreground">Treatment & Medications:</span>
+                          <p className="mt-0.5">{cons.treatmentPlan}</p>
+                          {cons.medications && <p className="mt-1 text-muted-foreground italic">Rx: {cons.medications}</p>}
+                        </div>
+                        {cons.followUpInstructions && (
+                          <div className="col-span-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md p-3">
+                            <span className="font-medium text-xs uppercase text-amber-700 dark:text-amber-400">Follow-up Instructions:</span>
+                            <p className="mt-0.5 text-amber-900 dark:text-amber-200">{cons.followUpInstructions}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-muted/20 rounded-2xl border border-dashed border-border/50">
-                  <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <ClipboardList className="w-10 h-10 text-muted-foreground/50" />
-                  </div>
-                  <h4 className="text-lg font-bold text-foreground mb-2">No consultations found</h4>
-                  <p className="text-sm text-muted-foreground max-w-sm mb-6">
-                    Record clinical encounters, diagnoses, and treatment plans to maintain a complete medical history.
-                  </p>
-                  <Button onClick={() => openRecordConsultation()} className="rounded-xl px-6 bg-primary hover:bg-primary/90 shadow-sm font-semibold">
-                    <Plus className="w-4 h-4 mr-2" /> Record First Consultation
-                  </Button>
-                </div>
-              )}
+              ) : <div className="text-sm text-muted-foreground py-2 text-center">No consultations recorded.</div>}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* ── OUTCOMES TAB ───────────────────────────────────────────────────── */}
         <TabsContent value="outcomes" className="animate-in-up">
-          <Card className="glass-card border-border/50 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2" />
-            <CardHeader className="flex flex-row items-center justify-between pb-6 border-b border-border/50 mb-6">
-              <CardTitle className="text-xl font-bold flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-primary" />
-                </div>
-                Clinical Outcomes
+          <Card className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" /> Clinical Outcomes
               </CardTitle>
               <Dialog open={isOutcomeDialogOpen} onOpenChange={(o) => { setIsOutcomeDialogOpen(o); if (!o) { setOutcomeMetricId(""); setOutcomeBaseline(""); setOutcomeCurrent(""); setOutcomeTarget(""); setOutcomeProgramId(""); setOutcomeNotes(""); } }}>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="h-10 rounded-xl px-6 bg-primary hover:bg-primary/90 shadow-sm font-semibold">
-                    <Plus className="w-4 h-4 mr-2" /> Record Outcome
+                  <Button size="sm" variant="outline" className="h-8">
+                    <Plus className="w-4 h-4 mr-1" /> Record Outcome
                   </Button>
                 </DialogTrigger>
-                <DialogContent aria-describedby={undefined} className="rounded-2xl">
+                <DialogContent aria-describedby={undefined} className="max-w-lg">
                   <DialogHeader><DialogTitle>Record Clinical Outcome</DialogTitle></DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
@@ -1625,85 +1539,66 @@ export default function PatientDetailPage() {
             </CardHeader>
             <CardContent>
               {isOutcomesLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-2xl" />)}
-                </div>
+                <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}</div>
               ) : !outcomesData?.data?.length ? (
-                <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-muted/20 rounded-2xl border border-dashed border-border/50">
-                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <TrendingUp className="w-8 h-8 text-muted-foreground/50" />
-                  </div>
-                  <h4 className="text-base font-semibold text-foreground mb-1">No outcomes recorded</h4>
-                  <p className="text-sm text-muted-foreground max-w-sm">Record clinical outcomes to track patient progress against care program goals.</p>
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <TrendingUp className="w-10 h-10 mb-3 opacity-20" />
+                  <p className="font-medium text-sm">No outcomes recorded yet</p>
+                  <p className="text-xs mt-1">Record clinical outcomes to track patient progress</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
                   {outcomesData.data.map((outcome: any) => {
                     const pct = outcome.progressPct ?? 0;
                     const improved = (outcome.currentValue ?? 0) >= (outcome.baselineValue ?? 0);
                     const metricName = outcome.outcomeMetric?.name ?? "Outcome";
                     const unit = outcome.unit ?? outcome.outcomeMetric?.unit ?? "";
                     const category = outcome.outcomeMetric?.category ?? "";
-                    const isAchieved = outcome.targetAchieved;
-                    
                     return (
-                      <div key={outcome.id} className={`group flex flex-col p-4 rounded-2xl bg-card border ${isAchieved ? 'border-emerald-500/30 shadow-emerald-500/5' : 'border-border/60'} shadow-sm hover:shadow-md transition-all`}>
-                        <div className="flex items-start justify-between mb-4">
+                      <div key={outcome.id} className="border border-border rounded-xl p-4 space-y-3">
+                        <div className="flex items-start justify-between">
                           <div>
-                            <div className="flex items-center gap-2 mb-1.5">
-                              <h4 className="font-bold text-foreground">{metricName}</h4>
-                              {category && <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider px-2 bg-muted/50 text-muted-foreground">{category}</Badge>}
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-sm">{metricName}</span>
+                              {category && <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{category}</span>}
+                              {outcome.targetAchieved && (
+                                <span className="text-xs bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3" /> Target Achieved
+                                </span>
+                              )}
                             </div>
-                            <p className="text-xs text-muted-foreground font-medium">
-                              Recorded: {outcome.measuredAt ? format(new Date(outcome.measuredAt), 'MMM d, yyyy') : format(new Date(outcome.createdAt), 'MMM d, yyyy')}
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Recorded {outcome.measuredAt ? format(new Date(outcome.measuredAt), 'MMM d, yyyy') : format(new Date(outcome.createdAt), 'MMM d, yyyy')}
                             </p>
                           </div>
-                          
-                          {isAchieved && (
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-success/10 text-success">
-                              <CheckCircle className="w-4 h-4" />
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-foreground">
+                              {outcome.currentValue} {unit}
                             </div>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-end justify-between mb-6 bg-muted/20 p-4 rounded-xl border border-border/50">
-                          <div>
-                            <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Current</div>
-                            <div className="text-3xl font-black text-foreground tracking-tight">
-                              {outcome.currentValue} <span className="text-lg font-semibold text-muted-foreground">{unit}</span>
+                            <div className="text-xs text-muted-foreground">
+                              {improved ? '↑' : '↓'} {Math.abs(outcome.improvementPct ?? 0).toFixed(1)}% vs baseline
                             </div>
                           </div>
-                          <div className={`flex flex-col items-end ${improved ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                            <div className="flex items-center gap-1 text-sm font-bold bg-background/50 px-2 py-1 rounded-md">
-                              {improved ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                              {Math.abs(outcome.improvementPct ?? 0).toFixed(1)}%
-                            </div>
-                            <div className="text-[10px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">Vs Baseline</div>
-                          </div>
                         </div>
-                        
                         {/* Progress bar */}
-                        <div className="space-y-2 mt-auto">
-                          <div className="flex justify-between text-xs font-semibold text-muted-foreground">
-                            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-border" /> {outcome.baselineValue} {unit}</span>
-                            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-primary/40" /> {outcome.targetValue} {unit}</span>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Baseline: {outcome.baselineValue} {unit}</span>
+                            <span>Target: {outcome.targetValue} {unit}</span>
                           </div>
-                          <div className="w-full bg-muted/50 rounded-full h-3 border border-border/50 overflow-hidden relative">
+                          <div className="w-full bg-muted rounded-full h-2">
                             <div
-                              className="absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ease-out"
+                              className="h-2 rounded-full transition-all"
                               style={{
                                 width: `${Math.min(100, pct)}%`,
-                                background: pct >= 100 ? 'hsl(var(--success))' : pct >= 50 ? 'hsl(var(--primary))' : 'hsl(var(--warning))'
+                                background: pct >= 100 ? '#10b981' : pct >= 50 ? '#3b82f6' : '#f59e0b'
                               }}
                             />
                           </div>
-                          <div className="text-right text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{pct}% to target</div>
+                          <div className="text-right text-xs text-muted-foreground">{pct}% to target</div>
                         </div>
-                        
                         {outcome.notes && (
-                          <div className="mt-4 pt-3 border-t border-border/50 text-sm text-muted-foreground italic bg-muted/20 p-3 rounded-xl border-dashed">
-                            {outcome.notes}
-                          </div>
+                          <p className="text-xs text-muted-foreground border-t border-border pt-2">{outcome.notes}</p>
                         )}
                       </div>
                     );
@@ -1715,24 +1610,19 @@ export default function PatientDetailPage() {
         </TabsContent>
 
         {/* ── TASKS TAB ──────────────────────────────────────────────────────── */}
-        {/* ── TASKS TAB ──────────────────────────────────────────────────────── */}
         <TabsContent value="tasks" className="animate-in-up">
-          <Card className="glass-card border-border/50 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2" />
-            <CardHeader className="flex flex-row items-center justify-between pb-6 border-b border-border/50 mb-6">
-              <CardTitle className="text-xl font-bold flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <ClipboardList className="w-5 h-5 text-primary" />
-                </div>
-                Care Tasks
+          <Card className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ClipboardList className="w-4 h-4" /> Care Tasks
               </CardTitle>
               <Dialog open={isTaskDialogOpen} onOpenChange={(o) => { setIsTaskDialogOpen(o); if (!o) { setTaskTitle(""); setTaskDescription(""); setTaskPriority("MEDIUM"); setTaskAssignedTo(""); setTaskDueDate(""); setTaskDueTime(""); } }}>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="h-10 rounded-xl px-6 bg-primary hover:bg-primary/90 shadow-sm font-semibold">
-                    <Plus className="w-4 h-4 mr-2" /> Add Task
+                  <Button size="sm" variant="outline" className="h-8">
+                    <Plus className="w-4 h-4 mr-1" /> Add Task
                   </Button>
                 </DialogTrigger>
-                <DialogContent aria-describedby={undefined} className="max-w-lg rounded-2xl">
+                <DialogContent aria-describedby={undefined} className="max-w-lg">
                   <DialogHeader><DialogTitle>Add Care Task</DialogTitle></DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
@@ -1815,77 +1705,74 @@ export default function PatientDetailPage() {
             </CardHeader>
             <CardContent>
               {isTasksLoading ? (
-                <div className="space-y-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-2xl" />)}</div>
+                <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}</div>
               ) : !tasksData?.data?.length ? (
-                <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-muted/20 rounded-2xl border border-dashed border-border/50">
-                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <ClipboardList className="w-8 h-8 text-muted-foreground/50" />
-                  </div>
-                  <h4 className="text-base font-semibold text-foreground mb-1">No tasks assigned</h4>
-                  <p className="text-sm text-muted-foreground max-w-sm">Create a care task to coordinate patient support across the care team.</p>
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <ClipboardList className="w-10 h-10 mb-3 opacity-20" />
+                  <p className="font-medium text-sm">No tasks assigned yet</p>
+                  <p className="text-xs mt-1">Create a care task to coordinate patient support</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {tasksData.data.map((task: any) => {
                     const isTaskOverdue = task.isOverdue || (task.status !== "COMPLETED" && new Date(task.dueDate) < new Date());
                     const priorityConfig = {
-                      LOW: "bg-muted text-muted-foreground border-border",
-                      MEDIUM: "bg-primary/10 text-primary border-primary/20",
-                      HIGH: "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 border-amber-200/50",
-                      CRITICAL: "bg-destructive/10 text-destructive border-destructive/20",
-                    }[task.priority as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"] || "bg-muted text-muted-foreground border-border";
+                      LOW: "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300",
+                      MEDIUM: "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400",
+                      HIGH: "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400",
+                      CRITICAL: "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-200/50",
+                    }[task.priority as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"] || "bg-muted text-muted-foreground";
 
                     const statusConfig = {
-                      PENDING: { label: "Pending", class: "bg-muted text-muted-foreground border-border shadow-sm" },
-                      IN_PROGRESS: { label: "In Progress", class: "bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm" },
-                      COMPLETED: { label: "Completed", class: "bg-success/10 text-success border-success/20 shadow-sm" },
-                      OVERDUE: { label: "Overdue", class: "bg-rose-50 text-rose-700 border-rose-200 shadow-sm" },
+                      PENDING: { label: "Pending", class: "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700" },
+                      IN_PROGRESS: { label: "In Progress", class: "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-300 dark:border-indigo-900" },
+                      COMPLETED: { label: "Completed", class: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900" },
+                      OVERDUE: { label: "Overdue", class: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-900" },
                     }[task.status as "PENDING" | "IN_PROGRESS" | "COMPLETED" | "OVERDUE"] || { label: task.status, class: "bg-muted text-muted-foreground" };
 
                     return (
-                      <div key={task.id} className={cn("group flex flex-col md:flex-row justify-between gap-4 p-4 rounded-2xl bg-card border border-border/60 shadow-sm hover:shadow-md hover:border-primary/30 transition-all", task.status === "COMPLETED" && "opacity-75 bg-muted/20 hover:border-border/60")}>
-                        <div className="space-y-3 flex-1">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <span className={cn("font-bold text-base text-foreground", task.status === "COMPLETED" && "line-through text-muted-foreground")}>{task.title}</span>
-                            <Badge variant="outline" className={cn("text-[10px] font-bold uppercase tracking-wider px-2 border", priorityConfig)}>
+                      <div key={task.id} className={cn("border border-border rounded-xl p-4 flex flex-col md:flex-row justify-between gap-4 transition-all", task.status === "COMPLETED" && "opacity-75 bg-muted/20")}>
+                        <div className="space-y-2 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={cn("font-semibold text-sm", task.status === "COMPLETED" && "line-through text-muted-foreground")}>{task.title}</span>
+                            <Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 rounded-full border-transparent", priorityConfig)}>
                               {task.priority}
                             </Badge>
-                            <Badge variant="outline" className={cn("text-[10px] font-bold uppercase tracking-wider px-2 border", statusConfig.class)}>
+                            <Badge variant="outline" className={cn("text-[10px] px-2 py-0.5 rounded-full", statusConfig.class)}>
                               {isTaskOverdue && task.status !== "COMPLETED" ? "OVERDUE" : statusConfig.label}
                             </Badge>
                           </div>
                           {task.description && (
-                            <p className={cn("text-sm text-muted-foreground leading-relaxed", task.status === "COMPLETED" && "line-through")}>
+                            <p className={cn("text-xs text-muted-foreground leading-relaxed", task.status === "COMPLETED" && "line-through")}>
                               {task.description}
                             </p>
                           )}
-                          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-medium pt-2 text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground pt-1">
                             {task.assignee && (
-                              <span className="flex items-center gap-1.5 bg-muted/50 px-2.5 py-1 rounded-md border border-border/50">
+                              <span className="flex items-center gap-1">
                                 <User className="w-3.5 h-3.5" />
-                                {task.assignee.firstName} {task.assignee.lastName}
+                                Assigned to {task.assignee.firstName} {task.assignee.lastName}
                               </span>
                             )}
-                            <span className={cn("flex items-center gap-1.5 bg-muted/50 px-2.5 py-1 rounded-md border border-border/50", isTaskOverdue && task.status !== "COMPLETED" && "bg-destructive/10 text-destructive border-destructive/20 font-bold")}>
+                            <span className={cn("flex items-center gap-1", isTaskOverdue && task.status !== "COMPLETED" && "text-destructive font-semibold")}>
                               <Clock className="w-3.5 h-3.5" />
                               Due: {format(new Date(task.dueDate), 'MMM d, yyyy • h:mm a')}
                             </span>
                             {task.completedAt && (
-                              <span className="flex items-center gap-1.5 text-success bg-success/10 px-2.5 py-1 rounded-md border border-success/20">
-                                <CheckCircle className="w-3.5 h-3.5" />
+                              <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                                 Completed: {format(new Date(task.completedAt), 'MMM d, yyyy')}
                               </span>
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 self-end md:self-center border-t border-border/50 md:border-t-0 md:border-l md:pl-6 pt-4 md:pt-0 w-full md:w-auto mt-2 md:mt-0">
+                        <div className="flex items-center gap-2 self-end md:self-center">
                           {task.status !== "COMPLETED" && (
                             <>
                               {task.status === "PENDING" && (
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="h-9 w-full md:w-auto text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg transition-all"
+                                  className="h-8 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:text-indigo-300 dark:hover:bg-indigo-950/30"
                                   onClick={async () => {
                                     try {
                                       await updateTaskMutation.mutateAsync({ id: task.id, data: { status: "IN_PROGRESS" } });
@@ -1897,13 +1784,13 @@ export default function PatientDetailPage() {
                                   }}
                                   disabled={updateTaskMutation.isPending}
                                 >
-                                  <PlayCircle className="w-4 h-4 mr-1.5" /> Start
+                                  <PlayCircle className="w-4 h-4 mr-1" /> Start
                                 </Button>
                               )}
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-9 w-full md:w-auto text-xs font-semibold text-success hover:text-success hover:bg-success/10 border border-transparent hover:border-success/30 rounded-lg transition-all"
+                                className="h-8 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-950/30"
                                 onClick={async () => {
                                   try {
                                     await completeTaskMutation.mutateAsync({ id: task.id });
@@ -1915,17 +1802,17 @@ export default function PatientDetailPage() {
                                 }}
                                 disabled={completeTaskMutation.isPending}
                               >
-                                <CheckCircle className="w-4 h-4 mr-1.5" /> Complete
+                                <CheckCircle className="w-4 h-4 mr-1" /> Complete
                               </Button>
                             </>
                           )}
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0">
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive">
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent className="rounded-2xl">
+                            <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Delete Task</AlertDialogTitle>
                                 <AlertDialogDescription>
@@ -1963,241 +1850,129 @@ export default function PatientDetailPage() {
 
         {/* ── FILES TAB ────────────────────────────────────────────────────── */}
         <TabsContent value="files" className="animate-in-up">
-          <Card className="glass-card border-border/50 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2" />
-            <CardHeader className="flex flex-row items-center justify-between pb-6 border-b border-border/50 mb-6">
-              <CardTitle className="text-xl font-bold flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-primary" />
-                </div>
-                Files & Documents
-              </CardTitle>
-              <Dialog open={isFileDialogOpen} onOpenChange={setIsFileDialogOpen}>
+          <Card className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg flex items-center gap-2"><FileText className="w-4 h-4" /> Files & Documents</CardTitle>
+              <Dialog open={isFileDialogOpen} onOpenChange={(open) => { setIsFileDialogOpen(open); if (!open) { setSelectedFile(null); } }}>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="h-10 rounded-xl px-6 bg-primary hover:bg-primary/90 shadow-sm font-semibold">
-                    <Upload className="w-4 h-4 mr-2" /> Upload File
-                  </Button>
+                  <Button size="sm" variant="outline" className="h-8"><Upload className="w-4 h-4 mr-1" /> Upload</Button>
                 </DialogTrigger>
-                <DialogContent aria-describedby={undefined} className="rounded-2xl">
-                  <DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
-                  <div className="grid gap-4 py-6">
-                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-border/60 rounded-xl p-8 bg-muted/20 hover:bg-muted/40 transition-colors">
-                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                        <Upload className="w-8 h-8 text-primary" />
-                      </div>
-                      <Label htmlFor="file-upload" className="cursor-pointer">
-                        <span className="text-primary font-semibold hover:underline">Click to browse</span>
-                        <span className="text-muted-foreground ml-1">or drag and drop</span>
-                        <input id="file-upload" type="file" className="hidden" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
-                      </Label>
-                      <p className="text-xs text-muted-foreground mt-2">Securely upload patient reports, scans, or identification</p>
-                      {selectedFile && (
-                        <div className="mt-4 p-3 bg-card border border-border/50 rounded-lg flex items-center gap-3 w-full">
-                          <FileText className="w-5 h-5 text-primary" />
-                          <span className="text-sm font-medium truncate">{selectedFile.name}</span>
-                        </div>
-                      )}
+                <DialogContent aria-describedby={undefined}>
+                  <DialogHeader><DialogTitle>Upload File</DialogTitle></DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label>Select File</Label>
+                      <input type="file" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
                     </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => { setIsFileDialogOpen(false); setSelectedFile(null); }}>Cancel</Button>
-                    <Button onClick={handleUploadFile} disabled={!selectedFile || uploadFile.isPending} className="px-6">{uploadFile.isPending ? "Uploading..." : "Upload Document"}</Button>
+                    <Button onClick={handleUploadFile} disabled={!selectedFile || uploadFile.isPending}>{uploadFile.isPending ? "Uploading..." : "Upload"}</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
             </CardHeader>
             <CardContent>
-              {isFileLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-32 w-full rounded-2xl" />)}
-                </div>
-              ) : fileList?.data?.length ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {fileList.data.map((file) => {
-                    const ext = file.fileKey.split('.').pop()?.toLowerCase();
-                    const isImage = ['jpg', 'jpeg', 'png', 'webp'].includes(ext || '');
-                    const isPdf = ext === 'pdf';
-                    
-                    return (
-                      <div key={file.id} className="group flex flex-col p-4 rounded-2xl bg-card border border-border/60 shadow-sm hover:shadow-md hover:border-primary/30 transition-all relative overflow-hidden">
-                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-background/80 backdrop-blur-sm p-1 rounded-lg border border-border/50 shadow-sm">
-                          <a href={file.fileUrl} target="_blank" rel="noopener noreferrer">
-                            <Button size="icon" variant="ghost" className="h-7 w-7 rounded-md hover:text-primary hover:bg-primary/10">
-                              <Download className="w-3.5 h-3.5" />
-                            </Button>
-                          </a>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-7 w-7 rounded-md hover:text-destructive hover:bg-destructive/10 text-muted-foreground">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="rounded-2xl">
-                              <AlertDialogHeader><AlertDialogTitle>Delete Document</AlertDialogTitle><AlertDialogDescription>Are you sure you want to delete <span className="font-semibold">{file.fileKey}</span>? This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" onClick={() => handleDeleteFile(file.id)}>Yes, Delete</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+              {isFileLoading ? <Skeleton className="h-10 w-full" /> : fileList?.data?.length ? (
+                <div className="space-y-3">
+                  {fileList.data.map((file) => (
+                    <div key={file.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
+                          <FileText className="w-4 h-4" />
                         </div>
-                        
-                        <div className="flex-1 flex flex-col items-center justify-center py-4 relative">
-                          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-inner ${isPdf ? 'bg-destructive/10 text-destructive border border-destructive/20' : isImage ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-primary/10 text-primary border border-primary/20'}`}>
-                            {isPdf ? <FileText className="w-8 h-8" /> : isImage ? <FileText className="w-8 h-8" /> : <FileText className="w-8 h-8" />}
-                          </div>
-                          <div className="text-center w-full">
-                            <h4 className="text-sm font-bold text-foreground truncate px-2" title={file.fileKey}>{file.fileKey}</h4>
-                            <p className="text-xs text-muted-foreground mt-1 font-medium">{format(new Date(file.createdAt), 'MMM d, yyyy')}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="pt-3 border-t border-border/50 mt-auto">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center shrink-0">
-                              <User className="w-3 h-3" />
-                            </div>
-                            <span className="truncate">Uploaded by {file.uploader?.firstName}</span>
-                          </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium leading-none">{file.fileKey}</span>
+                          <span className="text-xs text-muted-foreground mt-1">{format(new Date(file.createdAt), 'MMM d, yyyy')} • {file.uploader?.firstName} {file.uploader?.lastName}</span>
                         </div>
                       </div>
-                    );
-                  })}
+                      <div className="flex items-center gap-2">
+                        <a href={file.fileUrl} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><Download className="w-4 h-4 text-muted-foreground" /></Button>
+                        </a>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader><AlertDialogTitle>Delete File</AlertDialogTitle><AlertDialogDescription>Are you sure you want to delete {file.fileKey}? This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteFile(file.id)}>Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-muted/20 rounded-2xl border border-dashed border-border/50">
-                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <FileText className="w-8 h-8 text-muted-foreground/50" />
-                  </div>
-                  <h4 className="text-base font-semibold text-foreground mb-1">No documents found</h4>
-                  <p className="text-sm text-muted-foreground max-w-sm">Securely upload patient reports, identification, or clinical scans here.</p>
-                </div>
-              )}
+              ) : <div className="text-sm text-muted-foreground py-2 text-center">No files uploaded yet.</div>}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* ── COMMUNICATIONS TAB ────────────────────────────────────────────── */}
         <TabsContent value="communications" className="animate-in-up">
-          <Card className="glass-card border-border/50 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2" />
-            <CardHeader className="flex flex-row items-center justify-between pb-6 border-b border-border/50 mb-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <CardTitle className="text-xl font-bold flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <MessageSquare className="w-5 h-5 text-primary" />
-                  </div>
-                  Communications
-                </CardTitle>
-                <div className="flex bg-muted/50 p-1 rounded-xl border border-border/50 shadow-inner">
-                  <Button size="sm" variant={commType === "SMS" ? "default" : "ghost"} className={`h-8 rounded-lg px-4 text-xs font-semibold transition-all ${commType === "SMS" ? "shadow-sm" : ""}`} onClick={() => setCommType("SMS")}>SMS</Button>
-                  <Button size="sm" variant={commType === "EMAIL" ? "default" : "ghost"} className={`h-8 rounded-lg px-4 text-xs font-semibold transition-all ${commType === "EMAIL" ? "shadow-sm" : ""}`} onClick={() => setCommType("EMAIL")}>Email</Button>
+          <Card className="glass-card">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2"><MessageSquare className="w-4 h-4" /> Communications</CardTitle>
+                <div className="flex gap-2 mt-2">
+                  <Button size="sm" variant={commType === "SMS" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setCommType("SMS")}>SMS</Button>
+                  <Button size="sm" variant={commType === "EMAIL" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setCommType("EMAIL")}>Email</Button>
                 </div>
               </div>
-              <Dialog open={isSmsDialogOpen} onOpenChange={setIsSmsDialogOpen}>
+              <Dialog open={isSmsDialogOpen} onOpenChange={(open) => { setIsSmsDialogOpen(open); if (!open) { setSmsMessage(""); } }}>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="h-10 rounded-xl px-6 bg-primary hover:bg-primary/90 shadow-sm font-semibold">
-                    <Send className="w-4 h-4 mr-2" /> New Message
-                  </Button>
+                  <Button size="sm" variant="outline" className="h-8"><Send className="w-4 h-4 mr-1" /> Send {commType}</Button>
                 </DialogTrigger>
-                <DialogContent aria-describedby={undefined} className="rounded-2xl max-w-md">
-                  <DialogHeader><DialogTitle>New {commType} Message</DialogTitle></DialogHeader>
+                <DialogContent aria-describedby={undefined}>
+                  <DialogHeader><DialogTitle>Send {commType} to Patient</DialogTitle></DialogHeader>
                   <div className="grid gap-4 py-4">
                     {commType === "EMAIL" && (
                       <div className="grid gap-2">
-                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Subject</Label>
-                        <Input
+                        <Label>Subject</Label>
+                        <input
                           type="text"
-                          className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
-                          placeholder="e.g. Test Results Available"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          placeholder="Email subject..."
                           id="comm-subject"
                         />
                       </div>
                     )}
                     <div className="grid gap-2">
-                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Message Body</Label>
-                      <Textarea 
-                        value={smsMessage} 
-                        onChange={(e) => setSmsMessage(e.target.value)} 
-                        placeholder={commType === "SMS" ? "Type your SMS message..." : "Type your email body..."} 
-                        rows={6} 
-                        className="rounded-xl border-input bg-background resize-none"
-                        maxLength={commType === "SMS" ? 1600 : 5000} 
-                      />
-                      <div className="flex justify-end">
-                        <span className={`text-[10px] font-bold ${smsMessage.length > (commType === "SMS" ? 1500 : 4800) ? "text-amber-500" : "text-muted-foreground"}`}>
-                          {smsMessage.length} / {commType === "SMS" ? 1600 : 5000}
-                        </span>
-                      </div>
+                      <Label>{commType === "EMAIL" ? "Body" : "Message"}</Label>
+                      <Textarea value={smsMessage} onChange={(e) => setSmsMessage(e.target.value)} placeholder={commType === "SMS" ? "Type your SMS message..." : "Type your email body..."} rows={4} maxLength={commType === "SMS" ? 1600 : 5000} />
+                      <p className="text-xs text-muted-foreground text-right">{smsMessage.length}/{commType === "SMS" ? 1600 : 5000}</p>
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsSmsDialogOpen(false)} className="rounded-xl">Cancel</Button>
-                    <Button onClick={handleSendSms} disabled={!smsMessage.trim() || createCommunication.isPending} className="rounded-xl px-6">
-                      {createCommunication.isPending ? "Sending..." : "Send Message"} <Send className="w-3.5 h-3.5 ml-2" />
-                    </Button>
+                    <Button variant="outline" onClick={() => setIsSmsDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleSendSms} disabled={!smsMessage.trim() || createCommunication.isPending}>Send</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
             </CardHeader>
             <CardContent>
-              {isSmsLoading ? (
-                <div className="space-y-4">
-                  {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-2xl" />)}
-                </div>
-              ) : smsHistory?.data?.length ? (
-                <div className="space-y-4 pr-2 max-h-[600px] overflow-y-auto">
-                  {smsHistory.data.map((comm) => {
-                    const isDelivered = comm.status === "DELIVERED" || comm.status === "SENT";
-                    const isFailed = comm.status === "FAILED";
-                    
-                    return (
-                      <div key={comm.id} className="flex flex-col gap-2 p-4 rounded-2xl bg-card border border-border/60 shadow-sm hover:shadow-md transition-all">
-                        <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-1">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                              {comm.type === "SMS" ? <MessageSquare className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
-                            </div>
-                            <span className="text-sm font-bold">{comm.type || "Message"}</span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[11px] font-semibold text-muted-foreground bg-muted/50 px-2 py-1 rounded-md border border-border/50">
-                              {format(new Date(comm.createdAt), 'MMM d, yyyy • h:mm a')}
-                            </span>
-                            <Badge 
-                              variant={isDelivered ? "default" : isFailed ? "destructive" : "secondary"} 
-                              className={`text-[10px] font-bold uppercase tracking-wider px-2 ${isDelivered ? 'bg-success/10 text-success hover:bg-success/20 border-success/20' : ''}`}
-                            >
-                              {comm.status}
-                            </Badge>
-                          </div>
-                        </div>
-                        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap pl-10">
-                          {comm.body}
-                        </p>
+              {isSmsLoading ? <Skeleton className="h-10 w-full" /> : smsHistory?.data?.length ? (
+                <div className="space-y-3">
+                  {smsHistory.data.map((comm) => (
+                    <div key={comm.id} className="flex flex-col gap-1 py-2 border-b border-border last:border-0">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="text-xs">{comm.status}</Badge>
+                        <span className="text-xs text-muted-foreground">{format(new Date(comm.createdAt), 'MMM d, yyyy HH:mm')}</span>
                       </div>
-                    );
-                  })}
+                      <p className="text-sm text-muted-foreground">{comm.body}</p>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-muted/20 rounded-2xl border border-dashed border-border/50">
-                  <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <MessageSquare className="w-10 h-10 text-muted-foreground/50" />
-                  </div>
-                  <h4 className="text-lg font-bold text-foreground mb-2">No communications history</h4>
-                  <p className="text-sm text-muted-foreground max-w-sm mb-6">
-                    Send secure messages to the patient via SMS or Email directly from the platform.
-                  </p>
-                  <Button onClick={() => setIsSmsDialogOpen(true)} className="rounded-xl px-6 bg-primary hover:bg-primary/90 shadow-sm font-semibold">
-                    <Send className="w-4 h-4 mr-2" /> Send First Message
-                  </Button>
-                </div>
-              )}
+              ) : <div className="text-sm text-muted-foreground py-2 text-center">No messages sent yet.</div>}
             </CardContent>
           </Card>
         </TabsContent>
         </div>
       </Tabs>
+      </div>
     </div>
   );
 }

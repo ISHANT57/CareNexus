@@ -25,11 +25,9 @@ router.get("/", authorizePermission("clinics", "read"), async (req, res, next) =
     const areaId = req.query["areaId"] as string | undefined;
     const q = req.query["q"] as string | undefined;
     const reqTenantId = req.query["tenantId"] as string | undefined;
-    const roleScope = await getRoleScope(req, "clinic");
     const where = {
       deletedAt: null,
       ...(req.tenantId ? { tenantId: req.tenantId } : reqTenantId ? { tenantId: reqTenantId } : {}),
-      ...roleScope,
       ...(areaId ? { areaId } : {}),
       ...(q ? { name: { contains: q, mode: "insensitive" as const } } : {}),
     };
@@ -49,14 +47,13 @@ router.get("/", authorizePermission("clinics", "read"), async (req, res, next) =
 
 router.get("/:id", authorizePermission("clinics", "read"), async (req, res, next) => {
   try {
-    const roleScope = await getRoleScope(req, "clinic");
     const clinic = await prisma.clinic.findFirst({
-      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope },
+      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null },
       include: {
         area: { select: { id: true, name: true } },
         userClinicAssignments: {
           where: { deletedAt: null },
-          include: { user: { select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true, mobile: true } } },
+          include: { user: { select: { id: true, firstName: true, lastName: true, role: { select: { name: true } } } } },
         },
         _count: { select: { patients: true } },
       },
@@ -69,7 +66,12 @@ router.get("/:id", authorizePermission("clinics", "read"), async (req, res, next
 router.post("/", authorizePermission("clinics", "write"), validateBody(ClinicSchema), async (req, res, next) => {
   try {
     const data = req.body as z.infer<typeof ClinicSchema>;
-    let targetTenantId = data.tenantId || req.tenantId;
+    // HIGH-008: non-super-admins may only create within their own tenant
+    const isSuperAdmin = req.user?.role === "SUPER_ADMIN";
+    if (!isSuperAdmin && data.tenantId && data.tenantId !== req.tenantId) {
+      throw Errors.forbidden("You cannot create clinics in another tenant");
+    }
+    let targetTenantId = isSuperAdmin ? (data.tenantId || req.tenantId) : req.tenantId;
 
     if (!targetTenantId) {
       // If SUPER_ADMIN didn't pass tenantId, infer it from the Area
@@ -79,59 +81,9 @@ router.post("/", authorizePermission("clinics", "write"), validateBody(ClinicSch
     }
 
     const area = await prisma.area.findFirst({ where: { id: data.areaId, tenantId: targetTenantId, deletedAt: null } });
-    if (!area) throw Errors.validation("Area does not belong to this tenant");
+    if (!area) throw Errors.notFound("Area");
     
     const clinic = await prisma.clinic.create({ data: { ...data, tenantId: targetTenantId } });
-
-    // Auto-assign existing CLINIC_ADMINs of the tenant to the new clinic,
-    // and AREA_ADMINs if applicable.
-    const tenantAdmins = await prisma.userTenantAssignment.findMany({
-      where: {
-        tenantId: targetTenantId,
-        role: { name: { in: ["CLINIC_ADMIN", "AREA_ADMIN"] } },
-        status: "ACTIVE",
-        user: { deletedAt: null }
-      },
-      include: { role: true }
-    });
-
-    for (const assignment of tenantAdmins) {
-      let shouldAssign = assignment.role.name === "CLINIC_ADMIN";
-
-      if (assignment.role.name === "AREA_ADMIN") {
-        if (req.user && assignment.userId === req.user.userId) {
-          shouldAssign = true;
-        } else {
-          const hasAreaAssignment = await prisma.userClinicAssignment.findFirst({
-            where: {
-              userId: assignment.userId,
-              deletedAt: null,
-              clinic: { areaId: clinic.areaId }
-            }
-          });
-          if (hasAreaAssignment) {
-            shouldAssign = true;
-          }
-        }
-      }
-
-      if (shouldAssign) {
-        await prisma.userClinicAssignment.upsert({
-          where: {
-            userId_clinicId: {
-              userId: assignment.userId,
-              clinicId: clinic.id
-            }
-          },
-          update: { deletedAt: null },
-          create: {
-            userId: assignment.userId,
-            clinicId: clinic.id
-          }
-        });
-      }
-    }
-
     await createAuditLog({ req, entityType: "Clinic", entityId: clinic.id, action: "CREATE", after: data });
     res.status(201).json(clinic);
   } catch (err) { next(err); }
@@ -139,14 +91,15 @@ router.post("/", authorizePermission("clinics", "write"), validateBody(ClinicSch
 
 router.patch("/:id", authorizePermission("clinics", "write"), validateBody(ClinicSchema.partial()), async (req, res, next) => {
   try {
-    const clinic = await prisma.clinic.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const clinicScope = await getRoleScope(req, "clinic");
+    const clinic = await prisma.clinic.findFirst({ where: { AND: [{ id: req.params["id"] as string, deletedAt: null }, clinicScope] } });
     if (!clinic) throw Errors.notFound("Clinic");
     assertTenantMatch(req, clinic.tenantId);
-    
+
     let updateData = req.body;
     if (updateData.areaId && updateData.areaId !== clinic.areaId) {
-      const area = await prisma.area.findFirst({ where: { id: updateData.areaId, tenantId: clinic.tenantId, deletedAt: null } });
-      if (!area) throw Errors.validation("Area does not belong to this tenant");
+      const area = await prisma.area.findUnique({ where: { id: updateData.areaId } });
+      if (!area || area.deletedAt) throw Errors.notFound("Area");
       // ensure clinic is moved to the new area's tenant
       updateData.tenantId = area.tenantId;
     }
@@ -159,7 +112,8 @@ router.patch("/:id", authorizePermission("clinics", "write"), validateBody(Clini
 
 router.delete("/:id", authorizePermission("clinics", "write"), async (req, res, next) => {
   try {
-    const clinic = await prisma.clinic.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const clinicScope = await getRoleScope(req, "clinic");
+    const clinic = await prisma.clinic.findFirst({ where: { AND: [{ id: req.params["id"] as string, deletedAt: null }, clinicScope] } });
     if (!clinic) throw Errors.notFound("Clinic");
     assertTenantMatch(req, clinic.tenantId);
     await prisma.clinic.update({ where: { id: clinic.id }, data: { deletedAt: new Date() } });

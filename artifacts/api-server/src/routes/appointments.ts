@@ -58,13 +58,13 @@ router.get("/", authorizePermission("appointments", "read"), async (req, res, ne
 
 router.post("/", authorizePermission("appointments", "write"), validateBody(AppointmentSchema), async (req, res, next) => {
   try {
+    if (!req.tenantId) throw Errors.validation("A specific tenant must be selected to perform this action. Please select a tenant from the switcher.");
     const { patientId, doctorId, clinicId, appointmentDate, durationMinutes, notes } = req.body;
 
-    const patientRoleScope = await getRoleScope(req, "patient");
-    const patient = await prisma.patient.findFirst({ where: { id: patientId, tenantId: req.tenantId!, deletedAt: null, ...patientRoleScope } });
+    const patient = await prisma.patient.findFirst({ where: { id: patientId, tenantId: req.tenantId!, deletedAt: null } });
     if (!patient) throw Errors.notFound("Patient");
 
-    const doctor = await prisma.user.findFirst({ where: { id: doctorId, tenantAssignments: { some: { tenantId: req.tenantId! } }, deletedAt: null } });
+    const doctor = await prisma.user.findFirst({ where: { id: doctorId, tenantId: req.tenantId!, deletedAt: null } });
     if (!doctor) throw Errors.notFound("Doctor");
 
     const clinic = await prisma.clinic.findFirst({ where: { id: clinicId, tenantId: req.tenantId!, deletedAt: null } });

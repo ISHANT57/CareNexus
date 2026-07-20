@@ -8,12 +8,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Lock, CheckCircle, ArrowRight, Building2, Users, Activity, EyeOff, Eye, ChevronLeft, HeartPulse, BrainCircuit } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  Shield, Lock, CheckCircle, ArrowRight,
+  Building2, Users, Activity, Eye, EyeOff, Mail, Globe,
+} from "lucide-react";
+
+// ── Brand
+const BLUE = "#0b63f6";
+const NAVY = "#060d1b";
+const NAVY_CARD = "#0d1f3c";
+const NAVY_BORDER = "#1a2f52";
+const GREEN = "#059669";
+const VIOLET = "#7c3aed";
+const AMBER = "#f59e0b";
+const blueGrad = "linear-gradient(135deg, #0a3d91 0%, #0b63f6 100%)";
 
 const registerSchema = z.object({
   tenantName: z.string().min(2, "Organisation name is required"),
-  tenantDomain: z.string().min(2, "Domain is required").regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens"),
+  tenantDomain: z.string().min(2, "Domain is required"),
   firstName: z.string().min(2, "First name is required"),
   lastName: z.string().min(2, "Last name is required"),
   email: z.string().email("Invalid email address"),
@@ -22,45 +34,53 @@ const registerSchema = z.object({
 
 type RegisterForm = z.infer<typeof registerSchema>;
 
+const benefits = [
+  {
+    icon: Users, color: BLUE, bg: "rgba(11,99,246,0.12)",
+    title: "Multi-tenant patient management",
+    desc: "Isolated, secure environments for every healthcare organisation",
+  },
+  {
+    icon: Building2, color: GREEN, bg: "rgba(5,150,105,0.12)",
+    title: "Area & clinic hierarchy",
+    desc: "Manage hundreds of clinics across geographic areas from one control plane",
+  },
+  {
+    icon: Activity, color: VIOLET, bg: "rgba(124,58,237,0.12)",
+    title: "Real-time clinical analytics",
+    desc: "Programme outcomes, patient risk, and ICB-ready reporting dashboards",
+  },
+  {
+    icon: Shield, color: AMBER, bg: "rgba(245,158,11,0.12)",
+    title: "Enterprise-grade security",
+    desc: "NHS-compliant, role-based access with full GDPR audit trail",
+  },
+];
+
+const steps = [
+  { n: "1", label: "Register" },
+  { n: "2", label: "Verify email" },
+  { n: "3", label: "Set up clinics" },
+  { n: "4", label: "Go live" },
+];
+
 export default function RegisterPage() {
-  const [_, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const registerMutation = useRegister();
-
-  const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    mode: "onChange",
-    defaultValues: {
-      tenantName: "",
-      tenantDomain: "",
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
-    },
+    defaultValues: { tenantName: "", tenantDomain: "", firstName: "", lastName: "", email: "", password: "" },
   });
-
-  const nextStep = async () => {
-    let isValid = false;
-    if (step === 1) {
-      isValid = await form.trigger(["tenantName", "tenantDomain"]);
-    } else if (step === 2) {
-      isValid = await form.trigger(["firstName", "lastName", "email"]);
-    }
-    if (isValid) setStep((s) => s + 1);
-  };
-
-  const prevStep = () => setStep((s) => s - 1);
 
   const onSubmit = async (data: RegisterForm) => {
     try {
       await registerMutation.mutateAsync({ data });
       toast({
         title: "Registration successful",
-        description: "Please check the server console for the email verification link to verify your account before logging in.",
+        description: "Please check your email for the verification link before signing in.",
       });
       setLocation("/login");
     } catch (error: any) {
@@ -72,317 +92,378 @@ export default function RegisterPage() {
     }
   };
 
-  const variants = {
-    initial: { opacity: 0, x: 10 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -10 },
-  };
-
   return (
-    <div className="min-h-screen w-full flex bg-background font-sans selection:bg-primary/20">
+    <div className="min-h-screen w-full flex overflow-hidden" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
 
-      {/* ── LEFT PANEL (Form) ────────────────────────────────────── */}
-      <div className="w-full lg:w-[45%] flex flex-col justify-center px-8 sm:px-16 lg:px-24 py-12 relative z-10 bg-card">
+      {/* ── LEFT — Auth panel ─────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col bg-card relative overflow-y-auto">
+        {/* Top accent line */}
+        <div className="absolute top-0 left-0 right-0 h-0.5 z-10" style={{ background: blueGrad }} />
 
-        {/* Top Logo */}
-        <div className="absolute top-8 left-8 sm:top-12 sm:left-16 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20">
-            <svg viewBox="0 0 32 32" fill="none" className="w-5 h-5">
-              <rect x="13" y="4" width="6" height="24" rx="2" fill="white" opacity="0.95" />
-              <rect x="4" y="13" width="24" height="6" rx="2" fill="white" opacity="0.95" />
-            </svg>
-          </div>
-          <span className="font-extrabold text-xl text-foreground tracking-tight">CareNexus</span>
-        </div>
+        <div className="flex-1 flex flex-col justify-center px-8 sm:px-12 lg:px-16 py-12">
+          <div className="mx-auto w-full max-w-[420px]">
 
-        <div className="w-full max-w-[400px] mx-auto mt-16 lg:mt-0">
-          <div className="mb-10">
-            <h1 className="text-3xl font-bold text-foreground mb-3 tracking-tight">Request Access</h1>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              Create a new tenant workspace for your healthcare organization to manage patients securely.
-            </p>
-          </div>
-
-          <div className="mb-8">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-1.5 rounded-full bg-primary" />
-              <div className={`flex-1 h-1.5 rounded-full transition-colors duration-500 ${step >= 2 ? 'bg-primary' : 'bg-muted'}`} />
+            {/* Logo */}
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-md" style={{ background: blueGrad }}>
+                <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6">
+                  <rect x="13" y="4" width="6" height="24" rx="2" fill="white" opacity="0.95" />
+                  <rect x="4" y="13" width="24" height="6" rx="2" fill="white" opacity="0.95" />
+                </svg>
+              </div>
+              <div>
+                <div className="font-extrabold text-xl tracking-tight leading-none text-primary">CareNexus</div>
+                <div className="text-[10px] text-muted-foreground tracking-widest uppercase mt-0.5 font-medium">Enterprise Healthcare Platform</div>
+              </div>
             </div>
-            <div className="flex justify-between mt-2 text-xs font-bold uppercase tracking-wider">
-              <span className="text-primary">Organisation</span>
-              <span className={step >= 2 ? 'text-primary' : 'text-muted-foreground'}>Administrator</span>
-            </div>
-          </div>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <AnimatePresence mode="wait">
-                {step === 1 && (
-                  <motion.div
-                    key="step1"
-                    variants={variants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    transition={{ duration: 0.3 }}
-                    className="space-y-6"
-                  >
-                    <FormField
-                      control={form.control}
-                      name="tenantName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-bold text-foreground uppercase tracking-wider">Organisation Name</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="e.g. Northgate NHS Trust"
-                              className="h-12 bg-background border-border focus-visible:bg-card focus-visible:border-primary focus-visible:ring-primary/10 text-base rounded-xl transition-all"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="tenantDomain"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-bold text-foreground uppercase tracking-wider">Workspace Domain</FormLabel>
-                          <FormControl>
-                            <div className="flex items-center">
-                              <Input
-                                placeholder="northgate-trust"
-                                className="h-12 rounded-r-none bg-background border-border focus-visible:bg-card focus-visible:border-primary focus-visible:ring-primary/10 text-base rounded-l-xl border-r-0 transition-all"
-                                {...field}
-                              />
-                              <div className="h-12 px-4 flex items-center bg-muted border border-l-0 border-border text-muted-foreground font-medium text-sm rounded-r-xl">
-                                .carenexus.app
-                              </div>
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button
-                      type="button"
-                      onClick={nextStep}
-                      className="w-full h-12 text-[15px] font-bold mt-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5 group"
+            {/* Onboarding stepper */}
+            <div className="flex items-center gap-0 mb-8">
+              {steps.map((s, i) => (
+                <div key={s.n} className="flex items-center flex-1 last:flex-none">
+                  <div className="flex flex-col items-center gap-1">
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 ${i === 0 ? "text-white" : "bg-muted text-muted-foreground"}`}
+                      style={i === 0 ? { background: blueGrad } : undefined}
                     >
-                      Continue <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                    </Button>
-                  </motion.div>
-                )}
-
-                {step === 2 && (
-                  <motion.div
-                    key="step2"
-                    variants={variants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    transition={{ duration: 0.3 }}
-                    className="space-y-6"
-                  >
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="firstName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs font-bold text-foreground uppercase tracking-wider">First Name</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Jane"
-                                className="h-12 bg-background border-border focus-visible:bg-card focus-visible:border-primary focus-visible:ring-primary/10 text-base rounded-xl transition-all"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="lastName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs font-bold text-foreground uppercase tracking-wider">Last Name</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Smith"
-                                className="h-12 bg-background border-border focus-visible:bg-card focus-visible:border-primary focus-visible:ring-primary/10 text-base rounded-xl transition-all"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {i === 0 ? s.n : <span>{s.n}</span>}
                     </div>
+                    <span className={`text-[9px] font-semibold whitespace-nowrap ${i === 0 ? "text-primary" : "text-muted-foreground"}`}>{s.label}</span>
+                  </div>
+                  {i < steps.length - 1 && (
+                    <div className="flex-1 h-px mx-2 mb-4" style={{ background: i === 0 ? BLUE : "hsl(var(--border))" }} />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Heading */}
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground mb-1.5">Create your organisation</h1>
+              <p className="text-sm text-muted-foreground">Register a new CareNexus tenant for your healthcare provider.</p>
+            </div>
+
+            {/* Form */}
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+
+                {/* Organisation Details */}
+                <div className="rounded-2xl border border-border bg-muted/50/60 p-5 space-y-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${BLUE}12` }}>
+                      <Building2 className="w-3.5 h-3.5" style={{ color: BLUE }} />
+                    </div>
+                    <h3 className="text-sm font-bold text-foreground">Organisation Details</h3>
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="tenantName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Organisation Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="St. Jude's Mental Health Trust"
+                            className="h-10 bg-card border-border text-foreground placeholder:text-muted-foreground focus-visible:border-blue-500 focus-visible:ring-blue-500/20 rounded-xl text-sm"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="tenantDomain"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Subdomain</FormLabel>
+                        <FormControl>
+                          <div className="flex items-center rounded-xl overflow-hidden border border-border bg-card focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                            <div className="flex items-center pl-3 shrink-0">
+                              <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                            </div>
+                            <Input
+                              placeholder="stjudes"
+                              {...field}
+                              className="h-10 border-0 focus-visible:ring-0 bg-transparent text-foreground placeholder:text-muted-foreground rounded-none text-sm flex-1"
+                            />
+                            <div className="px-3 h-10 flex items-center text-sm font-semibold text-muted-foreground border-l border-border bg-muted/50 shrink-0 whitespace-nowrap">
+                              .carenexus.health
+                            </div>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Administrator Account */}
+                <div className="rounded-2xl border border-border bg-muted/50/60 p-5 space-y-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${VIOLET}12` }}>
+                      <Users className="w-3.5 h-3.5" style={{ color: VIOLET }} />
+                    </div>
+                    <h3 className="text-sm font-bold text-foreground">Administrator Account</h3>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
                     <FormField
                       control={form.control}
-                      name="email"
+                      name="firstName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-foreground uppercase tracking-wider">Work Email</FormLabel>
+                          <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">First Name</FormLabel>
                           <FormControl>
+                            <Input placeholder="Jane" className="h-10 bg-card border-border text-foreground placeholder:text-muted-foreground focus-visible:border-blue-500 focus-visible:ring-blue-500/20 rounded-xl text-sm" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Last Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Doe" className="h-10 bg-card border-border text-foreground placeholder:text-muted-foreground focus-visible:border-blue-500 focus-visible:ring-blue-500/20 rounded-xl text-sm" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Admin Email</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
                             <Input
-                              type="email"
-                              placeholder="jane.smith@nhs.net"
-                              className="h-12 bg-background border-border focus-visible:bg-card focus-visible:border-primary focus-visible:ring-primary/10 text-base rounded-xl transition-all"
+                              placeholder="admin@northgate.nhs.uk"
+                              className="h-10 pl-9 bg-card border-border text-foreground placeholder:text-muted-foreground focus-visible:border-blue-500 focus-visible:ring-blue-500/20 rounded-xl text-sm"
                               {...field}
                             />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-bold text-foreground uppercase tracking-wider">Create Password</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Input
-                                type={showPassword ? "text" : "password"}
-                                placeholder="••••••••"
-                                className="h-12 bg-background border-border focus-visible:bg-card focus-visible:border-primary focus-visible:ring-primary/10 pr-12 text-base rounded-xl transition-all"
-                                {...field}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                              >
-                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                              </button>
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="flex gap-3 pt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={prevStep}
-                        className="h-12 px-4 rounded-xl border-border text-muted-foreground font-bold hover:bg-muted transition-colors"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </Button>
-                      <Button
-                        type="submit"
-                        className="flex-1 h-12 text-[15px] font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5 relative overflow-hidden group"
-                        disabled={registerMutation.isPending}
-                      >
-                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                        <div className="relative flex items-center justify-center gap-2">
-                          {registerMutation.isPending ? (
-                            <>
-                              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              Creating Workspace...
-                            </>
-                          ) : (
-                            <>
-                              Complete Registration <CheckCircle className="w-4 h-4 ml-1" />
-                            </>
-                          )}
-                        </div>
-                      </Button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </form>
-          </Form>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-          <div className="mt-10 text-center text-sm text-muted-foreground font-medium border-t border-border pt-8">
-            Already have an account?{" "}
-            <Link href="/login" className="font-bold text-primary hover:text-primary/80 transition-colors hover:underline">
-              Sign in
-            </Link>
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Password</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                            <Input
+                              type={showPassword ? "text" : "password"}
+                              placeholder="Minimum 8 characters"
+                              className="h-10 pl-9 pr-10 bg-card border-border text-foreground placeholder:text-muted-foreground focus-visible:border-blue-500 focus-visible:ring-blue-500/20 rounded-xl text-sm"
+                              {...field}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground transition-colors"
+                              aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Submit */}
+                <Button
+                  type="submit"
+                  className="w-full h-11 text-sm font-bold text-white rounded-xl shadow-md hover:opacity-90 transition-opacity"
+                  disabled={registerMutation.isPending}
+                  style={{ background: blueGrad }}
+                >
+                  {registerMutation.isPending ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Creating account…
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      Complete Registration <ArrowRight className="w-4 h-4" />
+                    </span>
+                  )}
+                </Button>
+              </form>
+            </Form>
+
+            {/* Sign-in link */}
+            <p className="mt-5 text-center text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <Link href="/login" className="font-semibold hover:underline" style={{ color: BLUE }}>
+                Sign in
+              </Link>
+            </p>
+
+            {/* Trust badges */}
+            <div className="mt-8 pt-6 border-t border-border flex items-center justify-center gap-5">
+              {[
+                { icon: Shield, label: "NHS Compliant", color: "#059669" },
+                { icon: Lock, label: "256-bit Encrypted", color: BLUE },
+                { icon: CheckCircle, label: "HIPAA Ready", color: BLUE },
+              ].map(({ icon: Icon, label, color }) => (
+                <div key={label} className="flex flex-col items-center gap-1">
+                  <Icon className="w-4 h-4" style={{ color }} />
+                  <span className="text-[10px] text-muted-foreground font-medium text-center leading-tight">{label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Footer badges */}
-        <div className="absolute bottom-8 left-8 sm:left-16 flex items-center gap-6 text-xs font-semibold text-muted-foreground">
-          <div className="flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> 256-bit AES</div>
-          <div className="w-1 h-1 rounded-full bg-border" />
-          <div className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5" /> NHS DSP Toolkit Compliant</div>
+        {/* Footer */}
+        <div className="px-8 sm:px-12 lg:px-16 py-5 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p className="text-[11px] text-muted-foreground">© {new Date().getFullYear()} CareNexus. All rights reserved.</p>
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+            <a href="#" className="hover:text-muted-foreground transition-colors">Privacy Policy</a>
+            <span>·</span>
+            <a href="#" className="hover:text-muted-foreground transition-colors">Terms of Service</a>
+          </div>
         </div>
       </div>
 
-      {/* ── RIGHT PANEL (Premium Branding) ────────────────────────────────── */}
-      <div className="hidden lg:flex relative w-[55%] flex-col justify-center items-center overflow-hidden bg-sidebar">
-        {/* Dynamic Abstract Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10 pointer-events-none" />
-
-        {/* Animated Orbs */}
-        <motion.div
-          animate={{ rotate: 360, scale: [1, 1.1, 1] }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-[20%] -right-[10%] w-[800px] h-[800px] bg-gradient-to-t from-primary to-transparent rounded-full mix-blend-screen filter blur-[150px] opacity-30"
-        />
-        <motion.div
-          animate={{ rotate: -360, scale: [1, 1.2, 1] }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-[20%] -left-[10%] w-[600px] h-[600px] bg-gradient-to-b from-secondary to-transparent rounded-full mix-blend-screen filter blur-[120px] opacity-20"
+      {/* ── RIGHT — Branding panel (desktop only) ─────────────────── */}
+      <div
+        className="hidden lg:flex relative w-[52%] flex-col overflow-hidden"
+        style={{ background: NAVY }}
+      >
+        {/* Grid pattern */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.04]"
+          style={{
+            backgroundImage: "linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
         />
 
-        <div className="relative z-10 w-full max-w-[560px] px-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-success text-xs font-bold uppercase tracking-wider mb-8 backdrop-blur-md">
-              <Shield className="w-4 h-4" /> Built for Scale
+        {/* Cross watermark */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none" style={{ opacity: 0.03 }}>
+          <svg viewBox="0 0 200 200" fill="none" style={{ width: "480px", height: "480px" }}>
+            <rect x="80" y="10" width="40" height="180" rx="8" fill="white" />
+            <rect x="10" y="80" width="180" height="40" rx="8" fill="white" />
+          </svg>
+        </div>
+
+        {/* Radial glows */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] pointer-events-none" style={{ background: "radial-gradient(circle at 80% 10%, rgba(11,99,246,0.18) 0%, transparent 60%)" }} />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] pointer-events-none" style={{ background: "radial-gradient(circle at 20% 90%, rgba(124,58,237,0.12) 0%, transparent 60%)" }} />
+
+        <div className="relative z-10 flex flex-col h-full p-10 xl:p-14">
+
+          {/* Top bar */}
+          <div className="flex items-start justify-between mb-12">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                <svg viewBox="0 0 32 32" fill="none" className="w-5 h-5">
+                  <rect x="13" y="4" width="6" height="24" rx="2" fill="white" opacity="0.9" />
+                  <rect x="4" y="13" width="24" height="6" rx="2" fill="white" opacity="0.9" />
+                </svg>
+              </div>
+              <div>
+                <div className="font-bold text-white text-base leading-none">CareNexus</div>
+                <div className="text-[9px] tracking-widest uppercase mt-0.5 font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>Enterprise Healthcare Platform</div>
+              </div>
             </div>
 
-            <h2 className="text-4xl xl:text-5xl font-extrabold text-sidebar-foreground leading-[1.15] mb-6">
-              Deploy your secure clinical workspace <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-300">in seconds.</span>
+            {/* Free setup badge */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border" style={{ background: "rgba(11,99,246,0.15)", borderColor: "rgba(11,99,246,0.3)" }}>
+              <CheckCircle className="w-3 h-3" style={{ color: "#60a5fa" }} />
+              <span className="text-[10px] font-bold" style={{ color: "#93c5fd" }}>Free onboarding included</span>
+            </div>
+          </div>
+
+          {/* Headline */}
+          <div className="mb-10">
+            <h2 className="text-4xl xl:text-[2.75rem] font-extrabold text-white leading-tight tracking-tight mb-4">
+              Everything your<br />
+              <span style={{ background: "linear-gradient(90deg, #60a5fa 0%, #818cf8 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                clinical team needs
+              </span>
             </h2>
-
-            <p className="text-lg text-sidebar-foreground/70 leading-relaxed mb-12 max-w-[480px]">
-              Setup your organizational tenant, configure geographical areas, and onboard clinicians instantly with strict role-based access controls.
+            <p className="text-base leading-relaxed max-w-md" style={{ color: "rgba(255,255,255,0.5)" }}>
+              From patient onboarding to outcome tracking, CareNexus provides an end-to-end care management system built for healthcare excellence.
             </p>
+          </div>
 
-            {/* Glassmorphic Feature List */}
-            <div className="space-y-4">
-              {[
-                { icon: Users, title: "Multi-Tenant Architecture", desc: "Complete data isolation for different healthcare organizations." },
-                { icon: Building2, title: "Hierarchical Control", desc: "Manage clinics across regions with ease." },
-                { icon: Lock, title: "Granular RBAC", desc: "Strict permissions for Admins, Doctors, and Staff." }
-              ].map((item, idx) => {
-                const Icon = item.icon;
-                return (
-                  <motion.div 
-                    key={idx}
-                    whileHover={{ x: 5 }}
-                    className="flex items-center gap-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl backdrop-blur-sm transition-all"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center shrink-0 border border-cyan-500/20">
-                      <Icon className="w-5 h-5 text-cyan-400" />
-                    </div>
-                    <div>
-                      <h4 className="text-sidebar-foreground font-bold text-sm mb-0.5">{item.title}</h4>
-                      <p className="text-sidebar-foreground/60 text-sm leading-relaxed">{item.desc}</p>
-                    </div>
-                  </motion.div>
-                );
-              })}
+          {/* Benefits — vertical list with colored icons */}
+          <div className="space-y-3 mb-10">
+            {benefits.map(({ icon: Icon, color, bg, title, desc }) => (
+              <div
+                key={title}
+                className="flex items-start gap-4 rounded-2xl p-4 transition-all duration-200"
+                style={{ background: NAVY_CARD, border: `1px solid ${NAVY_BORDER}` }}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5" style={{ background: bg }}>
+                  <Icon className="w-4 h-4" style={{ color }} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white leading-snug">{title}</p>
+                  <p className="text-[11px] mt-0.5 leading-relaxed" style={{ color: "rgba(255,255,255,0.4)" }}>{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Testimonial */}
+          <div
+            className="mt-auto rounded-2xl p-5"
+            style={{ background: NAVY_CARD, border: `1px solid ${NAVY_BORDER}` }}
+          >
+            {/* Quote marks */}
+            <div className="text-4xl font-serif leading-none mb-2" style={{ color: `${BLUE}50` }}>"</div>
+            <p className="text-sm leading-relaxed mb-4" style={{ color: "rgba(255,255,255,0.65)" }}>
+              CareNexus transformed how we manage our patient pathways. The visibility across all our clinics is unprecedented.
+            </p>
+            <div className="flex items-center gap-3 pt-4 border-t" style={{ borderColor: NAVY_BORDER }}>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-extrabold text-white shrink-0" style={{ background: blueGrad }}>
+                SM
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white leading-none">Dr. Sarah Mitchell</p>
+                <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>Clinical Director, Northgate NHS Trust</p>
+              </div>
+              <div className="ml-auto flex gap-0.5">
+                {[...Array(5)].map((_, i) => (
+                  <span key={i} className="text-amber-400 text-xs">★</span>
+                ))}
+              </div>
             </div>
-          </motion.div>
+          </div>
+
+          {/* Bottom trust line */}
+          <div className="mt-5 flex items-center justify-center gap-2 py-3 border-t" style={{ borderColor: NAVY_BORDER }}>
+            <Lock className="w-3.5 h-3.5" style={{ color: "rgba(255,255,255,0.3)" }} />
+            <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+              Your data is encrypted end-to-end · NHS-compliant from day one
+            </p>
+          </div>
         </div>
-
       </div>
-
     </div>
   );
 }

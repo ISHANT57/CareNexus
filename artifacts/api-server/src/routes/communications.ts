@@ -9,7 +9,6 @@ import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 
 const router = Router();
-router.use(authenticate, requireTenant);
 
 const SendSmsSchema = z.object({
   patientIds: z.array(z.string().uuid()).min(1),
@@ -44,6 +43,7 @@ router.get("/", authorizePermission("communications", "read"), async (req, res, 
 
 router.post("/", authorizePermission("communications", "write"), async (req, res, next) => {
   try {
+    if (!req.tenantId) throw Errors.validation("A specific tenant must be selected to perform this action. Please select a tenant from the switcher.");
     const { patientId, type, subject, body: msgBody } = req.body as { patientId: string; type: string; subject: string; body?: string };
     if (!patientId) throw Errors.validation("patientId is required");
 
@@ -129,6 +129,7 @@ router.get("/sms", authorizePermission("communications", "read"), async (req, re
 
 router.post("/sms", authorizePermission("communications", "write"), validateBody(SendSmsSchema), async (req, res, next) => {
   try {
+    if (!req.tenantId) throw Errors.validation("A specific tenant must be selected to perform this action. Please select a tenant from the switcher.");
     const { patientIds, message } = req.body as z.infer<typeof SendSmsSchema>;
 
     const patients = await prisma.patient.findMany({

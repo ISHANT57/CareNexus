@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useListAreas, useListClinics } from "@workspace/api-client-react";
 import { useGetMe } from "@workspace/api-client-react";
-import { useActiveRole } from "@/hooks/useActiveRole";
 import { useTenantContext } from "@/contexts/TenantContext";
 
 /**
@@ -32,13 +31,13 @@ export function useAreaClinicCascade(
   const [areaQuery, setAreaQuery] = useState("");
   const [clinicQuery, setClinicQuery] = useState("");
 
-  const { user: me, isSuperAdmin } = useActiveRole();
+  const { data: me } = useGetMe({ query: { queryKey: ["getMe"] } });
   const { activeTenantId } = useTenantContext();
 
   // A SUPER_ADMIN with activeTenantId="ALL" has no specific tenant context
   // → disable area/clinic loading until they select a specific tenant
   const isSuperAdminWithNoTenant =
-    isSuperAdmin && activeTenantId === "ALL";
+    me?.role === "SUPER_ADMIN" && activeTenantId === "ALL";
 
   // Fetch tenant-scoped areas. Limit 1000 to cover large tenants.
   // Backend filters by req.tenantId automatically (set by requireTenant middleware

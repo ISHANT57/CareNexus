@@ -18,14 +18,13 @@ import {
   Moon,
   Monitor,
 } from "lucide-react";
-import { useGetMe, useLogout, useListNotifications, useListTenants } from "@workspace/api-client-react";
+import { useGetMe, useLogout, useListNotifications } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useTheme } from "@/components/ui/theme-provider";
 import { cn } from "@/lib/utils";
 import { TenantSwitcher } from "./TenantSwitcher";
 import { useTenantContext } from "@/contexts/TenantContext";
-import { useActiveRole } from "@/hooks/useActiveRole";
 
 const ALL_ROLES = ["SUPER_ADMIN", "AREA_ADMIN", "CLINIC_ADMIN", "DOCTOR", "OPERATOR", "STAFF"];
 const ADMIN_ROLES = ["SUPER_ADMIN", "AREA_ADMIN", "CLINIC_ADMIN"];
@@ -40,8 +39,8 @@ const navItems = [
   { href: "/roles", label: "Roles & Permissions", icon: Shield, group: "admin", allowedRoles: ["SUPER_ADMIN"] },
   { href: "/clinics", label: "Clinics", icon: Building2, group: "org", allowedRoles: ["SUPER_ADMIN", "AREA_ADMIN"] },
   { href: "/programs", label: "Programs", icon: FolderGit2, group: "org", allowedRoles: ADMIN_ROLES },
-  { href: "/areas", label: "Areas", icon: Map, group: "org", allowedRoles: ["SUPER_ADMIN", "AREA_ADMIN"] },
-  { href: "/audit-logs", label: "Audit Logs", icon: ScrollText, group: "system", allowedRoles: ["SUPER_ADMIN", "AREA_ADMIN"] },
+  { href: "/areas", label: "Areas", icon: Map, group: "org", allowedRoles: ["SUPER_ADMIN"] },
+  { href: "/audit-logs", label: "Audit Logs", icon: ScrollText, group: "system", allowedRoles: ["SUPER_ADMIN"] },
 ];
 
 const navGroups = [
@@ -86,31 +85,26 @@ function ThemeToggle() {
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const [location, setLocation] = useLocation();
-  const { role: activeRole, isSuperAdmin, user, activeAssignment } = useActiveRole();
-  const { activeTenantId } = useTenantContext();
-
-  const { data: tenantsData } = useListTenants(
-    { limit: 500 },
-    { request: { headers: { "x-tenant-id": "ALL" } }, query: { enabled: !!isSuperAdmin } as any }
-  );
-
-  const activeTenantName = activeTenantId === "ALL" 
-    ? (isSuperAdmin ? "Platform View" : (activeAssignment?.tenantName ?? "Unknown"))
-    : isSuperAdmin 
-      ? (tenantsData?.data?.find((t: any) => t.id === activeTenantId)?.name ?? "Loading...") 
-      : (activeAssignment?.tenantName ?? "Unknown");
-
+  const { data: user } = useGetMe();
   const logout = useLogout();
   const { data: notificationsData } = useListNotifications({ limit: 50 });
+  const { activeTenantId } = useTenantContext();
 
   const unreadCount = notificationsData?.data?.filter((n: any) => !n.readAt)?.length ?? 0;
 
+  // MED-002 / MED-007: never show "Unknown" or a stale cached tenant. Super admins viewing
+  // all tenants see "All Tenants"; everyone else sees their own tenant name.
+  const tenantLabel =
+    user?.role === "SUPER_ADMIN" && activeTenantId === "ALL"
+      ? "All Tenants · Platform View"
+      : user?.tenantName || "—";
+
   const filteredItems = navItems
-    .filter((item) => activeRole && item.allowedRoles.includes(activeRole))
+    .filter((item) => user?.role && item.allowedRoles.includes(user.role))
     .map((item) => {
       // Group platform-wide data into "Master Data" for SUPER_ADMIN
       if (
-        activeRole === "SUPER_ADMIN" &&
+        user?.role === "SUPER_ADMIN" &&
         ["/tenants", "/areas", "/clinics", "/programs", "/users"].includes(item.href)
       ) {
         return { ...item, group: "master_data" };
@@ -127,13 +121,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const getRoleColor = (role?: string) => {
     const colors: Record<string, string> = {
       SUPER_ADMIN: "bg-purple-500/20 text-purple-300",
-      AREA_ADMIN: "bg-primary/20 text-primary",
+      AREA_ADMIN: "bg-blue-500/20 text-blue-300",
       CLINIC_ADMIN: "bg-cyan-500/20 text-cyan-300",
-      DOCTOR: "bg-success/20 text-success",
+      DOCTOR: "bg-emerald-500/20 text-emerald-300",
       OPERATOR: "bg-amber-500/20 text-amber-300",
-      STAFF: "bg-muted text-muted-foreground",
+      STAFF: "bg-slate-500/20 text-slate-300",
     };
-    return colors[role ?? ""] ?? "bg-muted text-muted-foreground";
+    return colors[role ?? ""] ?? "bg-slate-500/20 text-slate-300";
   };
 
   return (
@@ -141,7 +135,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-sidebar-border shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm overflow-hidden shrink-0 gradient-primary">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm overflow-hidden shrink-0" style={{background: "linear-gradient(135deg, #0a3d91 0%, #0b63f6 100%)"}}>
             <svg viewBox="0 0 32 32" fill="none" className="w-5 h-5">
               <rect x="13" y="5" width="6" height="22" rx="2" fill="white" opacity="0.95"/>
               <rect x="5" y="13" width="22" height="6" rx="2" fill="white" opacity="0.95"/>
@@ -171,16 +165,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               {user?.firstName} {user?.lastName}
             </div>
             <div className="text-xs text-sidebar-foreground/50 truncate">
-              {activeTenantName}
+              {tenantLabel}
             </div>
           </div>
         </div>
-        {activeRole && (
+        {user?.role && (
           <div className={cn(
             "mt-2 text-[10px] uppercase tracking-wider font-semibold px-2 py-1 rounded-md inline-flex",
-            getRoleColor(activeRole)
+            getRoleColor(user.role)
           )}>
-            {activeRole.replace(/_/g, " ")}
+            {user.role.replace(/_/g, " ")}
           </div>
         )}
       </div>
@@ -274,7 +268,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
         <div
           onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all text-sidebar-foreground/50 hover:bg-destructive/10 hover:text-destructive mt-1"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all text-sidebar-foreground/50 hover:bg-red-500/10 hover:text-red-400 mt-1"
           data-testid="nav-logout"
         >
           <LogOut className="w-4 h-4" />
@@ -291,7 +285,7 @@ export function Sidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <div className="hidden md:flex w-64 border-r border-sidebar-border flex-col h-screen sticky top-0 bg-sidebar z-40">
+      <div className="hidden md:flex w-64 border-r border-sidebar-border flex-col h-screen sticky top-0 bg-sidebar/80 backdrop-blur-2xl shadow-2xl z-40">
         <SidebarContent />
       </div>
 
@@ -319,7 +313,7 @@ export function Sidebar() {
       {/* Mobile drawer */}
       <div
         className={cn(
-          "md:hidden fixed inset-y-0 left-0 z-50 w-72 flex flex-col transition-transform duration-300 ease-in-out bg-sidebar border-r border-sidebar-border shadow-xl",
+          "md:hidden fixed inset-y-0 left-0 z-50 w-72 flex flex-col transition-transform duration-300 ease-in-out bg-sidebar/90 backdrop-blur-2xl border-r border-sidebar-border shadow-2xl",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >

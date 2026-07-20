@@ -10,10 +10,9 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
-import { EmptyState } from "@/components/ui/empty-state";
-import { usePagination } from "@/hooks/use-pagination";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Pagination } from "@/lib/ui-helpers";
+import { BuildingsIllustration } from "@/components/ui/illustrations";
 import { Building2, Plus, Pencil, Trash2, Search, X, Phone, Mail, MapPin, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,7 +39,11 @@ import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { exportToCSV } from "@/lib/utils";
+import { useTenantContext } from "@/contexts/TenantContext";
+const PAGE_SIZE = 20;
+
 interface ClinicFormState {
   tenantId: string;
   name: string;
@@ -54,11 +57,13 @@ interface ClinicFormState {
 const EMPTY_FORM: ClinicFormState = { tenantId: "", name: "", areaId: "", address: "", city: "", phone: "", email: "" };
 
 export default function ClinicsPage() {
-  const { page, pageSize, setPage } = usePagination(20);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterTenant, setFilterTenant] = useState("");
   const [filterArea, setFilterArea] = useState("");
+  const { activeTenantId } = useTenantContext();
+  const isScopedToTenant = activeTenantId !== "ALL";
 
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 400);
@@ -72,21 +77,22 @@ export default function ClinicsPage() {
     { request: { headers: { "x-tenant-id": "ALL" } } }
   );
 
+  // Area filter options scope to the active tenant (or all tenants in Platform View),
+  // inheriting the switcher's x-tenant-id from the global API client.
   const { data: areasData, isLoading: areasLoading } = useListAreas(
     { limit: 500, tenantId: filterTenant || undefined } as any,
-    { request: { headers: { "x-tenant-id": "ALL" } } }
   );
 
+  // Main clinic list inherits the active tenant: a specific tenant shows only its own
+  // clinics; "Platform View" shows all tenants' clinics.
   const { data, isLoading } = useListClinics(
     {
       page,
-      limit: pageSize,
+      limit: PAGE_SIZE,
       tenantId: filterTenant || undefined,
       areaId: filterArea || undefined,
     } as any,
-    { request: { headers: { "x-tenant-id": "ALL" } } }
   );
-  const totalPages = data?.meta ? Math.ceil(data.meta.total / pageSize) : 1;
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -230,6 +236,7 @@ export default function ClinicsPage() {
     form,
     onChange,
     showArea = true,
+    tenantLocked = false,
     areaOptions,
     areasLoading,
     clinicOptions,
@@ -238,6 +245,7 @@ export default function ClinicsPage() {
     form: ClinicFormState;
     onChange: (f: ClinicFormState) => void;
     showArea?: boolean;
+    tenantLocked?: boolean;
     areaOptions: { label: string; value: string }[];
     areasLoading: boolean;
     clinicOptions: { label: string; value: string }[];
@@ -258,6 +266,7 @@ export default function ClinicsPage() {
             placeholder="Select hospital..."
             searchPlaceholder="Search hospitals..."
             isLoading={tenantsLoading}
+            disabled={tenantLocked}
           />
         </div>
         {showArea && (
@@ -287,7 +296,6 @@ export default function ClinicsPage() {
             searchPlaceholder="Search master clinics..."
             isLoading={clinicsLoading}
             disabled={!form.areaId}
-            creatable
           />
         </div>
       </div>
@@ -351,157 +359,62 @@ export default function ClinicsPage() {
     exportToCSV(exportData, `clinics_export_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
-  const columns: DataTableColumn<any>[] = [
-    {
-      key: "name",
-      header: "Clinic Name",
-      render: (clinic) => (
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 group-hover:border-primary/40 transition-colors">
-            <Building2 className="w-4 h-4 text-primary" />
-          </div>
-          <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{clinic.name}</span>
-        </div>
-      ),
-    },
-    {
-      key: "area",
-      header: "Area",
-      render: (clinic) =>
-        clinic.area?.name ? (
-          <Badge variant="secondary" className="text-xs font-medium bg-muted/50 border-border/50">
-            {clinic.area.name}
-          </Badge>
-        ) : (
-          <span className="text-muted-foreground text-sm">—</span>
-        ),
-    },
-    {
-      key: "contact",
-      header: "Contact",
-      render: (clinic) => (
-        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-          {clinic.phone && (
-            <div className="flex items-center gap-1.5 font-medium">
-              <Phone className="w-3.5 h-3.5 text-muted-foreground/70" />
-              {clinic.phone}
-            </div>
-          )}
-          {clinic.email && (
-            <div className="flex items-center gap-1.5 font-medium">
-              <Mail className="w-3.5 h-3.5 text-muted-foreground/70" />
-              {clinic.email}
-            </div>
-          )}
-          {!clinic.phone && !clinic.email && "—"}
-        </div>
-      ),
-    },
-    {
-      key: "address",
-      header: "Address",
-      render: (clinic) =>
-        clinic.address ? (
-          <div className="flex items-start gap-1.5 text-xs text-muted-foreground max-w-[220px]">
-            <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5 text-muted-foreground/70" />
-            <span className="line-clamp-2 font-medium">
-              {clinic.address}{clinic.city ? `, ${clinic.city}` : ""}
-            </span>
-          </div>
-        ) : (
-          <span className="text-muted-foreground text-sm">—</span>
-        ),
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      headerClassName: "text-right",
-      className: "text-right",
-      render: (clinic) => (
-        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8 bg-background border border-border shadow-sm hover:bg-primary hover:text-primary-foreground"
-            onClick={() => openEdit(clinic)}
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-8 w-8 bg-background border border-border shadow-sm text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/10">
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Clinic</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete "{clinic.name}"? This action cannot be undone and will affect all users assigned to this clinic.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => confirmDelete(clinic.id)}
-                  className="bg-destructive hover:bg-destructive/90"
-                >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      ),
-    },
-  ];
-
   return (
-    <div className="page-container animate-in-up">
-      <PageHeader
-        title="Clinics"
-        description={`${data?.meta?.total?.toLocaleString() ?? "—"} clinic locations across all areas.`}
-        actions={
-          <>
-            <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !filteredClinics.length}>
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
-            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Clinic
+    <div>
+      <div className="border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1">Clinical Locations</p>
+              <h1 className="text-xl font-semibold tracking-tight">Clinics</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{data?.meta?.total?.toLocaleString() ?? "—"} clinic locations across all areas.</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !filteredClinics.length}>
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </Button>
+              <Dialog open={isCreateOpen} onOpenChange={(open) => {
+                setIsCreateOpen(open);
+                if (open && isScopedToTenant) setCreateForm({ ...EMPTY_FORM, tenantId: activeTenantId });
+                else if (!open) setCreateForm(EMPTY_FORM);
+              }}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Clinic
+              </Button>
+            </DialogTrigger>
+            <DialogContent aria-describedby={undefined} className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Create New Clinic</DialogTitle>
+              </DialogHeader>
+              <ClinicFormFields
+                form={createForm}
+                onChange={setCreateForm}
+                tenantLocked={isScopedToTenant}
+                areaOptions={createFormAreaOptions}
+                areasLoading={allAreasLoading}
+                clinicOptions={createFormClinicOptions}
+                clinicsLoading={allClinicsLoading}
+              />
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setIsCreateOpen(false); setCreateForm(EMPTY_FORM); }}>
+                  Cancel
                 </Button>
-              </DialogTrigger>
-              <DialogContent aria-describedby={undefined} className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Create New Clinic</DialogTitle>
-                </DialogHeader>
-                <ClinicFormFields
-                  form={createForm}
-                  onChange={setCreateForm}
-                  areaOptions={createFormAreaOptions}
-                  areasLoading={allAreasLoading}
-                  clinicOptions={createFormClinicOptions}
-                  clinicsLoading={allClinicsLoading}
-                />
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => { setIsCreateOpen(false); setCreateForm(EMPTY_FORM); }}>
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleCreateClinic}
-                    disabled={createClinic.isPending || !createForm.name.trim() || !createForm.areaId}
-                  >
-                    {createClinic.isPending ? "Creating..." : "Create Clinic"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </>
-        }
-      />
+                <Button
+                  onClick={handleCreateClinic}
+                  disabled={createClinic.isPending || !createForm.name.trim() || !createForm.areaId}
+                >
+                  {createClinic.isPending ? "Creating..." : "Create Clinic"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+        </div>
+      </div>
       {/* Edit dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent aria-describedby={undefined} className="max-w-md">
@@ -526,7 +439,7 @@ export default function ClinicsPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="p-8 space-y-4">
+      <div className="page-container animate-in-up pt-6 pb-12 space-y-4">
         {/* Search + filter bar */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
@@ -562,34 +475,141 @@ export default function ClinicsPage() {
           )}
         </div>
 
-        {/* Table / Data Grid */}
-        <Card className="overflow-hidden glass-card border-border/50 shadow-sm rounded-2xl">
+        {/* Table */}
+        <Card className="overflow-hidden">
           <CardContent className="p-0">
-            <DataTable
-              columns={columns}
-              data={filteredClinics}
-              isLoading={isLoading}
-              getRowKey={(clinic) => clinic.id}
-              emptyState={
-                <EmptyState
-                  icon={Building2}
-                  title="No clinics found"
-                  description="Try adjusting your search query or area filter to see more results."
-                  action={
-                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-6" onClick={() => setIsCreateOpen(true)}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Clinic
-                    </Button>
-                  }
+            {isLoading ? (
+              <div className="flex justify-center items-center p-16">
+                <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                  <Building2 className="w-10 h-10 animate-pulse opacity-30" />
+                  <p className="text-sm">Loading clinics...</p>
+                </div>
+              </div>
+            ) : filteredClinics.length === 0 ? (
+              <EmptyState
+                illustration={<BuildingsIllustration />}
+                icon={Building2}
+                title={search || filterArea ? "No clinics match your filters" : "No clinics found"}
+                description={
+                  search || filterArea
+                    ? "Try adjusting your search or area filter to see more results."
+                    : "Create your first clinic to start managing care locations."
+                }
+                className="border-0 bg-transparent rounded-none"
+              />
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Clinic Name</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Area</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Contact</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wide">Address</TableHead>
+                        <TableHead className="font-semibold text-xs uppercase tracking-wide text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredClinics.map((clinic) => (
+                        <TableRow key={clinic.id} data-testid={`row-clinic-${clinic.id}`} className="hover:bg-muted/20 transition-colors">
+                          <TableCell>
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <Building2 className="w-3.5 h-3.5 text-primary" />
+                              </div>
+                              <span className="font-medium text-sm">{clinic.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {clinic.area?.name ? (
+                              <Badge variant="secondary" className="text-xs font-normal">
+                                {clinic.area.name}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                              {(clinic as any).phone && (
+                                <div className="flex items-center gap-1">
+                                  <Phone className="w-3 h-3" />
+                                  {(clinic as any).phone}
+                                </div>
+                              )}
+                              {(clinic as any).email && (
+                                <div className="flex items-center gap-1">
+                                  <Mail className="w-3 h-3" />
+                                  {(clinic as any).email}
+                                </div>
+                              )}
+                              {!(clinic as any).phone && !(clinic as any).email && "—"}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {clinic.address ? (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground max-w-[220px]">
+                                <MapPin className="w-3 h-3 shrink-0" />
+                                <span className="truncate">
+                                  {clinic.address}{clinic.city ? `, ${clinic.city}` : ""}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={() => openEdit(clinic)}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Clinic</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{clinic.name}"? This action cannot be undone and will affect all users assigned to this clinic.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => confirmDelete(clinic.id)}
+                                      className="bg-destructive hover:bg-destructive/90"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <Pagination
+                  page={page}
+                  pageSize={PAGE_SIZE}
+                  total={data?.meta?.total ?? 0}
+                  onPageChange={setPage}
+                  noun="clinics"
                 />
-              }
-              pagination={{
-                page,
-                totalPages,
-                totalLabel: `${data?.meta?.total?.toLocaleString() ?? 0} clinics`,
-                onPageChange: setPage,
-              }}
-            />
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

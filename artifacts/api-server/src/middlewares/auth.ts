@@ -16,6 +16,7 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
     const payload = verifyAccessToken(token);
 
     req.user = payload;
+    req.tenantId = payload.tenantId;
     next();
   } catch (err) {
     if ((err as Error).name === "AppError") return next(err);
@@ -35,6 +36,7 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
     if (token) {
       const payload = verifyAccessToken(token);
       req.user = payload;
+      req.tenantId = payload.tenantId;
     }
   } catch {
     // Swallow auth errors for optional auth

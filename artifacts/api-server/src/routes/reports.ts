@@ -12,22 +12,14 @@ router.use(authenticate, requireTenant, authorizePermission("reports", "read"));
 router.get("/dashboard", async (req, res, next) => {
   try {
     const tenantId = req.tenantId;
-
-    // Get module-specific scopes to avoid relation query crashes
+    // Patient-shaped scope is valid on Patient (clinicId / doctorAssignments). For models that
+    // do not carry those columns (User, Clinic, SmsCommunication, PatientOutcome) we either keep
+    // tenant-level totals (org config) or scope through the `patient` relation (HIGH-003).
     const patientScope = await getRoleScope(req, "patient");
-    const clinicScope = await getRoleScope(req, "clinic");
-    const programScope = await getRoleScope(req, "program");
-    const outcomeScope = await getRoleScope(req, "outcome");
-    const areaScope = await getRoleScope(req, "area");
-    const userScope = await getRoleScope(req, "user");
-
-    const patientBase = { tenantId, deletedAt: null, ...patientScope };
-    const clinicBase = { tenantId, deletedAt: null, ...clinicScope };
-    const programBase = { tenantId, deletedAt: null, ...programScope };
-    const outcomeBase = { tenantId, deletedAt: null, ...outcomeScope };
-    const areaBase = { tenantId, deletedAt: null, ...areaScope };
-    const userBase = { deletedAt: null, ...userScope };
-
+    const hasScope = Object.keys(patientScope).length > 0;
+    const tenantBase = { tenantId, deletedAt: null };
+    const patientBase = { ...tenantBase, ...patientScope };
+    const outcomeWhere = hasScope ? { ...tenantBase, patient: patientScope } : tenantBase;
     const now = new Date();
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -40,28 +32,19 @@ router.get("/dashboard", async (req, res, next) => {
       newPatientsThisMonth,
       pendingCommunications,
       outcomesRecorded,
-      totalTenants,
-      totalAreas,
     ] = await Promise.all([
       prisma.patient.count({ where: patientBase }),
       prisma.patient.count({ where: { ...patientBase, status: "ACTIVE" } }),
-      prisma.user.count({ 
-        where: { 
-          ...userBase,
-          ...(tenantId ? { tenantAssignments: { some: { tenantId, status: "ACTIVE" } } } : {})
-        } 
-      }),
-      prisma.clinic.count({ where: clinicBase }),
-      prisma.program.count({ where: programBase }),
+      prisma.user.count({ where: tenantBase }),
+      prisma.clinic.count({ where: tenantBase }),
+      prisma.program.count({ where: tenantBase }),
       prisma.patient.count({ where: { ...patientBase, createdAt: { gte: firstOfMonth } } }),
-      prisma.smsCommunication.count({ where: { tenantId, status: { in: ["QUEUED", "SENT"] } } }),
-      prisma.patientOutcome.count({ where: outcomeBase }),
-      prisma.tenant.count({ where: { deletedAt: null, ...(tenantId ? { id: tenantId } : {}) } }),
-      prisma.area.count({ where: areaBase }),
+      prisma.smsCommunication.count({ where: { tenantId, status: { in: ["QUEUED", "SENT"] }, ...(hasScope ? { patient: patientScope } : {}) } }),
+      prisma.patientOutcome.count({ where: outcomeWhere }),
     ]);
 
     // Improvement rate: outcomes where currentValue moved toward targetValue
-    const allOutcomes = await prisma.patientOutcome.findMany({ where: outcomeBase, select: { baselineValue: true, currentValue: true, targetValue: true } });
+    const allOutcomes = await prisma.patientOutcome.findMany({ where: outcomeWhere, select: { baselineValue: true, currentValue: true, targetValue: true } });
     const improving = allOutcomes.filter(o => {
       const totalRange = Math.abs(o.targetValue - o.baselineValue);
       if (totalRange === 0) return false;
@@ -81,8 +64,6 @@ router.get("/dashboard", async (req, res, next) => {
       outcomesRecorded,
       improvingPatients: improving.length,
       successRate,
-      totalTenants,
-      totalAreas,
     });
   } catch (err) { next(err); }
 });
@@ -92,8 +73,10 @@ router.get("/dashboard", async (req, res, next) => {
 router.get("/enrollment-stats", async (req, res, next) => {
   try {
     const tenantId = req.tenantId;
-    const roleScope = await getRoleScope(req, "patient");
-    const base = { tenantId, deletedAt: null, patient: roleScope };
+    // ProgramEnrollment has no clinic/doctor columns — scope through the patient relation.
+    const patientScope = await getRoleScope(req, "patient");
+    const hasScope = Object.keys(patientScope).length > 0;
+    const base = { tenantId, deletedAt: null, ...(hasScope ? { patient: patientScope } : {}) };
 
     const [
       totalEnrollments,
@@ -183,7 +166,7 @@ router.get("/patients-by-status", async (req, res, next) => {
   try {
     const rows = await prisma.patient.groupBy({
       by: ["status"],
-      where: { tenantId: req.tenantId!, deletedAt: null, ...await getRoleScope(req, "patient") },
+      where: { tenantId: req.tenantId!, deletedAt: null, ...await getRoleScope(req, "dashboard") },
       _count: { id: true },
     });
     res.json(rows.map((r) => ({ status: r.status, count: r._count.id })));
@@ -195,7 +178,7 @@ router.get("/patients-by-program", async (req, res, next) => {
   try {
     const rows = await prisma.patient.groupBy({
       by: ["programId"],
-      where: { tenantId: req.tenantId!, deletedAt: null, ...await getRoleScope(req, "patient") },
+      where: { tenantId: req.tenantId!, deletedAt: null, ...await getRoleScope(req, "dashboard") },
       _count: { id: true },
     });
     const programIds = rows.map((r) => r.programId).filter(Boolean) as string[];
@@ -218,13 +201,20 @@ router.get("/patients-by-program", async (req, res, next) => {
 router.get("/recent-activity", async (req, res, next) => {
   try {
     const limit = Math.min(Number(req.query["limit"]) || 20, 100);
+    // HIGH-003: AuditLog has no clinic/patient columns to scope by. Tenant admins manage the
+    // whole org and may see tenant-wide activity; clinicians (DOCTOR/OPERATOR/STAFF) are
+    // restricted to their own actions so the dashboard does not leak trust-wide activity.
+    const role = req.user?.role;
+    const activityWhere: Record<string, unknown> = { tenantId: req.tenantId! };
+    if (role !== "SUPER_ADMIN" && role !== "AREA_ADMIN" && role !== "CLINIC_ADMIN") {
+      activityWhere["actorId"] = req.user!.userId;
+    }
     const logs = await prisma.auditLog.findMany({
-      where: { tenantId: req.tenantId! },
+      where: activityWhere,
       orderBy: { createdAt: "desc" },
       take: limit,
       include: {
         actor: { select: { id: true, email: true, firstName: true, lastName: true } },
-        tenant: { select: { id: true, name: true } }
       },
     });
     res.json(logs);
@@ -318,8 +308,7 @@ router.get("/consultations-by-clinic", async (req, res, next) => {
 router.get("/consultations-by-program", async (req, res, next) => {
   try {
     const tenantId = req.tenantId;
-    const roleScope = await getRoleScope(req, "consultation");
-    const base = { tenantId, deletedAt: null, ...roleScope };
+    const base = { tenantId, deletedAt: null };
 
     // Join through patients to get program
     const consultations = await prisma.consultation.findMany({
@@ -352,8 +341,9 @@ router.get("/consultations-by-program", async (req, res, next) => {
 router.get("/follow-ups", async (req, res, next) => {
   try {
     const tenantId = req.tenantId;
-    const roleScope = await getRoleScope(req, "consultation");
-    const base = { tenantId, deletedAt: null, ...roleScope };
+    // Scope by consultation role-scope so this PII-bearing report respects doctor/clinic visibility.
+    const consultationScope = await getRoleScope(req, "consultation");
+    const base = { tenantId, deletedAt: null, ...consultationScope };
 
     // Get all consultations that have follow-up instructions
     const consultations = await prisma.consultation.findMany({
@@ -391,16 +381,14 @@ router.get("/follow-ups", async (req, res, next) => {
 router.get("/clinic-stats", async (req, res, next) => {
   try {
     const tenantId = req.tenantId;
-    const clinicScope = await getRoleScope(req, "clinic");
-    const patientScope = await getRoleScope(req, "patient");
-    const apptScope = await getRoleScope(req, "appointment");
+    const base = { tenantId, deletedAt: null };
 
     const [clinics, patientRows, apptRows, enrollRows] = await Promise.all([
-      prisma.clinic.findMany({ where: { tenantId, deletedAt: null, ...clinicScope }, select: { id: true, name: true, areaId: true, area: { select: { name: true } } } }),
-      prisma.patient.groupBy({ by: ["clinicId"], where: { tenantId, deletedAt: null, ...patientScope }, _count: { id: true } }),
-      prisma.appointment.groupBy({ by: ["clinicId"], where: { tenantId, deletedAt: null, ...apptScope }, _count: { id: true } }),
+      prisma.clinic.findMany({ where: base, select: { id: true, name: true, areaId: true, area: { select: { name: true } } } }),
+      prisma.patient.groupBy({ by: ["clinicId"], where: base, _count: { id: true } }),
+      prisma.appointment.groupBy({ by: ["clinicId"], where: base, _count: { id: true } }),
       prisma.programEnrollment.findMany({
-        where: { tenantId, deletedAt: null, patient: patientScope },
+        where: base,
         include: { patient: { select: { clinicId: true } } },
       }),
     ]);
@@ -493,8 +481,7 @@ router.get("/program-details/:programId", async (req, res, next) => {
 router.get("/outcomes-by-program", async (req, res, next) => {
   try {
     const tenantId = req.tenantId;
-    const outcomeScope = await getRoleScope(req, "outcome");
-    const base = { tenantId, deletedAt: null, ...outcomeScope };
+    const base = { tenantId, deletedAt: null };
     const outcomes = await prisma.patientOutcome.findMany({
       where: base,
       include: { program: { select: { id: true, name: true } } },
@@ -519,13 +506,16 @@ router.get("/outcomes-by-program", async (req, res, next) => {
 router.get("/outcomes-by-clinic", async (req, res, next) => {
   try {
     const tenantId = req.tenantId;
-    const outcomeScope = await getRoleScope(req, "outcome");
+    const roleScope = await getRoleScope(req, "clinic");
+    
+    // Build where clause with roleScope
+    const clinicWhere = { tenantId, deletedAt: null, ...roleScope };
 
     const outcomes = await prisma.patientOutcome.findMany({
       where: { 
         tenantId, 
         deletedAt: null,
-        ...outcomeScope
+        patient: { clinic: clinicWhere }
       },
       include: { patient: { include: { clinic: { select: { id: true, name: true } } } } },
     });
@@ -550,9 +540,8 @@ router.get("/outcomes-by-clinic", async (req, res, next) => {
 router.get("/outcomes-by-doctor", async (req, res, next) => {
   try {
     const tenantId = req.tenantId;
-    const outcomeScope = await getRoleScope(req, "outcome");
     const outcomes = await prisma.patientOutcome.findMany({
-      where: { tenantId, deletedAt: null, doctorId: { not: null }, ...outcomeScope },
+      where: { tenantId, deletedAt: null, doctorId: { not: null } },
       include: { doctor: { select: { id: true, firstName: true, lastName: true } } },
     });
     const map: Record<string, { doctorName: string; total: number; improving: number }> = {};

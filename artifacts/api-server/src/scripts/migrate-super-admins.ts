@@ -2,10 +2,10 @@ import { prisma } from "../lib/prisma.js";
 
 async function main() {
   const users = await prisma.user.findMany({
-    include: { tenantAssignments: { include: { role: true, tenant: true } } }
+    include: { role: true, tenant: true }
   });
 
-  const superAdmins = users.filter(u => u.tenantAssignments.some(a => a.role.name === "SUPER_ADMIN"));
+  const superAdmins = users.filter(u => u.role.name === "SUPER_ADMIN");
   console.log(`Found ${superAdmins.length} SUPER_ADMIN accounts.`);
 
   const clinicAdminRole = await prisma.role.findFirst({
@@ -25,11 +25,10 @@ async function main() {
       continue;
     }
 
-    const adminAssignment = user.tenantAssignments.find(a => a.role.name === "SUPER_ADMIN");
-    console.log(`[MIGRATING] Downgrading ${user.email} (Tenant: ${adminAssignment?.tenant?.name}) to CLINIC_ADMIN`);
+    console.log(`[MIGRATING] Downgrading ${user.email} (Tenant: ${user.tenant.name}) to CLINIC_ADMIN`);
     
-    await prisma.userTenantAssignment.updateMany({
-      where: { userId: user.id, role: { name: "SUPER_ADMIN" } },
+    await prisma.user.update({
+      where: { id: user.id },
       data: { roleId: clinicAdminRole.id },
     });
 

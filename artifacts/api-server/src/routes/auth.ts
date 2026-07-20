@@ -55,6 +55,9 @@ const RegisterSchema = z.object({
 });
 
 const RefreshSchema = z.object({
+  // Optional: the refresh token is normally read from the httpOnly cookie. The body
+  // is only a fallback (e.g. non-browser clients). Requiring it here caused the SPA's
+  // cookie-based refresh (empty body) to fail validation with 422 → forced logout.
   refreshToken: z.string().min(1).optional(),
 });
 
@@ -70,7 +73,7 @@ router.post("/login", authLimiter, validateBody(LoginSchema), async (req, res, n
 
     const user = await prisma.user.findUnique({
       where: { email },
-      include: { tenantAssignments: { include: { role: true, tenant: true } } },
+      include: { role: true, tenant: true },
     });
 
     if (!user || user.deletedAt) throw Errors.unauthorized("Invalid credentials");
@@ -85,7 +88,9 @@ router.post("/login", authLimiter, validateBody(LoginSchema), async (req, res, n
 
     const payload = {
       userId: user.id,
+      tenantId: user.tenantId,
       email: user.email,
+      role: user.role.name,
     };
 
     const accessToken = signAccessToken(payload);
@@ -114,13 +119,10 @@ router.post("/login", authLimiter, validateBody(LoginSchema), async (req, res, n
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        role: user.role.name,
+        tenantId: user.tenantId,
+        tenantName: user.tenant.name,
         avatarUrl: user.avatarUrl,
-        tenantAssignments: user.tenantAssignments.map(a => ({
-          tenantId: a.tenantId,
-          tenantName: a.tenant.name,
-          role: a.role.name,
-          status: a.status
-        }))
       },
     });
   } catch (err) {
@@ -152,6 +154,7 @@ router.post("/refresh", validateBody(RefreshSchema), async (req, res, next) => {
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
+      include: { role: true },
     });
 
     if (!user || user.deletedAt || user.status !== "ACTIVE") {
@@ -175,7 +178,9 @@ router.post("/refresh", validateBody(RefreshSchema), async (req, res, next) => {
 
     const accessToken = signAccessToken({
       userId: user.id,
+      tenantId: user.tenantId,
       email: user.email,
+      role: user.role.name,
     });
 
     setAuthCookies(res, accessToken, newRefresh);
@@ -209,9 +214,8 @@ router.get("/me", authenticate, async (req, res, next) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
       include: {
-        tenantAssignments: {
-          include: { role: true, tenant: true }
-        },
+        role: true,
+        tenant: { select: { id: true, name: true, logoUrl: true } },
         clinicAssignments: {
           where: { deletedAt: null },
           include: { clinic: { select: { id: true, name: true } } },
@@ -228,13 +232,11 @@ router.get("/me", authenticate, async (req, res, next) => {
       lastName: user.lastName,
       mobile: user.mobile,
       avatarUrl: user.avatarUrl,
+      role: user.role.name,
+      tenantId: user.tenantId,
+      tenantName: user.tenant.name,
       status: user.status,
-      tenantAssignments: user.tenantAssignments.map(a => ({
-        tenantId: a.tenantId,
-        tenantName: a.tenant.name,
-        role: a.role.name,
-        status: a.status
-      })),
+      tenant: user.tenant,
       clinics: user.clinicAssignments.map((a) => a.clinic),
       lastLoginAt: user.lastLoginAt,
     });
@@ -273,6 +275,8 @@ router.post("/register", authLimiter, validateBody(RegisterSchema), async (req, 
 
     const user = await prisma.user.create({
       data: {
+        tenantId: tenant.id,
+        roleId: tenantAdminRole.id,
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
@@ -280,12 +284,6 @@ router.post("/register", authLimiter, validateBody(RegisterSchema), async (req, 
         emailVerified: false,
         verificationToken: crypto.randomUUID(),
         status: "ACTIVE",
-        tenantAssignments: {
-          create: {
-            tenantId: tenant.id,
-            roleId: tenantAdminRole.id
-          }
-        }
       },
     });
 
@@ -299,6 +297,9 @@ router.post("/register", authLimiter, validateBody(RegisterSchema), async (req, 
         email: user.email,
         firstName: data.firstName,
         lastName: data.lastName,
+        role: "CLINIC_ADMIN",
+        tenantId: tenant.id,
+        tenantName: data.tenantName,
         avatarUrl: null,
       },
     });

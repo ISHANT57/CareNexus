@@ -29,6 +29,8 @@ import type {
   AreaInput,
   AreaList,
   AreaUpdate,
+  AssignClinicRequest,
+  AssignProgramRequest,
   Assignment,
   AssignmentInput,
   AssignmentList,
@@ -2546,6 +2548,270 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getDeleteUserMutationOptions(options));
+    }
+
+export const getAssignUserClinicUrl = (id: string,) => {
+
+
+
+
+  return `/api/users/${id}/clinics`
+}
+
+export const assignUserClinic = async (id: string,
+    assignClinicRequest: AssignClinicRequest, options?: RequestInit): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getAssignUserClinicUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      assignClinicRequest,)
+  }
+);}
+
+
+
+
+export const getAssignUserClinicMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignUserClinic>>, TError,{id: string;data: BodyType<AssignClinicRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assignUserClinic>>, TError,{id: string;data: BodyType<AssignClinicRequest>}, TContext> => {
+
+const mutationKey = ['assignUserClinic'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignUserClinic>>, {id: string;data: BodyType<AssignClinicRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  assignUserClinic(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignUserClinicMutationResult = NonNullable<Awaited<ReturnType<typeof assignUserClinic>>>
+    export type AssignUserClinicMutationBody = BodyType<AssignClinicRequest>
+    export type AssignUserClinicMutationError = ErrorType<unknown>
+
+    export const useAssignUserClinic = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignUserClinic>>, TError,{id: string;data: BodyType<AssignClinicRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assignUserClinic>>,
+        TError,
+        {id: string;data: BodyType<AssignClinicRequest>},
+        TContext
+      > => {
+      return useMutation(getAssignUserClinicMutationOptions(options));
+    }
+
+export const getUnassignUserClinicUrl = (id: string,
+    clinicId: string,) => {
+
+
+
+
+  return `/api/users/${id}/clinics/${clinicId}`
+}
+
+export const unassignUserClinic = async (id: string,
+    clinicId: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getUnassignUserClinicUrl(id,clinicId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getUnassignUserClinicMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignUserClinic>>, TError,{id: string;clinicId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unassignUserClinic>>, TError,{id: string;clinicId: string}, TContext> => {
+
+const mutationKey = ['unassignUserClinic'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unassignUserClinic>>, {id: string;clinicId: string}> = (props) => {
+          const {id,clinicId} = props ?? {};
+
+          return  unassignUserClinic(id,clinicId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnassignUserClinicMutationResult = NonNullable<Awaited<ReturnType<typeof unassignUserClinic>>>
+
+    export type UnassignUserClinicMutationError = ErrorType<unknown>
+
+    export const useUnassignUserClinic = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignUserClinic>>, TError,{id: string;clinicId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unassignUserClinic>>,
+        TError,
+        {id: string;clinicId: string},
+        TContext
+      > => {
+      return useMutation(getUnassignUserClinicMutationOptions(options));
+    }
+
+export const getAssignUserProgramUrl = (id: string,) => {
+
+
+
+
+  return `/api/users/${id}/programs`
+}
+
+export const assignUserProgram = async (id: string,
+    assignProgramRequest: AssignProgramRequest, options?: RequestInit): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getAssignUserProgramUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      assignProgramRequest,)
+  }
+);}
+
+
+
+
+export const getAssignUserProgramMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignUserProgram>>, TError,{id: string;data: BodyType<AssignProgramRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assignUserProgram>>, TError,{id: string;data: BodyType<AssignProgramRequest>}, TContext> => {
+
+const mutationKey = ['assignUserProgram'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignUserProgram>>, {id: string;data: BodyType<AssignProgramRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  assignUserProgram(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignUserProgramMutationResult = NonNullable<Awaited<ReturnType<typeof assignUserProgram>>>
+    export type AssignUserProgramMutationBody = BodyType<AssignProgramRequest>
+    export type AssignUserProgramMutationError = ErrorType<unknown>
+
+    export const useAssignUserProgram = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignUserProgram>>, TError,{id: string;data: BodyType<AssignProgramRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assignUserProgram>>,
+        TError,
+        {id: string;data: BodyType<AssignProgramRequest>},
+        TContext
+      > => {
+      return useMutation(getAssignUserProgramMutationOptions(options));
+    }
+
+export const getUnassignUserProgramUrl = (id: string,
+    programId: string,) => {
+
+
+
+
+  return `/api/users/${id}/programs/${programId}`
+}
+
+export const unassignUserProgram = async (id: string,
+    programId: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getUnassignUserProgramUrl(id,programId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getUnassignUserProgramMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignUserProgram>>, TError,{id: string;programId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unassignUserProgram>>, TError,{id: string;programId: string}, TContext> => {
+
+const mutationKey = ['unassignUserProgram'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unassignUserProgram>>, {id: string;programId: string}> = (props) => {
+          const {id,programId} = props ?? {};
+
+          return  unassignUserProgram(id,programId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnassignUserProgramMutationResult = NonNullable<Awaited<ReturnType<typeof unassignUserProgram>>>
+
+    export type UnassignUserProgramMutationError = ErrorType<unknown>
+
+    export const useUnassignUserProgram = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unassignUserProgram>>, TError,{id: string;programId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unassignUserProgram>>,
+        TError,
+        {id: string;programId: string},
+        TContext
+      > => {
+      return useMutation(getUnassignUserProgramMutationOptions(options));
     }
 
 export const getListProgramsUrl = (params?: ListProgramsParams,) => {

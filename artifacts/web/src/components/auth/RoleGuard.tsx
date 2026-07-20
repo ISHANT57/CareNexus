@@ -1,4 +1,4 @@
-import { useActiveRole } from "@/hooks/useActiveRole";
+import { useGetMe } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
 import { ShieldAlert } from "lucide-react";
@@ -22,10 +22,12 @@ interface RoleGuardProps {
  * so this is a defense-in-depth UX improvement.
  */
 export function RoleGuard({ allowedRoles, children, redirectTo = "/dashboard" }: RoleGuardProps) {
-  const { role: activeRole, user, isLoading } = useActiveRole();
+  const { data: user, isLoading } = useGetMe({
+    query: { queryKey: ["getMe"], retry: false },
+  });
   const [, setLocation] = useLocation();
 
-  const isAuthorized = activeRole && allowedRoles.includes(activeRole);
+  const isAuthorized = user?.role && allowedRoles.includes(user.role);
 
   useEffect(() => {
     if (!isLoading && user && !isAuthorized) {

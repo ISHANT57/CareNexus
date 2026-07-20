@@ -31,9 +31,11 @@ const CreateUserSchema = z.object({
   programIds: z.array(z.string().uuid()).optional(),
 });
 
-const UpdateUserSchema = CreateUserSchema.omit({ password: true, email: true }).partial();
+const UpdateUserSchema = CreateUserSchema.omit({ password: true, email: true }).partial().extend({
+  emailVerified: z.boolean().optional(),
+});
 
-const safeUser = { id: true, email: true, firstName: true, lastName: true, mobile: true, avatarUrl: true, status: true, lastLoginAt: true, createdAt: true };
+const safeUser = { id: true, email: true, firstName: true, lastName: true, mobile: true, avatarUrl: true, status: true, lastLoginAt: true, emailVerified: true, createdAt: true };
 
 router.get("/", authorizePermission("users", "read"), async (req, res, next) => {
   try {
@@ -42,9 +44,8 @@ router.get("/", authorizePermission("users", "read"), async (req, res, next) => 
     const clinicId = req.query["clinicId"] as string | undefined;
     const q = req.query["q"] as string | undefined;
 
-    const roleScope = await getRoleScope(req, "user");
-    const where: Record<string, unknown> = { tenantAssignments: { some: { tenantId: req.tenantId!, status: 'ACTIVE' } }, deletedAt: null, ...roleScope };
-    if (roleId) where["tenantAssignments"] = { some: { tenantId: req.tenantId!, roleId, status: 'ACTIVE' } };
+    const where: Record<string, unknown> = { tenantId: req.tenantId!, deletedAt: null };
+    if (roleId) where["roleId"] = roleId;
     if (clinicId) where["clinicAssignments"] = { some: { clinicId, deletedAt: null } };
     if (q) where["OR"] = [
       { firstName: { contains: q, mode: "insensitive" } },
@@ -58,7 +59,8 @@ router.get("/", authorizePermission("users", "read"), async (req, res, next) => 
         where, skip, take, orderBy: { createdAt: "desc" },
         select: {
           ...safeUser,
-          tenantAssignments: { where: { tenantId: req.tenantId! }, include: { tenant: { select: { id: true, name: true } }, role: { select: { id: true, name: true } } } },
+          tenant: { select: { id: true, name: true } },
+          role: { select: { id: true, name: true } },
           clinicAssignments: { where: { deletedAt: null }, include: { clinic: { select: { id: true, name: true } } } },
         },
       }),
@@ -69,11 +71,13 @@ router.get("/", authorizePermission("users", "read"), async (req, res, next) => 
 
 router.get("/:id", authorizePermission("users", "read"), async (req, res, next) => {
   try {
+    const userScope = await getRoleScope(req, "user");
     const user = await prisma.user.findFirst({
-      where: { id: req.params["id"] as string, tenantAssignments: { some: { tenantId: req.tenantId! } }, deletedAt: null },
+      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...userScope },
       select: {
         ...safeUser,
-        tenantAssignments: { where: { tenantId: req.tenantId! }, include: { tenant: { select: { id: true, name: true } }, role: { select: { id: true, name: true } } } },
+        tenant: { select: { id: true, name: true } },
+        role: { select: { id: true, name: true } },
         clinicAssignments: { where: { deletedAt: null }, include: { clinic: { select: { id: true, name: true } } } },
         programAssignments: { where: { deletedAt: null }, include: { program: { select: { id: true, name: true } } } },
       },
@@ -86,89 +90,71 @@ router.get("/:id", authorizePermission("users", "read"), async (req, res, next) 
 router.post("/", authorizePermission("users", "write"), validateBody(CreateUserSchema), async (req, res, next) => {
   try {
     const data = req.body as z.infer<typeof CreateUserSchema>;
-    const targetTenantId = data.tenantId || req.tenantId;
+    const existing = await prisma.user.findUnique({ where: { email: data.email } });
+    if (existing) throw Errors.conflict("Email already in use");
+
+    // HIGH-008: non-super-admins may only create users within their own tenant
+    const isSuperAdmin = req.user?.role === "SUPER_ADMIN";
+    if (!isSuperAdmin && data.tenantId && data.tenantId !== req.tenantId) {
+      throw Errors.forbidden("You cannot create users in another tenant");
+    }
+    const targetTenantId = isSuperAdmin ? (data.tenantId || req.tenantId) : req.tenantId;
     if (!targetTenantId) throw Errors.badRequest("Tenant ID is required");
 
-    const role = await prisma.role.findUnique({ where: { id: data.roleId } });
-    if (!role) throw Errors.notFound("Role");
+    // CRIT-005: target role must exist within the target tenant (or be a system role)
+    const targetRole = await prisma.role.findFirst({ where: { id: data.roleId, OR: [{ tenantId: targetTenantId }, { isSystem: true }] } });
+    if (!targetRole) throw Errors.notFound("Role");
 
-    let user = await prisma.user.findUnique({ where: { email: data.email } });
-    if (user) {
-      const existingAssignment = await prisma.userTenantAssignment.findUnique({
-        where: { userId_tenantId: { userId: user.id, tenantId: targetTenantId } }
-      });
-      if (existingAssignment) {
-        throw Errors.conflict("User is already assigned to this tenant");
-      }
-
-      await prisma.userTenantAssignment.create({
-        data: { userId: user.id, tenantId: targetTenantId, roleId: data.roleId }
-      });
-
-      if (role.name === "CLINIC_ADMIN") {
-        const tenantClinics = await prisma.clinic.findMany({
-          where: { tenantId: targetTenantId, deletedAt: null }
-        });
-        for (const clinic of tenantClinics) {
-          await prisma.userClinicAssignment.upsert({
-            where: { userId_clinicId: { userId: user.id, clinicId: clinic.id } },
-            update: { deletedAt: null },
-            create: { userId: user.id, clinicId: clinic.id }
-          });
-        }
-      }
-
-      await createAuditLog({ req, entityType: "UserTenantAssignment", entityId: user.id, action: "CREATE", after: { email: data.email, roleId: data.roleId, tenantId: targetTenantId } });
-      res.status(200).json({ message: "Existing user linked to tenant", id: user.id });
-      return;
+    // CRIT-005: role hierarchy — cannot create a user with a role above your own
+    const userRole = req.user?.role ?? "";
+    const allowedRoles = ROLE_HIERARCHY[userRole] || [];
+    if (!allowedRoles.includes(targetRole.name)) {
+      throw Errors.forbidden(`Your role (${userRole}) is not permitted to create users with the ${targetRole.name} role`);
     }
 
-    const { clinicIds, programIds, tenantId, roleId, ...rest } = data;
     const hashed = await bcrypt.hash(data.password, 12);
 
-    let finalClinicIds = clinicIds || [];
-    if (role.name === "CLINIC_ADMIN") {
-      const tenantClinics = await prisma.clinic.findMany({
-        where: { tenantId: targetTenantId, deletedAt: null },
-        select: { id: true }
-      });
-      finalClinicIds = Array.from(new Set([...finalClinicIds, ...tenantClinics.map(c => c.id)]));
-    }
+    const { clinicIds, programIds, tenantId, ...rest } = data;
 
-    const newUser = await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         ...rest,
         password: hashed,
-        tenantAssignments: {
-          create: { tenantId: targetTenantId, roleId: data.roleId }
-        },
-        clinicAssignments: finalClinicIds.length
-          ? { create: finalClinicIds.map((clinicId) => ({ clinicId })) }
+        tenantId: targetTenantId,
+        clinicAssignments: clinicIds?.length
+          ? { create: clinicIds.map((clinicId) => ({ clinicId })) }
           : undefined,
         programAssignments: programIds?.length
           ? { create: programIds.map((programId) => ({ programId })) }
           : undefined,
       },
-      select: { ...safeUser, tenantAssignments: { include: { role: { select: { id: true, name: true } } } } },
+      select: { ...safeUser, role: { select: { id: true, name: true } } },
     });
 
-    await createAuditLog({ req, entityType: "User", entityId: newUser.id, action: "CREATE", after: { email: data.email, roleId: data.roleId } });
-    res.status(201).json(newUser);
+    await createAuditLog({ req, entityType: "User", entityId: user.id, action: "CREATE", after: { email: data.email, roleId: data.roleId } });
+    res.status(201).json(user);
   } catch (err) { next(err); }
 });
 
 router.patch("/:id", authorizePermission("users", "write"), validateBody(UpdateUserSchema), async (req, res, next) => {
   try {
-    const user = await prisma.user.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const user = await prisma.user.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!user) throw Errors.notFound("User");
-    const assignment = await prisma.userTenantAssignment.findUnique({ where: { userId_tenantId: { userId: user.id, tenantId: req.tenantId! } } });
-    if (!assignment && req.user?.role !== "SUPER_ADMIN") throw Errors.tenantMismatch();
+    assertTenantMatch(req, user.tenantId);
 
-    const { clinicIds, programIds, roleId, ...rest } = req.body as z.infer<typeof UpdateUserSchema>;
+    const { clinicIds, programIds, ...rest } = req.body as z.infer<typeof UpdateUserSchema>;
+
+    // Only SUPER_ADMIN may manually change a user's email-verified status.
+    if (rest.emailVerified !== undefined && req.user?.role !== "SUPER_ADMIN") {
+      throw Errors.forbidden("Only a Super Admin can change email verification status");
+    }
+    // Clearing the verification token alongside mirrors the token-based verify flow.
+    const verificationPatch =
+      rest.emailVerified === true ? { verificationToken: null } : {};
 
     // Prevent non-super-admins from assigning SUPER_ADMIN role
-    if (roleId) {
-      const targetRole = await prisma.role.findUnique({ where: { id: roleId } });
+    if (rest.roleId) {
+      const targetRole = await prisma.role.findUnique({ where: { id: rest.roleId } });
       if (!targetRole) throw Errors.notFound("Role");
 
       const userRole = req.user?.role ?? "";
@@ -177,43 +163,23 @@ router.patch("/:id", authorizePermission("users", "write"), validateBody(UpdateU
       if (!allowedRoles.includes(targetRole.name)) {
         throw Errors.forbidden(`Your role (${userRole}) is not permitted to assign the ${targetRole.name} role`);
       }
-      
-      await prisma.userTenantAssignment.update({
-        where: { userId_tenantId: { userId: user.id, tenantId: req.tenantId! } },
-        data: { roleId }
-      });
-
-      if (targetRole.name === "CLINIC_ADMIN") {
-        const tenantClinics = await prisma.clinic.findMany({
-          where: { tenantId: req.tenantId!, deletedAt: null }
-        });
-        for (const clinic of tenantClinics) {
-          await prisma.userClinicAssignment.upsert({
-            where: { userId_clinicId: { userId: user.id, clinicId: clinic.id } },
-            update: { deletedAt: null },
-            create: { userId: user.id, clinicId: clinic.id }
-          });
-        }
-      }
     }
-
     const updated = await prisma.user.update({
       where: { id: user.id },
-      data: rest,
-      select: { ...safeUser, tenantAssignments: { where: { tenantId: req.tenantId! }, include: { role: { select: { id: true, name: true } } } } },
+      data: { ...rest, ...verificationPatch },
+      select: { ...safeUser, role: { select: { id: true, name: true } } },
     });
 
-    await createAuditLog({ req, entityType: "User", entityId: user.id, action: "UPDATE", before: {}, after: rest });
+    await createAuditLog({ req, entityType: "User", entityId: user.id, action: "UPDATE", before: { roleId: user.roleId }, after: rest });
     res.json(updated);
   } catch (err) { next(err); }
 });
 
 router.delete("/:id", authorizePermission("users", "write"), async (req, res, next) => {
   try {
-    const user = await prisma.user.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const user = await prisma.user.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!user) throw Errors.notFound("User");
-    const assignment = await prisma.userTenantAssignment.findUnique({ where: { userId_tenantId: { userId: user.id, tenantId: req.tenantId! } } });
-    if (!assignment && req.user?.role !== "SUPER_ADMIN") throw Errors.tenantMismatch();
+    assertTenantMatch(req, user.tenantId);
     if (user.id === req.user!.userId) throw Errors.forbidden("Cannot deactivate your own account");
 
     await prisma.user.update({ where: { id: user.id }, data: { deletedAt: new Date(), status: "INACTIVE" } });
@@ -227,10 +193,6 @@ router.post("/:id/clinics", authorizePermission("users", "write"), async (req, r
   try {
     const { clinicId } = req.body as { clinicId: string };
     if (!clinicId) throw Errors.validation("clinicId is required");
-    
-    const clinic = await prisma.clinic.findFirst({ where: { id: clinicId, tenantId: req.tenantId!, deletedAt: null } });
-    if (!clinic) throw Errors.validation("Clinic does not belong to this tenant");
-
     await prisma.userClinicAssignment.upsert({
       where: { userId_clinicId: { userId: req.params["id"] as string, clinicId } },
       update: { deletedAt: null },
@@ -255,10 +217,6 @@ router.post("/:id/programs", authorizePermission("users", "write"), async (req, 
   try {
     const { programId } = req.body as { programId: string };
     if (!programId) throw Errors.validation("programId is required");
-
-    const program = await prisma.program.findFirst({ where: { id: programId, tenantId: req.tenantId!, deletedAt: null } });
-    if (!program) throw Errors.validation("Program does not belong to this tenant");
-
     await prisma.userProgramAssignment.upsert({
       where: { userId_programId: { userId: req.params["id"] as string, programId } },
       update: { deletedAt: null },

@@ -55,6 +55,8 @@ async function main() {
       where: { email },
       update: {
         password: passwordHash,
+        roleId: role.id,
+        tenantId: tenant.id,
         firstName: "Ishant",
         lastName: "Superadmin",
         status: "ACTIVE",
@@ -62,11 +64,12 @@ async function main() {
       create: {
         email,
         password: passwordHash,
+        roleId: role.id,
+        tenantId: tenant.id,
         firstName: "Ishant",
         lastName: "Superadmin",
         status: "ACTIVE",
         emailVerified: true,
-        tenantAssignments: { create: { tenantId: tenant.id, roleId: role.id } }
       },
     });
 

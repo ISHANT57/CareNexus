@@ -200,8 +200,8 @@ router.post("/", authorizePermission("patients", "write"), validateBody(PatientS
 // PATCH /api/patients/:id
 router.patch("/:id", authorizePermission("patients", "write"), validateBody(PatientSchema.partial().omit({ gpDetails: true, referral: true })), async (req, res, next) => {
   try {
-    const roleScope = await getRoleScope(req, "patient");
-    const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
+    const patientScope = await getRoleScope(req, "patient");
+    const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...patientScope } });
     if (!patient) throw Errors.notFound("Patient");
     assertTenantMatch(req, patient.tenantId);
 
@@ -232,8 +232,8 @@ router.patch("/:id", authorizePermission("patients", "write"), validateBody(Pati
 // DELETE /api/patients/:id
 router.delete("/:id", authorizePermission("patients", "write"), async (req, res, next) => {
   try {
-    const roleScope = await getRoleScope(req, "patient");
-    const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
+    const patientScope = await getRoleScope(req, "patient");
+    const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...patientScope } });
     if (!patient) throw Errors.notFound("Patient");
     assertTenantMatch(req, patient.tenantId);
     await patientService.deletePatient(patient.id);
@@ -246,15 +246,15 @@ router.delete("/:id", authorizePermission("patients", "write"), async (req, res,
 router.get("/:id/journey", authorizePermission("patients", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
-    const roleScope = await getRoleScope(req, "patient");
-    const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
+    const patientScope = await getRoleScope(req, "patient");
+    const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...patientScope } });
     if (!patient) throw Errors.notFound("Patient");
     const [total, events] = await Promise.all([
       prisma.patientJourneyEvent.count({ where: { patientId: patient.id } }),
       prisma.patientJourneyEvent.findMany({
         where: { patientId: patient.id },
         orderBy: { createdAt: "desc" }, skip, take,
-        include: { actedByUser: { select: { id: true, firstName: true, lastName: true } } },
+        include: { actedByUser: { select: { id: true, firstName: true, lastName: true, role: { select: { name: true } } } } },
       }),
     ]);
     res.json({ data: events, meta: paginationMeta(total, page, limit) });
@@ -264,8 +264,8 @@ router.get("/:id/journey", authorizePermission("patients", "read"), async (req, 
 // POST /api/patients/:id/journey
 router.post("/:id/journey", authorizePermission("patients", "write"), validateBody(JourneySchema), async (req, res, next) => {
   try {
-    const roleScope = await getRoleScope(req, "patient");
-    const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
+    const patientScope = await getRoleScope(req, "patient");
+    const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...patientScope } });
     if (!patient) throw Errors.notFound("Patient");
     const event = await prisma.patientJourneyEvent.create({
       data: { patientId: patient.id, status: req.body.status, notes: req.body.notes, actedBy: req.user!.userId },
@@ -287,8 +287,8 @@ const StatusSchema = z.object({
 
 router.patch("/:id/status", authorizePermission("patients", "write"), validateBody(StatusSchema), async (req, res, next) => {
   try {
-    const roleScope = await getRoleScope(req, "patient");
-    const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
+    const patientScope = await getRoleScope(req, "patient");
+    const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...patientScope } });
     if (!patient) throw Errors.notFound("Patient");
     const { status, notes } = req.body as z.infer<typeof StatusSchema>;
     const updated = await prisma.patient.update({ where: { id: patient.id }, data: { status } });
@@ -306,8 +306,8 @@ router.patch("/:id/status", authorizePermission("patients", "write"), validateBo
 // PATCH /api/patients/:id/gp
 router.patch("/:id/gp", authorizePermission("patients", "write"), validateBody(GpSchema), async (req, res, next) => {
   try {
-    const roleScope = await getRoleScope(req, "patient");
-    const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
+    const patientScope = await getRoleScope(req, "patient");
+    const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...patientScope } });
     if (!patient) throw Errors.notFound("Patient");
     const gp = await prisma.patientGpDetails.upsert({
       where: { patientId: patient.id },
@@ -322,8 +322,8 @@ router.patch("/:id/gp", authorizePermission("patients", "write"), validateBody(G
 router.get("/:id/communications", authorizePermission("communications", "read"), async (req, res, next) => {
   try {
     const { skip, take, page, limit } = paginate(req.query);
-    const roleScope = await getRoleScope(req, "patient");
-    const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
+    const patientScope = await getRoleScope(req, "patient");
+    const patient = await prisma.patient.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...patientScope } });
     if (!patient) throw Errors.notFound("Patient");
     const [total, comms] = await Promise.all([
       prisma.smsCommunication.count({ where: { patientId: patient.id } }),

@@ -72,10 +72,23 @@ router.get("/database-metrics", async (_req, res) => {
 
 router.get("/public-stats", async (_req, res) => {
   try {
-    const [areasCount, clinicsCount, programsCount, activeTenants] = await Promise.all([
+    const [
+      areasCount,
+      clinicsCount,
+      programsCount,
+      patientsCount,
+      appointmentsCount,
+      consultationsCount,
+      usersCount,
+      activeTenants,
+    ] = await Promise.all([
       prisma.area.count({ where: { deletedAt: null } }),
       prisma.clinic.count({ where: { deletedAt: null } }),
       prisma.program.count({ where: { deletedAt: null } }),
+      prisma.patient.count({ where: { deletedAt: null } }),
+      prisma.appointment.count({ where: { deletedAt: null } }),
+      prisma.consultation.count({ where: { deletedAt: null } }),
+      prisma.user.count({ where: { deletedAt: null } }),
       prisma.tenant.findMany({
         where: { isActive: true, deletedAt: null },
         select: { name: true },
@@ -86,6 +99,10 @@ router.get("/public-stats", async (_req, res) => {
       areas: areasCount,
       clinics: clinicsCount,
       programs: programsCount,
+      patients: patientsCount,
+      appointments: appointmentsCount,
+      consultations: consultationsCount,
+      users: usersCount,
       tenants: activeTenants.map((t) => t.name),
     });
   } catch (err: any) {

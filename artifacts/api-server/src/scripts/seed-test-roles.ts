@@ -1,28 +1,25 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { randomUUID } from "crypto";
 
 const prisma = new PrismaClient();
 
 // Shared dev password for all test-role accounts.
 const PASSWORD = "Caremesh@123";
 
-// One test login per role. DOCTOR/CLINIC_ADMIN/STAFF/AREA_ADMIN are all
-// clinic-scoped (see roleScope.ts): a non-SUPER_ADMIN with no clinic
-// assignment sees nothing, so every account below gets wired to a real
-// clinic that actually has patients.
+// One test login per role. Every non-SUPER_ADMIN role is clinic-scoped
+// (see roleScope.ts): a user with no clinic assignment sees nothing, so
+// each account below is wired to a real clinic that has patients.
 const ACCOUNTS = [
-  { role: "AREA_ADMIN",   email: "areaadmin@caremesh.test",   firstName: "Ava",   lastName: "AreaAdmin" },
-  { role: "CLINIC_ADMIN", email: "clinicadmin@caremesh.test", firstName: "Cara",  lastName: "ClinicAdmin" },
-  { role: "DOCTOR",       email: "doctor@caremesh.test",      firstName: "Dev",   lastName: "Doctor" },
-  { role: "STAFF",        email: "staff@caremesh.test",       firstName: "Sam",   lastName: "Staff" },
+  { role: "AREA_ADMIN",   email: "areaadmin@caremesh.test",   firstName: "Ava",  lastName: "AreaAdmin" },
+  { role: "CLINIC_ADMIN", email: "clinicadmin@caremesh.test", firstName: "Cara", lastName: "ClinicAdmin" },
+  { role: "DOCTOR",       email: "doctor@caremesh.test",      firstName: "Dev",  lastName: "Doctor" },
+  { role: "STAFF",        email: "staff@caremesh.test",       firstName: "Sam",  lastName: "Staff" },
 ];
 
 async function main() {
   const passwordHash = await bcrypt.hash(PASSWORD, 12);
 
-  // Any clinic that actually has patients works for scoping. (This Prisma
-  // build rejects null literals in filters, so we filter in JS instead.)
+  // Any clinic that actually has patients works for scoping.
   const candidates = await prisma.patient.findMany({
     where: { deletedAt: null },
     select: { clinicId: true, tenantId: true, areaId: true },
@@ -33,39 +30,29 @@ async function main() {
   const { clinicId, tenantId, areaId } = sample as { clinicId: string; tenantId: string; areaId: string };
 
   const clinic = await prisma.clinic.findUnique({ where: { id: clinicId }, select: { name: true } });
-  console.log(`Target clinic: ${clinic?.name} (${clinicId}) in area ${areaId}, tenant ${tenantId}`);
+  console.log(`Target clinic: ${clinic?.name} (${clinicId})`);
 
-  const roles = await prisma.role.findMany({
-    where: { name: { in: ACCOUNTS.map((a) => a.role) } },
-  });
+  const roles = await prisma.role.findMany({ where: { name: { in: ACCOUNTS.map((a) => a.role) } } });
   const roleByName = new Map(roles.map((r) => [r.name, r]));
 
   for (const acct of ACCOUNTS) {
     const role = roleByName.get(acct.role);
     if (!role) { console.warn(`⚠️  Role ${acct.role} not found — skipping ${acct.email}`); continue; }
 
-    // NOTE: the live `users` table still carries stale NOT-NULL `tenantId`
-    // and `roleId` columns that the current Prisma model dropped. Prisma
-    // can't populate columns it doesn't model, so create/update via raw SQL.
-    const rows = await prisma.$queryRawUnsafe<{ id: string }[]>(
-      `INSERT INTO users (id,"tenantId","roleId","firstName","lastName",email,password,status,"emailVerified","updatedAt")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,'ACTIVE',true,now())
-       ON CONFLICT (email) DO UPDATE SET
-         password=EXCLUDED.password, status='ACTIVE', "emailVerified"=true,
-         "deletedAt"=NULL, "tenantId"=EXCLUDED."tenantId", "roleId"=EXCLUDED."roleId", "updatedAt"=now()
-       RETURNING id;`,
-      randomUUID(), tenantId, role.id, acct.firstName, acct.lastName, acct.email, passwordHash
-    );
-    const user = { id: rows[0].id };
-
-    // Role within tenant.
-    await prisma.userTenantAssignment.upsert({
-      where: { userId_tenantId: { userId: user.id, tenantId } },
-      update: { roleId: role.id, status: "ACTIVE" },
-      create: { userId: user.id, tenantId, roleId: role.id, status: "ACTIVE" },
+    const user = await prisma.user.upsert({
+      where: { email: acct.email },
+      update: {
+        password: passwordHash, status: "ACTIVE", emailVerified: true,
+        deletedAt: null, tenantId, roleId: role.id,
+      },
+      create: {
+        firstName: acct.firstName, lastName: acct.lastName, email: acct.email,
+        password: passwordHash, status: "ACTIVE", emailVerified: true,
+        tenantId, roleId: role.id,
+      },
     });
 
-    // Clinic assignment — required for all scoped roles to see any data.
+    // Clinic assignment — required for any non-super role to see data.
     await prisma.userClinicAssignment.upsert({
       where: { userId_clinicId: { userId: user.id, clinicId } },
       update: { deletedAt: null },
@@ -79,9 +66,7 @@ async function main() {
       });
       if (existing === 0) {
         const patients = await prisma.patient.findMany({
-          where: { clinicId, deletedAt: null },
-          select: { id: true },
-          take: 25,
+          where: { clinicId, deletedAt: null }, select: { id: true }, take: 25,
         });
         await prisma.doctorPatientAssignment.createMany({
           data: patients.map((p) => ({ tenantId, areaId, clinicId, doctorId: user.id, patientId: p.id })),
@@ -93,9 +78,7 @@ async function main() {
     console.log(`✅ ${acct.role.padEnd(13)} ${acct.email}`);
   }
 
-  console.log("\n──────────────────────────────────────────────");
-  console.log(`All accounts share password: ${PASSWORD}`);
-  console.log("──────────────────────────────────────────────");
+  console.log(`\nAll accounts share password: ${PASSWORD}`);
 }
 
 main()

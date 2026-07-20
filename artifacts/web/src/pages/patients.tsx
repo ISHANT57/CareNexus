@@ -11,20 +11,20 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/ui/page-header";
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
-import { EmptyState } from "@/components/ui/empty-state";
-import { StatusBadge, getStatusConfig, getToneBadgeClass } from "@/components/ui/status-badge";
-import { Search, Plus, Upload, Filter, X, User, Download } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Search, Plus, Loader2, Upload, Filter, X, User, Download, Eye, MoreHorizontal, Building2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { cn, exportToCSV } from "@/lib/utils";
+import { exportToCSV } from "@/lib/utils";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { usePagination } from "@/hooks/use-pagination";
+import { GradientAvatar, ProgramIcon, StatusBadge, RiskBadge, Pagination } from "@/lib/ui-helpers";
+import { PatientsIllustration, SearchIllustration } from "@/components/ui/illustrations";
+
+const PAGE_SIZE = 10;
 
 const STATUS_OPTIONS = [
   { value: "ACTIVE", label: "Active" },
@@ -39,7 +39,7 @@ const STATUS_OPTIONS = [
 export default function PatientsPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const { page, pageSize, setPage } = usePagination(20);
+  const [page, setPage] = useState(1);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const { filters, setFilter, clearFilters } = useUrlFilters<{
@@ -109,10 +109,9 @@ export default function PatientsPage() {
     areaId: filterArea || undefined,
     clinicId: filterClinic || undefined,
     page,
-    limit: pageSize,
+    limit: PAGE_SIZE,
   });
 
-  const totalPages = data?.meta ? Math.ceil(data.meta.total / pageSize) : 1;
   const activeFilterCount = [filterStatus, filterProgram, filterArea, filterClinic].filter(Boolean).length;
 
   const handleImport = async () => {
@@ -153,133 +152,73 @@ export default function PatientsPage() {
     exportToCSV(exportData, `patients_export_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
-  const columns: DataTableColumn<any>[] = [
-    {
-      key: "nhsNumber",
-      header: "NHS Number",
-      className: "font-mono text-sm text-muted-foreground/80 group-hover:text-muted-foreground transition-colors",
-      render: (patient) => patient.nhsNumber ?? "—",
-    },
-    {
-      key: "name",
-      header: "Name",
-      render: (patient) => (
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 group-hover:border-primary/40 transition-colors">
-            <span className="text-xs font-bold text-primary">{patient.firstName?.[0]}</span>
-          </div>
-          <span className="font-semibold text-foreground group-hover:text-primary transition-colors">
-            {patient.firstName} {patient.lastName}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (patient) => <StatusBadge domain="patient" status={patient.status ?? "INACTIVE"} />,
-    },
-    {
-      key: "risk",
-      header: "Risk Profile",
-      render: (patient) =>
-        patient.riskLevel ? (
-          <Badge
-            variant="outline"
-            className={cn("uppercase font-semibold text-[10px] tracking-wider", getToneBadgeClass(getStatusConfig("patientRisk", patient.riskLevel).tone))}
-          >
-            {getStatusConfig("patientRisk", patient.riskLevel).label} ({patient.riskScore ?? 0})
-          </Badge>
-        ) : (
-          <span className="text-muted-foreground text-xs">—</span>
-        ),
-    },
-    {
-      key: "program",
-      header: "Program",
-      className: "text-sm font-medium text-muted-foreground",
-      render: (patient) => patient.program?.name ?? "—",
-    },
-    {
-      key: "clinic",
-      header: "Clinic",
-      className: "text-sm font-medium text-muted-foreground",
-      render: (patient) => patient.clinic?.name ?? "—",
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      headerClassName: "text-right",
-      className: "text-right",
-      render: (patient) => (
-        <Link href={`/patients/${patient.id}`}>
-          <Button variant="ghost" size="sm" className="h-8 text-xs font-semibold bg-background border border-border shadow-sm hover:bg-primary hover:text-primary-foreground">
-            View Profile →
-          </Button>
-        </Link>
-      ),
-    },
-  ];
-
   return (
-    <div className="page-container animate-in-up">
-      <PageHeader
-        title="Patients"
-        description="Manage patient records, demographics, and care assignments."
-        actions={
-          <>
-            <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !data?.data?.length}>
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
-
-            <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import CSV
-                </Button>
-              </DialogTrigger>
-              <DialogContent aria-describedby={undefined}>
-                <DialogHeader>
-                  <DialogTitle>Bulk Import Patients</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label>CSV File</Label>
-                    <input
-                      type="file"
-                      accept=".csv"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
-                      onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Required columns: firstName, lastName. Optional: email, mobile, dateOfBirth, nhsNumber.
-                    </p>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => { setIsImportOpen(false); setImportFile(null); }}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleImport} disabled={!importFile || importPatients.isPending}>
-                    {importPatients.isPending ? "Importing..." : "Import"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            <Link href="/patients/new">
-              <Button data-testid="button-new-patient" size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
-                <Plus className="w-4 h-4 mr-2" />
-                New Patient
+    <div>
+      {/* ── Page header ──────────────────────────────────────────────────────── */}
+      <div className="border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1">Clinical Records</p>
+              <h1 className="text-xl font-semibold tracking-tight">Patients</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {data?.meta?.total ? `${data.meta.total.toLocaleString()} patients · ` : ""}Manage records, demographics, and care assignments.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !data?.data?.length}>
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
               </Button>
-            </Link>
-          </>
-        }
-      />
 
-      <div className="space-y-4">
+              <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Import CSV
+                  </Button>
+                </DialogTrigger>
+                <DialogContent aria-describedby={undefined}>
+                  <DialogHeader>
+                    <DialogTitle>Bulk Import Patients</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label>CSV File</Label>
+                      <input
+                        type="file"
+                        accept=".csv"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
+                        onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Required columns: firstName, lastName. Optional: email, mobile, dateOfBirth, nhsNumber.
+                      </p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => { setIsImportOpen(false); setImportFile(null); }}>Cancel</Button>
+                    <Button onClick={handleImport} disabled={!importFile || importPatients.isPending}>
+                      {importPatients.isPending ? "Importing..." : "Import"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Link href="/patients/new">
+                <Button data-testid="button-new-patient" size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Patient
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Content ──────────────────────────────────────────────────────────── */}
+      <div className="page-container animate-in-up pt-6 pb-12 space-y-4">
+
         {/* Search + Filter bar */}
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-md">
@@ -311,7 +250,7 @@ export default function PatientsPage() {
           {activeFilterCount > 0 && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
               <X className="w-3.5 h-3.5" />
-              Clear
+              Clear filters
             </Button>
           )}
 
@@ -322,13 +261,11 @@ export default function PatientsPage() {
           )}
         </div>
 
-        {/* Expanded Filter panel */}
+        {/* Filter panel */}
         {showFilters && (
           <div className="bg-card border border-border rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in-up">
             <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Status
-              </Label>
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</Label>
               <SearchableSelect
                 options={STATUS_OPTIONS}
                 value={filterStatus}
@@ -339,9 +276,7 @@ export default function PatientsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Program
-              </Label>
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Program</Label>
               <SearchableSelect
                 options={programOptions}
                 value={filterProgram}
@@ -353,9 +288,7 @@ export default function PatientsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Area
-              </Label>
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Area</Label>
               <SearchableSelect
                 options={areaOptions}
                 value={filterArea}
@@ -385,42 +318,143 @@ export default function PatientsPage() {
           </div>
         )}
 
-        {/* Table / Data Grid */}
-        <Card className="overflow-hidden border-border/50 shadow-sm rounded-2xl">
+        {/* Table */}
+        <Card className="overflow-hidden">
           <CardContent className="p-0">
-            <DataTable
-              columns={columns}
-              data={data?.data ?? []}
-              isLoading={isLoading}
-              getRowKey={(patient) => patient.id}
-              emptyState={
-                <EmptyState
-                  icon={User}
-                  title="No patients found"
-                  description={
-                    search || activeFilterCount > 0
-                      ? "Try adjusting your search query or removing some filters to see more results."
-                      : "Your registry is empty. Add your first patient record to begin."
-                  }
-                  action={
-                    !search && !activeFilterCount ? (
-                      <Link href="/patients/new">
-                        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-6">
-                          <Plus className="w-4 h-4 mr-2" />
-                          Register New Patient
-                        </Button>
-                      </Link>
-                    ) : undefined
-                  }
+            {isLoading ? (
+              <div className="flex justify-center items-center p-16">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : !data?.data || data.data.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <div className="w-32 h-32 mb-1 text-primary">
+                  {search || activeFilterCount > 0 ? <SearchIllustration /> : <PatientsIllustration />}
+                </div>
+                <p className="font-semibold text-foreground">No patients found</p>
+                <p className="text-sm mt-1">
+                  {search || activeFilterCount > 0
+                    ? "Try adjusting your search or filters"
+                    : "Add your first patient to get started"}
+                </p>
+                {!search && !activeFilterCount && (
+                  <Link href="/patients/new">
+                    <Button size="sm" className="mt-5">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Patient
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40 hover:bg-muted/40 border-b border-border">
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground w-36">NHS Number</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Patient</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Risk</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Program</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Clinic</TableHead>
+                      <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.data.map((patient) => {
+                      const riskLevel = (patient as any).riskLevel as string | undefined;
+                      const riskScore = (patient as any).riskScore as number | undefined;
+                      const programName = (patient as any).program?.name as string | undefined;
+                      return (
+                        <TableRow
+                          key={patient.id}
+                          data-testid={`row-patient-${patient.id}`}
+                          className="group/row hover:bg-muted/30 transition-colors border-b border-border/50"
+                        >
+                          <TableCell className="font-mono text-xs text-muted-foreground">
+                            {patient.nhsNumber ?? "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Link href={`/patients/${patient.id}`} className="flex items-center gap-3 group/name">
+                              <GradientAvatar first={patient.firstName} last={patient.lastName} />
+                              <span className="font-medium group-hover/name:text-primary transition-colors">
+                                {patient.firstName} {patient.lastName}
+                              </span>
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge status={patient.status ?? "INACTIVE"} />
+                          </TableCell>
+                          <TableCell>
+                            <RiskBadge level={riskLevel} score={riskScore} />
+                          </TableCell>
+                          <TableCell>
+                            {programName ? (
+                              <div className="flex items-center gap-1.5 text-sm">
+                                <ProgramIcon name={programName} />
+                                <span className="text-foreground/80 truncate max-w-[140px]">{programName}</span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {patient.clinic?.name ? (
+                              <div className="flex items-center gap-1.5 text-sm">
+                                <Building2 className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
+                                <span className="text-muted-foreground truncate max-w-[140px]">{patient.clinic.name}</span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Link href={`/patients/${patient.id}`}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/10 opacity-0 group-hover/row:opacity-100 transition-opacity"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  View Details
+                                </Button>
+                              </Link>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                  >
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-44">
+                                  <Link href={`/patients/${patient.id}`}>
+                                    <DropdownMenuItem className="gap-2 cursor-pointer">
+                                      <Eye className="w-4 h-4" />
+                                      View Details
+                                    </DropdownMenuItem>
+                                  </Link>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+
+                <Pagination
+                  page={page}
+                  pageSize={PAGE_SIZE}
+                  total={data.meta?.total ?? 0}
+                  onPageChange={setPage}
+                  noun="patients"
                 />
-              }
-              pagination={{
-                page,
-                totalPages,
-                totalLabel: `${data?.meta?.total?.toLocaleString() ?? 0} total`,
-                onPageChange: setPage,
-              }}
-            />
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

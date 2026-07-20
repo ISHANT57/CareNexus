@@ -1,22 +1,14 @@
 import { useState } from "react";
 import { useListAuditLogs } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  Search,
-  Filter,
-  ChevronDown,
-  ChevronUp,
-  ScrollText,
-  X,
-} from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { usePagination } from "@/hooks/use-pagination";
+import { ChevronDown, ChevronUp, ScrollText, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -26,30 +18,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const PAGE_SIZE = 50;
-
-const ACTION_CONFIG: Record<string, { label: string; class: string; dotClass: string }> = {
-  CREATE: {
-    label: "Created",
-    class: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-    dotClass: "bg-emerald-500",
-  },
-  UPDATE: {
-    label: "Updated",
-    class: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
-    dotClass: "bg-blue-500",
-  },
-  PATCH: {
-    label: "Modified",
-    class: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
-    dotClass: "bg-blue-400",
-  },
-  DELETE: {
-    label: "Deleted",
-    class: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-    dotClass: "bg-red-500",
-  },
+const ACTION_LABELS: Record<string, string> = {
+  CREATE: "Created",
+  UPDATE: "Updated",
+  PATCH: "Modified",
+  DELETE: "Deleted",
 };
+
+function actionToneClass(action: string): string {
+  if (action === "CREATE") return "bg-success/10 text-success border-success/20";
+  if (action === "DELETE") return "bg-destructive/10 text-destructive border-destructive/20";
+  return "bg-primary/10 text-primary border-primary/20";
+}
+
+function actionDotClass(action: string): string {
+  if (action === "CREATE") return "bg-success";
+  if (action === "DELETE") return "bg-destructive";
+  return "bg-primary";
+}
 
 const ENTITY_LABELS: Record<string, string> = {
   Patient: "Patient",
@@ -66,7 +52,7 @@ const ENTITY_LABELS: Record<string, string> = {
 };
 
 function humanizeAction(action: string, entityType: string): string {
-  const actionLabel = ACTION_CONFIG[action]?.label ?? action;
+  const actionLabel = ACTION_LABELS[action] ?? action;
   const entityLabel = ENTITY_LABELS[entityType] ?? entityType?.replace(/_/g, " ");
   return `${actionLabel} ${entityLabel}`;
 }
@@ -89,17 +75,17 @@ function JsonViewer({ data, label }: { data: any; label: string }) {
 }
 
 export default function AuditLogsPage() {
-  const [page, setPage] = useState(1);
+  const { page, pageSize, setPage } = usePagination(50);
   const [filterAction, setFilterAction] = useState("");
   const [filterEntity, setFilterEntity] = useState("");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   const { data, isLoading } = useListAuditLogs({
     page,
-    limit: PAGE_SIZE,
+    limit: pageSize,
   });
 
-  const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;
+  const totalPages = data?.meta ? Math.ceil(data.meta.total / pageSize) : 1;
 
   const activeFilterCount = [filterAction, filterEntity].filter(Boolean).length;
 
@@ -121,26 +107,99 @@ export default function AuditLogsPage() {
     new Set((data?.data ?? []).map((l: any) => l.entity).filter(Boolean))
   ).sort() as string[];
 
-  return (
-    <div className="flex-1 overflow-y-auto bg-background">
-      {/* Header */}
-      <div className="bg-card border-b border-border px-8 py-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Audit Logs</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Immutable, append-only record of all system activity and data access.
-            </p>
+  const expandedLog: any = filteredLogs.find((log: any) => log.id === expandedRow);
+
+  const columns: DataTableColumn<any>[] = [
+    {
+      key: "indicator",
+      header: "",
+      headerClassName: "w-4",
+      className: "w-4 pr-0",
+      render: (log) => <div className={cn("w-2 h-2 rounded-full", actionDotClass(log.action))} />,
+    },
+    {
+      key: "timestamp",
+      header: "Timestamp",
+      className: "text-sm text-muted-foreground whitespace-nowrap",
+      render: (log) =>
+        new Date(log.createdAt).toLocaleString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+    },
+    {
+      key: "actor",
+      header: "Actor",
+      render: (log) => (
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <span className="text-[10px] font-bold text-primary">
+              {log.user ? log.user.firstName?.[0] : "S"}
+            </span>
           </div>
-          {data?.meta && (
+          <span className="text-sm font-medium">
+            {log.user ? `${log.user.firstName} ${log.user.lastName}` : "System"}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "event",
+      header: "Event",
+      render: (log) => (
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={cn("text-xs font-medium", actionToneClass(log.action))}>
+            {ACTION_LABELS[log.action] ?? log.action}
+          </Badge>
+          <span className="text-sm text-muted-foreground">{humanizeAction(log.action, log.entity)}</span>
+        </div>
+      ),
+    },
+    {
+      key: "entity",
+      header: "Entity",
+      render: (log) => (
+        <Badge variant="secondary" className="text-xs font-mono">
+          {ENTITY_LABELS[log.entity] ?? log.entity ?? "—"}
+        </Badge>
+      ),
+    },
+    {
+      key: "entityId",
+      header: "Entity ID",
+      render: (log) => (
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-mono text-xs text-muted-foreground truncate max-w-[120px]">
+            {log.entityId ?? "—"}
+          </span>
+          {expandedRow === log.id ? (
+            <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className="page-container animate-in-up">
+      <PageHeader
+        title="Audit Logs"
+        description="Immutable, append-only record of all system activity and data access."
+        actions={
+          data?.meta ? (
             <Badge variant="secondary" className="text-sm px-3 py-1.5">
               {data.meta.total.toLocaleString()} total events
             </Badge>
-          )}
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
 
-      <div className="p-8 space-y-4">
+      <div className="space-y-4">
         {/* Filters */}
         <div className="bg-card border border-border rounded-xl p-4 flex flex-wrap items-end gap-4">
           <div className="flex-1 min-w-[200px] space-y-2">
@@ -192,156 +251,42 @@ export default function AuditLogsPage() {
           </div>
         </div>
 
-        {/* Pagination top */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Prev
-            </Button>
-            <span className="text-sm text-muted-foreground px-2">
-              Page {page} of {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages}
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
-
         {/* Table */}
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border-border/50 shadow-sm rounded-2xl">
           <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex justify-center items-center p-16">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              </div>
-            ) : filteredLogs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                <ScrollText className="w-12 h-12 mb-3 opacity-20" />
-                <p className="font-medium">No audit logs found</p>
-                <p className="text-sm mt-1">
-                  {activeFilterCount > 0 ? "Try clearing the filters" : "System events will appear here"}
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/30 hover:bg-muted/30">
-                      <TableHead className="font-semibold text-xs uppercase tracking-wide w-4"></TableHead>
-                      <TableHead className="font-semibold text-xs uppercase tracking-wide">Timestamp</TableHead>
-                      <TableHead className="font-semibold text-xs uppercase tracking-wide">Actor</TableHead>
-                      <TableHead className="font-semibold text-xs uppercase tracking-wide">Event</TableHead>
-                      <TableHead className="font-semibold text-xs uppercase tracking-wide">Entity</TableHead>
-                      <TableHead className="font-semibold text-xs uppercase tracking-wide">Entity ID</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLogs.map((log: any) => {
-                      const config = ACTION_CONFIG[log.action] ?? {
-                        label: log.action,
-                        class: "bg-muted text-muted-foreground border-border",
-                        dotClass: "bg-muted-foreground",
-                      };
-                      const isExpanded = expandedRow === log.id;
-                      const humanAction = humanizeAction(log.action, log.entity);
+            <DataTable
+              columns={columns}
+              data={filteredLogs}
+              isLoading={isLoading}
+              getRowKey={(log) => log.id}
+              onRowClick={(log) => setExpandedRow(expandedRow === log.id ? null : log.id)}
+              emptyState={
+                <EmptyState
+                  icon={ScrollText}
+                  title="No audit logs found"
+                  description={activeFilterCount > 0 ? "Try clearing the filters" : "System events will appear here"}
+                />
+              }
+              pagination={{
+                page,
+                totalPages,
+                totalLabel: `${data?.meta?.total?.toLocaleString() ?? 0} total`,
+                onPageChange: setPage,
+              }}
+            />
 
-                      return (
-                        <>
-                          <TableRow
-                            key={log.id}
-                            data-testid={`row-log-${log.id}`}
-                            className={cn(
-                              "cursor-pointer transition-colors",
-                              isExpanded ? "bg-muted/50" : "hover:bg-muted/20"
-                            )}
-                            onClick={() => setExpandedRow(isExpanded ? null : log.id)}
-                          >
-                            <TableCell className="w-4 pr-0">
-                              <div className={cn("w-2 h-2 rounded-full", config.dotClass)} />
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                              {new Date(log.createdAt).toLocaleString("en-GB", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                  <span className="text-[10px] font-bold text-primary">
-                                    {log.user ? log.user.firstName?.[0] : "S"}
-                                  </span>
-                                </div>
-                                <span className="text-sm font-medium">
-                                  {log.user ? `${log.user.firstName} ${log.user.lastName}` : "System"}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className={cn("text-xs font-medium", config.class)}>
-                                  {config.label}
-                                </Badge>
-                                <span className="text-sm text-muted-foreground">{humanAction}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="secondary" className="text-xs font-mono">
-                                {ENTITY_LABELS[log.entity] ?? log.entity ?? "—"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="font-mono text-xs text-muted-foreground truncate max-w-[120px]">
-                                  {log.entityId ?? "—"}
-                                </span>
-                                {isExpanded ? (
-                                  <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
-                                ) : (
-                                  <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-
-                          {/* Expanded detail row */}
-                          {isExpanded && (
-                            <TableRow key={`${log.id}-expanded`} className="bg-muted/30 hover:bg-muted/30">
-                              <TableCell colSpan={6} className="p-0">
-                                <div className="px-6 py-4 border-t border-border/50">
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <JsonViewer data={log.beforeValue} label="Before" />
-                                    <JsonViewer data={log.afterValue} label="After" />
-                                  </div>
-                                  {log.ipAddress && (
-                                    <p className="text-xs text-muted-foreground mt-3">
-                                      IP Address: <code className="font-mono">{log.ipAddress}</code>
-                                    </p>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+            {/* Expanded detail panel for the selected row */}
+            {expandedLog && (
+              <div className="px-6 py-4 border-t border-border/50 bg-muted/30">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <JsonViewer data={expandedLog.beforeValue} label="Before" />
+                  <JsonViewer data={expandedLog.afterValue} label="After" />
+                </div>
+                {expandedLog.ipAddress && (
+                  <p className="text-xs text-muted-foreground mt-3">
+                    IP Address: <code className="font-mono">{expandedLog.ipAddress}</code>
+                  </p>
+                )}
               </div>
             )}
           </CardContent>

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTenantContext } from "@/contexts/TenantContext";
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
@@ -19,6 +20,8 @@ type PasswordForm = z.infer<typeof passwordSchema>;
 export default function SettingsPage() {
   const { toast } = useToast();
   const { data: user } = useGetMe();
+  const { activeTenantId } = useTenantContext();
+  const activeTenant = user?.tenantAssignments?.find((a) => a.tenantId === activeTenantId);
   const changePassword = useChangePassword();
 
   const form = useForm<PasswordForm>({
@@ -53,17 +56,17 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Organisation Profile</CardTitle>
-          <CardDescription>Tenant details for {user?.tenantName}</CardDescription>
+          <CardDescription>Tenant details for {activeTenant?.tenantName || "Platform"}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground">Tenant ID</label>
-              <div className="mt-1 font-mono text-sm bg-muted p-2 rounded">{user?.tenantId}</div>
+              <div className="mt-1 font-mono text-sm bg-muted p-2 rounded">{activeTenantId}</div>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Organisation Name</label>
-              <div className="mt-1 font-medium p-2">{user?.tenantName}</div>
+              <div className="mt-1 font-medium p-2">{activeTenant?.tenantName || "Platform View"}</div>
             </div>
           </div>
         </CardContent>

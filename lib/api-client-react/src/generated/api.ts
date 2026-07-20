@@ -5801,6 +5801,70 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getUpdateConsultationMutationOptions(options));
     }
 
+export const getDeleteConsultationUrl = (id: string,) => {
+
+
+
+
+  return `/api/consultations/${id}`
+}
+
+export const deleteConsultation = async (id: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteConsultationUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteConsultationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteConsultation>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteConsultation>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteConsultation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteConsultation>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteConsultation(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteConsultationMutationResult = NonNullable<Awaited<ReturnType<typeof deleteConsultation>>>
+
+    export type DeleteConsultationMutationError = ErrorType<unknown>
+
+    export const useDeleteConsultation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteConsultation>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteConsultation>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteConsultationMutationOptions(options));
+    }
+
 export const getUploadFileUrl = () => {
 
 

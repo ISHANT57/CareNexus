@@ -6,6 +6,7 @@ export type BodyType<T> = T;
 let _baseUrl = "";
 let _getToken: AuthTokenGetter = () => null;
 let _getTenantId: () => string | null = () => null;
+let refreshPromise: Promise<any> | null = null;
 
 export function setBaseUrl(url: string) {
   _baseUrl = url;
@@ -51,38 +52,50 @@ export async function customFetch<T = unknown>(
   if (response.status === 401 && typeof window !== "undefined") {
     if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
       try {
-        // Attempt to refresh the token
-        const refreshRes = await fetch(`${_baseUrl}/api/auth/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
+        if (!refreshPromise) {
+          refreshPromise = (async () => {
+            const refreshHeaders: Record<string, string> = { "Content-Type": "application/json" };
+            if (xsrfToken) refreshHeaders["x-xsrf-token"] = xsrfToken;
+
+            const refreshRes = await fetch(`${_baseUrl}/api/auth/refresh`, {
+              method: "POST",
+              headers: refreshHeaders,
+              body: JSON.stringify({}),
+              credentials: "include",
+            });
+
+            if (!refreshRes.ok) throw new Error("Refresh failed");
+            return await refreshRes.json();
+          })();
+        }
+
+        const data = await refreshPromise;
+        localStorage.setItem("access_token", data.accessToken);
+        headers.set("Authorization", `Bearer ${data.accessToken}`);
+        
+        // Retry original request
+        const retryRes = await fetch(`${_baseUrl}${url}`, {
+          ...options,
+          headers,
           credentials: "include",
         });
 
-        if (refreshRes.ok) {
-          const data = await refreshRes.json();
-          localStorage.setItem("access_token", data.accessToken);
-          headers.set("Authorization", `Bearer ${data.accessToken}`);
-          
-          // Retry original request
-          const retryRes = await fetch(`${_baseUrl}${url}`, {
-            ...options,
-            headers,
-            credentials: "include",
-          });
-
-          if (retryRes.ok) {
-            if (retryRes.status === 204) return undefined as unknown as T;
-            return retryRes.json() as Promise<T>;
-          }
+        if (retryRes.ok) {
+          if (retryRes.status === 204) return undefined as unknown as T;
+          return retryRes.json() as Promise<T>;
         }
       } catch (err) {
         // Fall through to logout
+        localStorage.removeItem("access_token");
+        window.location.href = "/login";
+      } finally {
+        refreshPromise = null;
       }
-
-      // If refresh fails, clear everything and redirect to login
-      localStorage.removeItem("access_token");
-      window.location.href = "/login";
+      
+      // If retryRes is not ok or we fell through, but we didn't throw in the try block
+      // we still might want to throw the original response error or just return.
+      // But actually if we fall through without redirecting, it means we had an issue.
+      // Let it fall to the `!response.ok` below if it didn't return.
     }
   }
 

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { PageHeader } from "@/components/ui/page-header";
 import { Shield, Plus, ShieldCheck, ShieldOff, Loader2, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -24,8 +25,8 @@ import { cn } from "@/lib/utils";
 const RESOURCE_GROUPS = [
   {
     group: "Clinical",
-    color: "text-emerald-600 dark:text-emerald-400",
-    bgColor: "bg-emerald-50 dark:bg-emerald-950/20",
+    color: "text-success",
+    bgColor: "bg-success/10",
     resources: [
       { key: "patients", label: "Patients", description: "Patient records and demographics" },
       { key: "consultations", label: "Consultations", description: "Clinical consultation notes" },
@@ -37,8 +38,8 @@ const RESOURCE_GROUPS = [
   },
   {
     group: "Administration",
-    color: "text-blue-600 dark:text-blue-400",
-    bgColor: "bg-blue-50 dark:bg-blue-950/20",
+    color: "text-primary",
+    bgColor: "bg-primary/10",
     resources: [
       { key: "users", label: "Team Members", description: "User accounts and profiles" },
       { key: "roles", label: "Roles", description: "Role definitions and assignments" },
@@ -66,8 +67,8 @@ const RESOURCE_GROUPS = [
   },
   {
     group: "System",
-    color: "text-slate-600 dark:text-slate-400",
-    bgColor: "bg-slate-50 dark:bg-slate-950/20",
+    color: "text-muted-foreground",
+    bgColor: "bg-muted",
     resources: [
       { key: "audit_logs", label: "Audit Logs", description: "System audit trail access" },
       { key: "reports", label: "Reports", description: "Analytics and reporting" },
@@ -118,14 +119,11 @@ export default function RolesPage() {
   return (
     <div className="page-container animate-in-up flex flex-col h-[calc(100vh-2rem)]">
       {/* Header */}
-      <div className="page-header shrink-0">
-        <div>
-          <h1 className="text-h2">Roles & Permissions</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Define roles and configure granular access control for your team.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader
+        className="shrink-0"
+        title="Roles & Permissions"
+        description="Define roles and configure granular access control for your team."
+        actions={
           <Dialog open={isCreateRoleOpen} onOpenChange={setIsCreateRoleOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
@@ -165,8 +163,8 @@ export default function RolesPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
+        }
+      />
 
       <div className="flex-1 flex gap-6 min-h-0 pt-4">
         {/* Roles List */}
@@ -218,7 +216,7 @@ export default function RolesPage() {
                       </div>
                       {role.description && (
                         <p className={cn(
-                          "text-xs line-clamp-1 ml-5",
+                          "text-xs line-clamp-1 ml-6",
                           selectedRoleId === role.id ? "text-primary-foreground/70" : "text-muted-foreground"
                         )}>
                           {role.description}
@@ -438,8 +436,8 @@ function PermissionsMatrix({ role }: { role: { id: string; name: string; isSyste
                           className={cn(
                             "w-16 h-8 rounded-md border-2 flex items-center justify-center transition-all text-xs font-semibold",
                             allGranted
-                              ? "bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600"
-                              : "border-dashed border-border text-muted-foreground hover:border-emerald-500 hover:text-emerald-600"
+                              ? "bg-success border-success text-success-foreground hover:bg-success/90"
+                              : "border-dashed border-border text-muted-foreground hover:border-success hover:text-success"
                           )}
                         >
                           {allGranted ? "All ✓" : "All"}

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Lock, Activity, Users, Building2, CheckCircle, ArrowRight, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { Shield, Lock, Activity, Users, Building2, CheckCircle, ArrowRight, Eye, EyeOff, BrainCircuit, HeartPulse, ChevronRight } from "lucide-react";
+import { motion } from "framer-motion";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -19,46 +19,12 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
-const features = [
-  { icon: Users, label: "Patient Management", desc: "Comprehensive patient journey tracking" },
-  { icon: Building2, label: "Multi-Clinic Network", desc: "195 areas, 707 clinics connected" },
-  { icon: Activity, label: "Clinical Analytics", desc: "Real-time outcome & risk dashboards" },
-  { icon: Shield, label: "Enterprise Security", desc: "NHS-compliant, role-based access" },
-];
-
-const stats = [
-  { value: "195+", label: "Areas" },
-  { value: "707+", label: "Clinics" },
-  { value: "25+", label: "Programs" },
-  { value: "99.9%", label: "Uptime" },
-];
-
 export default function LoginPage() {
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
   const loginMutation = useLogin();
   const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
-  const [statsData, setStatsData] = useState<{ areas: number; clinics: number; programs: number } | null>(null);
-
-  useEffect(() => {
-    fetch("/api/health/public-stats")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch");
-        return res.json();
-      })
-      .then((data) => {
-        setStatsData(data);
-      })
-      .catch((err) => console.error("Error loading stats:", err));
-  }, []);
-
-  const dynamicStats = [
-    { value: statsData ? `${statsData.areas}` : "—", label: "Areas" },
-    { value: statsData ? `${statsData.clinics}` : "—", label: "Clinics" },
-    { value: statsData ? `${statsData.programs}` : "—", label: "Programs" },
-    { value: "99.9%", label: "Uptime" },
-  ];
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -90,51 +56,46 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex bg-background overflow-hidden">
-      {/* Left — Auth Panel */}
-      <div className="flex-1 flex flex-col justify-center px-6 sm:px-10 lg:px-16 xl:px-20 py-12 relative z-10">
-        {/* Background subtle pattern */}
-        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/3 pointer-events-none" />
+    <div className="min-h-screen w-full flex bg-background font-sans selection:bg-primary/20">
 
-        <div className="relative mx-auto w-full max-w-sm">
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-10">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shrink-0"
-              style={{ background: "linear-gradient(135deg, #003f9e 0%, #0066ff 100%)" }}
-            >
-              <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6">
-                <rect x="13" y="4" width="6" height="24" rx="2" fill="white" opacity="0.95" />
-                <rect x="4" y="13" width="24" height="6" rx="2" fill="white" opacity="0.95" />
-              </svg>
-            </div>
-            <div>
-              <div className="font-bold text-xl tracking-tight text-foreground leading-none">CareNexus</div>
-              <div className="text-[10px] text-muted-foreground tracking-widest uppercase mt-0.5">Connected Care. Better Outcomes.</div>
-            </div>
+      {/* ── LEFT PANEL (Auth Form) ──────────────────────────────── */}
+      <div className="w-full lg:w-[45%] flex flex-col justify-center px-8 sm:px-16 lg:px-24 py-12 relative z-10 bg-card">
+
+        {/* Top Logo */}
+        <div className="absolute top-8 left-8 sm:top-12 sm:left-16 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20">
+            <svg viewBox="0 0 32 32" fill="none" className="w-5 h-5">
+              <rect x="13" y="4" width="6" height="24" rx="2" fill="white" opacity="0.95" />
+              <rect x="4" y="13" width="24" height="6" rx="2" fill="white" opacity="0.95" />
+            </svg>
+          </div>
+          <span className="font-extrabold text-xl text-foreground tracking-tight">CareNexus</span>
+        </div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-[400px] mx-auto mt-16 lg:mt-0"
+        >
+          <div className="mb-10">
+            <h1 className="text-3xl font-bold text-foreground mb-3 tracking-tight">Welcome back</h1>
+            <p className="text-muted-foreground text-sm leading-relaxed">Enter your credentials to securely access your clinical workspace and patient records.</p>
           </div>
 
-          {/* Heading */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground mb-1.5">Welcome back</h1>
-            <p className="text-sm text-muted-foreground">Sign in to your CareNexus account to continue.</p>
-          </div>
-
-          {/* Form */}
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">Email address</FormLabel>
+                    <FormLabel className="text-xs font-bold text-foreground uppercase tracking-wider">Work Email</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="name@nhs.net"
-                        className="h-11 bg-background border-border/80 focus-visible:border-primary"
+                        placeholder="name@trust.nhs.uk"
+                        className="h-12 bg-background border-border focus-visible:bg-card focus-visible:border-primary focus-visible:ring-primary/10 text-base rounded-xl transition-all"
                         {...field}
-                        data-testid="input-email"
                       />
                     </FormControl>
                     <FormMessage />
@@ -146,12 +107,9 @@ export default function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex items-center justify-between">
-                      <FormLabel className="text-sm font-medium">Password</FormLabel>
-                      <Link
-                        href="/forgot-password"
-                        className="text-xs text-primary hover:underline"
-                      >
+                    <div className="flex items-center justify-between mb-2">
+                      <FormLabel className="text-xs font-bold text-foreground uppercase tracking-wider">Password</FormLabel>
+                      <Link href="/forgot-password" className="text-xs font-semibold text-primary hover:text-primary/80 hover:underline transition-colors">
                         Forgot password?
                       </Link>
                     </div>
@@ -160,17 +118,15 @@ export default function LoginPage() {
                         <Input
                           type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
-                          className="h-11 bg-background border-border/80 focus-visible:border-primary pr-10"
+                          className="h-12 bg-background border-border focus-visible:bg-card focus-visible:border-primary focus-visible:ring-primary/10 pr-12 text-base rounded-xl transition-all"
                           {...field}
-                          data-testid="input-password"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
                       </div>
                     </FormControl>
@@ -181,118 +137,106 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full h-11 text-sm font-semibold mt-2"
+                className="w-full h-12 text-[15px] font-bold mt-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-lg shadow-primary/25 transition-all hover:-translate-y-0.5 relative overflow-hidden group"
                 disabled={loginMutation.isPending}
-                data-testid="button-submit"
-                style={{ background: "linear-gradient(135deg, #003f9e 0%, #0066ff 100%)" }}
               >
-                {loginMutation.isPending ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Signing in...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    Sign in <ArrowRight className="w-4 h-4" />
-                  </span>
-                )}
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                <div className="relative flex items-center justify-center gap-2">
+                  {loginMutation.isPending ? (
+                    <>
+                      <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Authenticating...
+                    </>
+                  ) : (
+                    <>
+                      Sign In to Workspace <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </div>
               </Button>
             </form>
           </Form>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            Don't have a tenant account?{" "}
-            <Link href="/register" className="font-medium text-primary hover:underline">
-              Register here
+          <div className="mt-10 text-center text-sm text-muted-foreground font-medium border-t border-border pt-8">
+            Don't have a platform account?{" "}
+            <Link href="/register" className="font-bold text-primary hover:text-primary/80 transition-colors hover:underline">
+              Request access
             </Link>
           </div>
+        </motion.div>
 
-          {/* Trust badges */}
-          <div className="mt-10 pt-6 border-t border-border/60">
-            <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-emerald-500" />
-                <span>NHS Compliant</span>
-              </div>
-              <div className="w-px h-3 bg-border" />
-              <div className="flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5 text-blue-500" />
-                <span>256-bit Encryption</span>
-              </div>
-              <div className="w-px h-3 bg-border" />
-              <div className="flex items-center gap-1.5">
-                <CheckCircle className="w-3.5 h-3.5 text-purple-500" />
-                <span>HIPAA Ready</span>
-              </div>
-            </div>
-          </div>
+        {/* Footer badges */}
+        <div className="absolute bottom-8 left-8 sm:left-16 flex items-center gap-6 text-xs font-semibold text-muted-foreground">
+          <div className="flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> 256-bit AES</div>
+          <div className="w-1 h-1 rounded-full bg-border" />
+          <div className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5" /> NHS DSP Toolkit Compliant</div>
         </div>
       </div>
 
-      {/* Right — Branding Panel (desktop only) */}
-      <div
-        className="hidden lg:flex relative w-[52%] flex-col justify-between p-12 overflow-hidden"
-        style={{ background: "linear-gradient(145deg, #001f5e 0%, #003f9e 40%, #0066ff 100%)" }}
-      >
-        {/* Abstract background shapes */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #60a5fa, transparent)" }} />
-          <div className="absolute bottom-0 -left-16 w-72 h-72 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #a78bfa, transparent)" }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5 border-2 border-white" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full opacity-5 border-2 border-white" />
-        </div>
+      {/* ── RIGHT PANEL (Premium Branding) ────────────────────────────────── */}
+      <div className="hidden lg:flex relative w-[55%] flex-col justify-center items-center overflow-hidden bg-sidebar">
+        {/* Dynamic Abstract Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10 pointer-events-none" />
 
-        {/* Top — Brand */}
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-12">
-            <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
-              <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6">
-                <rect x="13" y="4" width="6" height="24" rx="2" fill="white" opacity="0.95" />
-                <rect x="4" y="13" width="24" height="6" rx="2" fill="white" opacity="0.95" />
-              </svg>
+        {/* Animated Orbs */}
+        <motion.div
+          animate={{ rotate: 360, scale: [1, 1.1, 1] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="absolute -top-[20%] -right-[10%] w-[800px] h-[800px] bg-gradient-to-b from-primary to-transparent rounded-full mix-blend-screen filter blur-[150px] opacity-30"
+        />
+        <motion.div
+          animate={{ rotate: -360, scale: [1, 1.2, 1] }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          className="absolute -bottom-[20%] -left-[10%] w-[600px] h-[600px] bg-gradient-to-t from-secondary to-transparent rounded-full mix-blend-screen filter blur-[120px] opacity-20"
+        />
+
+        <div className="relative z-10 w-full max-w-[560px] px-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-secondary text-xs font-bold uppercase tracking-wider mb-8 backdrop-blur-md">
+              <HeartPulse className="w-4 h-4" /> Next-Gen Care
             </div>
-            <div>
-              <div className="font-bold text-white text-lg tracking-tight">CareNexus</div>
-              <div className="text-white/50 text-[10px] tracking-widest uppercase">Enterprise Healthcare Platform</div>
+
+            <h2 className="text-4xl xl:text-5xl font-extrabold text-sidebar-foreground leading-[1.15] mb-6">
+              Transforming patient pathways with <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">intelligent care.</span>
+            </h2>
+
+            <p className="text-lg text-sidebar-foreground/80 leading-relaxed mb-12 max-w-[480px]">
+              CareNexus unifies clinical workflows, appointment scheduling, and outcome tracking across multiple facilities—providing a seamless experience for healthcare professionals.
+            </p>
+
+            {/* Glassmorphic Feature Cards */}
+            <div className="grid grid-cols-2 gap-4">
+              <motion.div
+                whileHover={{ y: -5 }}
+                className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 p-6 rounded-2xl backdrop-blur-xl transition-all"
+              >
+                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center mb-4 border border-primary/20">
+                  <BrainCircuit className="w-5 h-5 text-primary" />
+                </div>
+                <h3 className="text-sidebar-foreground font-bold mb-1">AI Insights</h3>
+                <p className="text-sm text-sidebar-foreground/70 leading-relaxed">Predictive risk scoring and pathway recommendations.</p>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ y: -5 }}
+                className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 p-6 rounded-2xl backdrop-blur-xl transition-all"
+              >
+                <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center mb-4 border border-secondary/20">
+                  <Activity className="w-5 h-5 text-secondary" />
+                </div>
+                <h3 className="text-sidebar-foreground font-bold mb-1">Live Analytics</h3>
+                <p className="text-sm text-sidebar-foreground/70 leading-relaxed">Real-time monitoring of clinical outcomes.</p>
+              </motion.div>
             </div>
-          </div>
-
-          <h2 className="text-4xl font-bold text-white leading-tight mb-4">
-            Clinical-Grade<br />
-            <span className="text-blue-300">Healthcare Operations</span>
-          </h2>
-          <p className="text-white/65 text-base leading-relaxed max-w-md">
-            A unified platform for managing patient care, clinical programs, appointments, consultations, and outcomes — built for NHS trusts and healthcare providers.
-          </p>
+          </motion.div>
         </div>
 
-        {/* Middle — Feature list */}
-        <div className="relative z-10 space-y-4">
-          {features.map(({ icon: Icon, label, desc }) => (
-            <div key={label} className="flex items-start gap-4 group">
-              <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center shrink-0 group-hover:bg-white/15 transition-colors">
-                <Icon className="w-4.5 h-4.5 text-blue-300 w-[18px] h-[18px]" />
-              </div>
-              <div>
-                <div className="text-white font-semibold text-sm">{label}</div>
-                <div className="text-white/50 text-xs mt-0.5">{desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Bottom — Stats */}
-        <div className="relative z-10">
-          <div className="grid grid-cols-4 gap-4 pt-8 border-t border-white/10">
-            {dynamicStats.map(({ value, label }) => (
-              <div key={label} className="text-center">
-                <div className="text-2xl font-bold text-white">{value}</div>
-                <div className="text-white/50 text-xs mt-0.5">{label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
+
     </div>
   );
 }

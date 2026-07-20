@@ -61,7 +61,7 @@ export default function NewUserPage() {
 
   return (
     <div className="page-container animate-in-up">
-      <div className="max-w-3xl mx-auto">
+      <div>
         <div className="page-header border-b-0 pb-2 mb-6">
           <div>
             <Link href="/users">

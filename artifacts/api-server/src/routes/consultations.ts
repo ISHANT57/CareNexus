@@ -69,13 +69,31 @@ router.post("/", authorizePermission("consultations", "write"), validateBody(Con
   try {
     const { patientId, appointmentId, doctorId, clinicId, chiefComplaint, symptoms, observations, diagnosis, treatmentPlan, medications, followUpInstructions, consultationDate } = req.body;
 
-    const [patient, appointment] = await Promise.all([
-      prisma.patient.findFirst({ where: { id: patientId, tenantId: req.tenantId!, deletedAt: null } }),
-      prisma.appointment.findFirst({ where: { id: appointmentId, tenantId: req.tenantId!, deletedAt: null } })
+    const patientRoleScope = await getRoleScope(req, "patient");
+    const appointmentRoleScope = await getRoleScope(req, "appointment");
+
+    const [patient, appointment, doctor, clinic] = await Promise.all([
+      prisma.patient.findFirst({ where: { id: patientId, tenantId: req.tenantId!, deletedAt: null, ...patientRoleScope } }),
+      prisma.appointment.findFirst({ where: { id: appointmentId, tenantId: req.tenantId!, deletedAt: null, ...appointmentRoleScope } }),
+      prisma.user.findFirst({ where: { id: doctorId, tenantAssignments: { some: { tenantId: req.tenantId! } }, deletedAt: null } }),
+      prisma.clinic.findFirst({ where: { id: clinicId, tenantId: req.tenantId!, deletedAt: null } })
     ]);
 
     if (!patient) throw Errors.notFound("Patient");
     if (!appointment) throw Errors.notFound("Appointment");
+    if (!doctor) throw Errors.notFound("Doctor");
+    if (!clinic) throw Errors.notFound("Clinic");
+
+    // Enforce relationship and hierarchy check
+    if (appointment.patientId !== patientId) {
+      throw Errors.badRequest("Appointment does not match patient");
+    }
+    if (appointment.doctorId !== doctorId) {
+      throw Errors.badRequest("Appointment does not match doctor");
+    }
+    if (appointment.clinicId !== clinicId) {
+      throw Errors.badRequest("Appointment does not match clinic");
+    }
 
     // Check if consultation already exists for this appointment
     const existing = await prisma.consultation.findFirst({ where: { appointmentId } });

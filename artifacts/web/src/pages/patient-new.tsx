@@ -96,7 +96,7 @@ export default function NewPatientPage() {
 
   return (
     <div className="p-8 flex-1 overflow-y-auto">
-      <div className="max-w-3xl mx-auto">
+      <div>
         <div className="mb-6">
           <Link href="/patients">
             <Button variant="ghost" size="sm" className="mb-4 -ml-3 text-muted-foreground">

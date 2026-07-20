@@ -7,6 +7,7 @@ import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js"
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 import { createAuditLog } from "../lib/audit.js";
+import { getRoleScope } from "../middlewares/roleScope.js";
 
 const router = Router();
 router.use(authenticate, requireTenant);
@@ -21,9 +22,11 @@ router.get("/", authorizePermission("areas", "read"), async (req, res, next) => 
     const { skip, take, page, limit } = paginate(req.query);
     const q = req.query["q"] as string | undefined;
     const reqTenantId = req.query["tenantId"] as string | undefined;
+    const roleScope = await getRoleScope(req, "area");
     const where = {
       deletedAt: null,
       ...(req.tenantId ? { tenantId: req.tenantId } : reqTenantId ? { tenantId: reqTenantId } : {}),
+      ...roleScope,
       ...(q ? { name: { contains: q, mode: "insensitive" as const } } : {}),
     };
     const [total, areas] = await Promise.all([
@@ -39,8 +42,9 @@ router.get("/", authorizePermission("areas", "read"), async (req, res, next) => 
 
 router.get("/:id", authorizePermission("areas", "read"), async (req, res, next) => {
   try {
+    const roleScope = await getRoleScope(req, "area");
     const area = await prisma.area.findFirst({
-      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null },
+      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope },
       include: { clinics: { where: { deletedAt: null } }, _count: { select: { patients: true } } },
     });
     if (!area) throw Errors.notFound("Area");

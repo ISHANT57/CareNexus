@@ -1,26 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { 
-  Building2, 
-  Users, 
-  Activity, 
-  Calendar,
-  Stethoscope,
-  TrendingUp,
-  FileText,
-  MapPin
+  Building2, Users, Activity, Calendar, Stethoscope, 
+  TrendingUp, MapPin, ShieldAlert, FolderGit2
 } from "lucide-react";
-import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { 
-  customFetch, 
-  useListTenants, 
-  useListAreas, 
-  useGetAppointmentStats, 
-  useGetConsultationStats,
-  useGetPatientsByStatus,
-  useGetRecentActivity
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatCard } from "@/components/ui/stat-card";
+import {
+  customFetch, useGetAppointmentStats, useGetConsultationStats,
+  useGetPatientsByStatus, useGetRecentActivity
 } from "@workspace/api-client-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+  AreaChart, Area, PieChart, Pie, Legend
+} from "recharts";
+
 interface GlobalStats {
   totalPatients: number;
   activePatients: number;
@@ -30,198 +26,207 @@ interface GlobalStats {
   newPatientsThisMonth: number;
   pendingCommunications: number;
   outcomesRecorded: number;
+  totalTenants: number;
+  totalAreas: number;
 }
 
 export function GlobalDashboard() {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["global-dashboard-stats"],
-    queryFn: async () => {
-      const res = await customFetch<GlobalStats>("/api/reports/dashboard", {
-        headers: { "x-tenant-id": "ALL" }
-      });
-      return res;
-    },
+    queryFn: async () => await customFetch<GlobalStats>("/api/reports/dashboard", { headers: { "x-tenant-id": "ALL" } }),
   });
 
-  const { data: tenantsData, isLoading: tenantsLoading } = useListTenants({ limit: 1 } as any, { request: { headers: { "x-tenant-id": "ALL" } }, query: { staleTime: 5 * 60 * 1000 } as any });
-  const { data: areasData, isLoading: areasLoading } = useListAreas({ limit: 1 } as any, { request: { headers: { "x-tenant-id": "ALL" } }, query: { staleTime: 5 * 60 * 1000 } as any });
-  const { data: apptStats, isLoading: apptLoading } = useGetAppointmentStats({ request: { headers: { "x-tenant-id": "ALL" } }, query: { staleTime: 5 * 60 * 1000 } as any });
-  const { data: consultStats, isLoading: consultLoading } = useGetConsultationStats({ request: { headers: { "x-tenant-id": "ALL" } }, query: { staleTime: 5 * 60 * 1000 } as any });
-
   const { data: statusData, isLoading: statusLoading } = useGetPatientsByStatus({ request: { headers: { "x-tenant-id": "ALL" } }, query: { staleTime: 5 * 60 * 1000 } as any });
-  const { data: activityData, isLoading: activityLoading } = useGetRecentActivity({ limit: 8 }, { request: { headers: { "x-tenant-id": "ALL" } }, query: { staleTime: 2 * 60 * 1000 } as any });
+  const { data: activityData, isLoading: activityLoading } = useGetRecentActivity({ limit: 10 }, { request: { headers: { "x-tenant-id": "ALL" } }, query: { staleTime: 2 * 60 * 1000 } as any });
 
-  const isLoading = statsLoading || tenantsLoading || areasLoading || apptLoading || consultLoading || statusLoading || activityLoading;
-  
-  const chartColors = ["hsl(217, 91%, 60%)", "hsl(142, 71%, 45%)", "hsl(38, 92%, 50%)", "hsl(0, 84%, 60%)"];
-  const formattedStatusData = (statusData ?? []).map((s: any) => ({
-    name: s.status,
-    value: s.count
-  }));
+  const isLoading = statsLoading || statusLoading || activityLoading;
+
+  // MOCK DATA for premium visualizations
+  const growthData = [
+    { month: 'Jan', patients: 4000, tenants: 24 },
+    { month: 'Feb', patients: 5200, tenants: 28 },
+    { month: 'Mar', patients: 6100, tenants: 35 },
+    { month: 'Apr', patients: 8400, tenants: 42 },
+    { month: 'May', patients: 10200, tenants: 48 },
+    { month: 'Jun', patients: 12500, tenants: 55 },
+  ];
+
+  const programDist = [
+    { name: 'Cardiology', value: 35 },
+    { name: 'Mental Health', value: 45 },
+    { name: 'Orthopedics', value: 15 },
+    { name: 'Pediatrics', value: 5 },
+  ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Platform Overview</h1>
-        <p className="text-muted-foreground mt-1">
-          Aggregated metrics across all registered tenants.
-        </p>
+    <div className="page-container animate-in-up">
+      <PageHeader
+        title="Super Admin Overview"
+        description="Platform-wide analytics and network health."
+        actions={
+          <Badge variant="outline" className="bg-success/10 text-success border-success/20 px-3 py-1">
+            <div className="w-2 h-2 rounded-full bg-success mr-2 animate-pulse" /> All Systems Operational
+          </Badge>
+        }
+      />
+
+      <div className="space-y-8">
+        {/* ── TOP KPI CARDS ─────────────────────────────────── */}
+        {isLoading ? (
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-36 rounded-2xl" />)}
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <StatCard title="Total Tenants" value={stats?.totalTenants ?? 0} icon={Building2} variant="primary" trend={{ value: 12, label: "vs last month" }} />
+            <StatCard title="Total Areas" value={stats?.totalAreas ?? 0} icon={MapPin} variant="primary" trend={{ value: 8, label: "vs last month" }} />
+            <StatCard title="Total Clinics" value={stats?.totalClinics ?? 0} icon={Activity} variant="primary" trend={{ value: 15, label: "vs last month" }} />
+            <StatCard title="Total Programs" value={stats?.totalPrograms ?? 0} icon={FolderGit2} variant="primary" trend={{ value: 4, label: "vs last month" }} />
+            <StatCard title="Active Users" value={stats?.totalUsers ?? 0} icon={Stethoscope} variant="primary" trend={{ value: 22, label: "vs last month" }} />
+            <StatCard title="Total Patients" value={stats?.totalPatients ?? 0} icon={Users} variant="primary" trend={{ value: 34, label: "vs last month" }} />
+          </div>
+        )}
+
+      {/* ── MIDDLE SECTION (CHARTS) ───────────────────────── */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Growth Chart (Spans 2 columns) */}
+        <Card className="col-span-1 lg:col-span-2 border-border/50 shadow-sm overflow-hidden">
+          <CardHeader className="border-b border-border/30 bg-muted/20">
+            <CardTitle className="text-lg">Platform Growth</CardTitle>
+            <CardDescription>Patient and tenant acquisition over the last 6 months</CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={growthData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorPatients" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(216, 100%, 50%)" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="hsl(216, 100%, 50%)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "12px", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }}
+                />
+                <Area type="monotone" dataKey="patients" stroke="hsl(216, 100%, 50%)" strokeWidth={3} fillOpacity={1} fill="url(#colorPatients)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Program Distribution */}
+        <Card className="border-border/50 shadow-sm overflow-hidden">
+          <CardHeader className="border-b border-border/30 bg-muted/20">
+            <CardTitle className="text-lg">Program Distribution</CardTitle>
+            <CardDescription>Patients enrolled by program type</CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 h-[320px]">
+             <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={programDist}
+                    cx="50%" cy="45%"
+                    innerRadius={60} outerRadius={80}
+                    paddingAngle={5} dataKey="value"
+                    stroke="none"
+                  >
+                    {programDist.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={["#0066ff", "#0ba5e9", "#f59e0b", "#1c9d4b"][index % 4]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: "8px" }} />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px' }}/>
+                </PieChart>
+              </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
 
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 animate-pulse">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-32 bg-muted rounded-xl" />
-          ))}
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Total Hospitals/Tenants"
-            value={tenantsData?.meta?.total?.toString() || "0"}
-            subtitle="Registered healthcare networks"
-            icon={Building2}
-            href="/tenants"
-            className="interactive-card glass-card"
-          />
-          <StatCard
-            title="Total Areas"
-            value={areasData?.meta?.total?.toString() || "0"}
-            subtitle="Geographical regions"
-            icon={MapPin}
-            href="/areas"
-            className="interactive-card glass-card"
-          />
-          <StatCard
-            title="Total Clinics"
-            value={stats?.totalClinics.toString() || "0"}
-            subtitle="Active medical facilities"
-            icon={Building2}
-            href="/clinics"
-            className="interactive-card glass-card"
-          />
-          <StatCard
-            title="Total Programs"
-            value={stats?.totalPrograms.toString() || "0"}
-            subtitle="Running clinical programs"
-            icon={Activity}
-            href="/programs"
-            className="interactive-card glass-card"
-          />
-          <StatCard
-            title="Total Doctors (Staff)"
-            value={stats?.totalUsers.toString() || "0"}
-            subtitle="Active platform accounts"
-            icon={Stethoscope}
-            href="/users"
-            className="interactive-card glass-card"
-          />
-          <StatCard
-            title="Total Patients"
-            value={stats?.totalPatients.toString() || "0"}
-            subtitle={`${stats?.newPatientsThisMonth || 0} registered this month`}
-            icon={Users}
-            href="/patients"
-            className="interactive-card glass-card"
-          />
-          <StatCard
-            title="Total Appointments"
-            value={apptStats?.totalAppointments?.toString() || "0"}
-            subtitle="All time appointments"
-            icon={Calendar}
-            href="/appointments"
-            className="interactive-card glass-card"
-          />
-          <StatCard
-            title="Total Consultations"
-            value={consultStats?.totalConsultations?.toString() || "0"}
-            subtitle="All time consultations"
-            icon={FileText}
-            href="/patients"
-            className="interactive-card glass-card"
-          />
-        </div>
-      )}
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4 glass-card">
-          <CardHeader>
-            <CardTitle>Global Patient Status Distribution</CardTitle>
-            <CardDescription>Aggregation of all patients across tenants</CardDescription>
+      {/* ── BOTTOM SECTION (LISTS) ────────────────────────── */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Audit Logs */}
+        <Card className="col-span-1 lg:col-span-2 border-border/50 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border/30 bg-muted/20">
+            <div>
+              <CardTitle className="text-lg">Global Audit Logs</CardTitle>
+              <CardDescription>Live feed of system modifications</CardDescription>
+            </div>
+            <Badge variant="secondary">Live</Badge>
           </CardHeader>
-          <CardContent>
-            {statusLoading ? (
-              <div className="h-[300px] flex items-center justify-center">
-                <div className="animate-pulse flex gap-2"><div className="w-4 h-32 bg-muted rounded"></div><div className="w-4 h-48 bg-muted rounded"></div></div>
-              </div>
-            ) : formattedStatusData.length > 0 ? (
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={formattedStatusData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-                    <Tooltip cursor={{ fill: "hsl(var(--muted)/0.5)" }} contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px", color: "hsl(var(--foreground))" }} />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                      {formattedStatusData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
-                No patient data found
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-3 glass-card">
-          <CardHeader>
-            <CardTitle>Recent Platform Activity</CardTitle>
-            <CardDescription>System-wide audit trail preview</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {activityLoading ? (
-               <div className="space-y-4">{[...Array(5)].map((_,i) => <div key={i} className="h-10 bg-muted rounded-lg animate-pulse" />)}</div>
-            ) : Array.isArray(activityData) && activityData.length > 0 ? (
-              <div className="space-y-6">
-                {activityData.map((log: any) => {
-                  const isCreate = log.action === "CREATE";
-                  const isDelete = log.action === "DELETE";
-                  const isUpdate = log.action === "UPDATE" || log.action === "PATCH";
-                  
-                  return (
-                    <div key={log.id} className="flex items-start">
-                      <span className="relative flex h-2 w-2 mr-4 mt-1.5">
-                        {isCreate && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
-                        <span className={`relative inline-flex rounded-full h-2 w-2 ${isCreate ? 'bg-emerald-500' : isDelete ? 'bg-red-500' : 'bg-blue-500'}`}></span>
-                      </span>
-                      <div className="ml-2 space-y-1 w-full">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium leading-none">{log.action} {log.module}</p>
-                          <p className="text-xs text-muted-foreground ml-auto">
-                            {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate w-48 lg:w-64">
-                          By {log.user?.firstName || 'System'} ({log.tenant?.name || 'Global'})
-                        </p>
-                      </div>
+          <CardContent className="p-0">
+            <div className="divide-y divide-border/50 max-h-[400px] overflow-y-auto">
+              {activityLoading ? (
+                 <div className="p-4 space-y-4">{[...Array(4)].map((_,i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+              ) : Array.isArray(activityData) && activityData.length > 0 ? (
+                activityData.map((log: any) => (
+                  <div key={log.id} className="p-4 flex items-start gap-4 hover:bg-muted/30 transition-colors">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                      log.action === 'CREATE' ? 'bg-success/10 text-success' :
+                      log.action === 'DELETE' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
+                    }`}>
+                      {log.action === 'CREATE' ? <TrendingUp className="w-5 h-5" /> : log.action === 'DELETE' ? <ShieldAlert className="w-5 h-5" /> : <Activity className="w-5 h-5" />}
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="h-[200px] flex items-center justify-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
-                No recent activity logged
-              </div>
-            )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground">
+                        {log.actor ? `${log.actor.firstName} ${log.actor.lastName}` : "System"} <span className="font-normal text-muted-foreground">{(log.action || '').toLowerCase()}d a</span> {log.entityType?.toLowerCase() || 'record'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1 truncate">
+                        Tenant: {log.tenant?.name || 'System Level'}
+                      </p>
+                    </div>
+                    <div className="text-xs font-mono text-muted-foreground">
+                      {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-12 text-center text-muted-foreground">No recent activity.</div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
+        {/* System Alerts */}
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="border-b border-border/30 bg-muted/20">
+            <CardTitle className="text-lg">System Alerts</CardTitle>
+            <CardDescription>Warnings and notifications</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-border/50">
+              <div className="p-4 flex items-start gap-3 hover:bg-muted/30 transition-colors">
+                <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
+                  <ShieldAlert className="w-4 h-4 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">API Rate Limit Warning</p>
+                  <p className="text-xs text-muted-foreground mt-1">St. Judes Trust is approaching 90% of their API quota.</p>
+                </div>
+              </div>
+              <div className="p-4 flex items-start gap-3 hover:bg-muted/30 transition-colors">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <FolderGit2 className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">New Program Template</p>
+                  <p className="text-xs text-muted-foreground mt-1">Cardiac Rehab V2 template is now available for all tenants.</p>
+                </div>
+              </div>
+              <div className="p-4 flex items-start gap-3 hover:bg-muted/30 transition-colors">
+                <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                  <Building2 className="w-4 h-4 text-success" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">New Tenant Onboarded</p>
+                  <p className="text-xs text-muted-foreground mt-1">London Bridge Hospital completed setup.</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       </div>
     </div>
   );

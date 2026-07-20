@@ -59,7 +59,7 @@ router.get("/", async (req, res, next) => {
         take,
         orderBy: { createdAt: "desc" },
         include: {
-          _count: { select: { users: true, patients: true, areas: true } },
+          _count: { select: { userAssignments: true, patients: true, areas: true } },
         },
       }),
     ]);
@@ -75,7 +75,7 @@ router.get("/:id", async (req, res, next) => {
   try {
     const tenant = await prisma.tenant.findFirst({
       where: { id: req.params["id"] as string, deletedAt: null },
-      include: { _count: { select: { users: true, patients: true, areas: true, programs: true } } },
+      include: { _count: { select: { userAssignments: true, patients: true, areas: true, programs: true } } },
     });
     if (!tenant) throw Errors.notFound("Tenant");
     res.json(tenant);
@@ -135,8 +135,7 @@ router.post("/onboard", SUPER_ADMIN_ONLY, validateBody(OnboardTenantSchema), asy
         data: {
           ...data.adminUser,
           password: hashed,
-          roleId: role.id,
-          tenantId: tenant.id,
+          tenantAssignments: { create: { tenantId: tenant.id, roleId: role.id, status: "ACTIVE" } },
           clinicAssignments: {
             create: createdClinics.map(c => ({ clinicId: c.id }))
           }

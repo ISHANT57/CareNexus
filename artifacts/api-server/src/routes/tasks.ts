@@ -7,6 +7,7 @@ import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js"
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 import { createAuditLog } from "../lib/audit.js";
+import { getRoleScope } from "../middlewares/roleScope.js";
 
 const router = Router();
 router.use(authenticate, requireTenant);
@@ -34,7 +35,8 @@ router.get("/", authorizePermission("tasks", "read"), async (req, res, next) => 
     const { patientId, assignedTo, status } = req.query as Record<string, string>;
     const overdue = req.query["overdue"] === "true";
 
-    const where: Record<string, unknown> = { tenantId: req.tenantId!, deletedAt: null };
+    const roleScope = await getRoleScope(req, "task");
+    const where: Record<string, unknown> = { tenantId: req.tenantId!, deletedAt: null, ...roleScope };
     if (patientId) where["patientId"] = patientId;
     if (assignedTo) where["assignedTo"] = assignedTo;
     if (status) where["status"] = status;
@@ -64,8 +66,9 @@ router.get("/", authorizePermission("tasks", "read"), async (req, res, next) => 
 // GET /api/tasks/:id
 router.get("/:id", authorizePermission("tasks", "read"), async (req, res, next) => {
   try {
+    const roleScope = await getRoleScope(req, "task");
     const task = await prisma.careTask.findFirst({
-      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null },
+      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope },
       include: {
         patient: { select: { id: true, firstName: true, lastName: true, nhsNumber: true } },
         creator: { select: { id: true, firstName: true, lastName: true } },
@@ -81,6 +84,14 @@ router.get("/:id", authorizePermission("tasks", "read"), async (req, res, next) 
 router.post("/", authorizePermission("tasks", "write"), validateBody(TaskSchema), async (req, res, next) => {
   try {
     const data = req.body as z.infer<typeof TaskSchema>;
+    
+    const patientRoleScope = await getRoleScope(req, "patient");
+    const patient = await prisma.patient.findFirst({ where: { id: data.patientId, tenantId: req.tenantId!, deletedAt: null, ...patientRoleScope } });
+    if (!patient) throw Errors.notFound("Patient");
+
+    const assignee = await prisma.user.findFirst({ where: { id: data.assignedTo, tenantAssignments: { some: { tenantId: req.tenantId! } }, deletedAt: null } });
+    if (!assignee) throw Errors.notFound("Assignee");
+
     const task = await prisma.careTask.create({
       data: {
         tenantId: req.tenantId!,
@@ -123,9 +134,9 @@ router.patch("/:id", authorizePermission("tasks", "write"), validateBody(TaskSch
   status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "OVERDUE"]).optional(),
 })), async (req, res, next) => {
   try {
-    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const roleScope = await getRoleScope(req, "task");
+    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
     if (!task) throw Errors.notFound("Task");
-    assertTenantMatch(req, task.tenantId);
 
     const body = req.body as Partial<z.infer<typeof TaskSchema> & { status: string }>;
     const updated = await prisma.careTask.update({
@@ -154,9 +165,9 @@ router.patch("/:id", authorizePermission("tasks", "write"), validateBody(TaskSch
 // PATCH /api/tasks/:id/complete
 router.patch("/:id/complete", authorizePermission("tasks", "write"), async (req, res, next) => {
   try {
-    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const roleScope = await getRoleScope(req, "task");
+    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
     if (!task) throw Errors.notFound("Task");
-    assertTenantMatch(req, task.tenantId);
 
     const updated = await prisma.careTask.update({
       where: { id: task.id },
@@ -171,9 +182,9 @@ router.patch("/:id/complete", authorizePermission("tasks", "write"), async (req,
 // PATCH /api/tasks/:id/reopen
 router.patch("/:id/reopen", authorizePermission("tasks", "write"), async (req, res, next) => {
   try {
-    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const roleScope = await getRoleScope(req, "task");
+    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
     if (!task) throw Errors.notFound("Task");
-    assertTenantMatch(req, task.tenantId);
 
     const updated = await prisma.careTask.update({
       where: { id: task.id },
@@ -188,9 +199,9 @@ router.patch("/:id/reopen", authorizePermission("tasks", "write"), async (req, r
 // DELETE /api/tasks/:id (soft-delete)
 router.delete("/:id", authorizePermission("tasks", "write"), async (req, res, next) => {
   try {
-    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const roleScope = await getRoleScope(req, "task");
+    const task = await prisma.careTask.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...roleScope } });
     if (!task) throw Errors.notFound("Task");
-    assertTenantMatch(req, task.tenantId);
     await prisma.careTask.update({ where: { id: task.id }, data: { deletedAt: new Date() } });
     await createAuditLog({ req, entityType: "CareTask", entityId: task.id, action: "DELETE", before: task });
     res.status(204).send();

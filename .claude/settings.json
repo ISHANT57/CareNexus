@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node check_user_assignments.js)",
+      "Bash(node \"C:/Users/GOQII-~3/AppData/Local/Temp/claude/d--Caremesh-Platform/5d71c1cb-cb8f-4512-b1af-1eb1ea9bff57/scratchpad/check_all.mjs\")",
+      "Bash(node check_all_users.mjs)",
+      "Bash(git --no-pager diff -- artifacts/api-server/prisma/seed.mjs)",
+      "Bash(git --no-pager diff -- artifacts/api-server/prisma/schema.prisma)",
+      "Read(//d/Caremesh-Platform/**)",
+      "Bash(node verify_assignments.mjs)",
+      "Bash(rm -f verify_assignments.mjs)",
+      "Bash(node prisma/seed.mjs)",
+      "Bash(pnpm run *)",
+      "Bash(netstat -ano)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
+      "Bash(pkill -f \"vite --config vite.config.ts\")",
+      "PowerShell(Stop-Process -Id 18900 -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5174 -ErrorAction SilentlyContinue)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_run_code_unsafe",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "Bash(git -C /d/Caremesh-Platform diff --stat artifacts/web/src/pages/areas.tsx artifacts/web/src/pages/users.tsx)",
+      "mcp__plugin_playwright_playwright__browser_resize",
+      "Bash(pnpm --filter @workspace/web run typecheck)",
+      "Bash(grep -rlE \"text-slate-|bg-slate-|border-slate-|text-gray-|bg-gray-|border-gray-|text-blue-|bg-blue-|bg-red-|bg-emerald-|bg-green-|#[0-9a-fA-F]{3,6}\" pages components --include=\"*.tsx\")",
+      "Bash(grep -rcE \"text-slate-|bg-slate-|border-slate-|text-gray-|bg-gray-|border-gray-|text-blue-|bg-blue-|bg-red-|bg-emerald-|bg-green-|#[0-9a-fA-F]{3,6}\" pages components --include=\"*.tsx\")",
+      "Bash(awk -F: '$2>0')",
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(grep -rlE \"\\(^|[^0-9a-zA-Z-]\\)\\(p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|gap|gap-x|gap-y|space-x|space-y\\)-\\(5|7\\)\\([^0-9]|$\\)\" pages components --include=\"*.tsx\")",
+      "Bash(git rm *)",
+      "Bash(node _check_user_status.mjs)",
+      "Bash(grep -rn *)"
+    ]
+  }
+}

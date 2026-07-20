@@ -36,7 +36,7 @@ router.get("/", async (req, res, next) => {
       prisma.role.count({ where }),
       prisma.role.findMany({
         where, skip, take, orderBy: { name: "asc" },
-        include: { _count: { select: { users: true } } },
+        include: { _count: { select: { userAssignments: true } } },
       }),
     ]);
     res.json({ data: roles, meta: paginationMeta(total, page, limit) });

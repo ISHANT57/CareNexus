@@ -24,7 +24,7 @@ model Tenant {
 
   areas              Area[]
   programs           Program[]
-  users              User[]
+  userAssignments    UserTenantAssignment[]
   patients           Patient[]
   smsComs            SmsCommunication[]
   auditLogs          AuditLog[]
@@ -104,7 +104,7 @@ model Role {
   updatedAt   DateTime @updatedAt
 
   rolePermissions RolePermission[]
-  users           User[]
+  userAssignments UserTenantAssignment[]
 
   @@unique([tenantId, name])
   @@map("roles")
@@ -142,8 +142,6 @@ model RolePermission {
 
 model User {
   id                  String     @id @default(uuid())
-  tenantId            String
-  roleId              String
   firstName           String
   lastName            String
   email               String     @unique
@@ -162,9 +160,7 @@ model User {
   createdBy           String?
   updatedBy           String?
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  role   Role   @relation(fields: [roleId], references: [id])
-
+  tenantAssignments  UserTenantAssignment[]
   clinicAssignments  UserClinicAssignment[]
   programAssignments UserProgramAssignment[]
   doctorAssignments  DoctorPatientAssignment[]
@@ -179,9 +175,27 @@ model User {
   assignedTasks      CareTask[]                @relation("TaskAssignee")
   createdTasks       CareTask[]                @relation("TaskCreator")
 
-  @@index([tenantId])
   @@index([email])
   @@map("users")
+}
+
+model UserTenantAssignment {
+  id        String     @id @default(uuid())
+  userId    String
+  tenantId  String
+  roleId    String
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role      Role       @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@index([userId])
+  @@map("user_tenant_assignments")
 }
 
 enum UserStatus {

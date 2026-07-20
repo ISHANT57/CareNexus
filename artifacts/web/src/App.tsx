@@ -103,7 +103,7 @@ function Router() {
       </Route>
       <Route path="/areas">
         <AppLayout>
-          <RoleGuard allowedRoles={["SUPER_ADMIN"]}>
+          <RoleGuard allowedRoles={["SUPER_ADMIN", "AREA_ADMIN"]}>
             <AreasPage />
           </RoleGuard>
         </AppLayout>

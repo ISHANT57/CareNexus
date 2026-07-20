@@ -1802,6 +1802,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Consultation"
+    delete:
+      operationId: deleteConsultation
+      tags: [consultations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
 
   /files:
     post:

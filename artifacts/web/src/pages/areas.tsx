@@ -25,14 +25,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-
-const PAGE_SIZE = 20;
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { usePagination } from "@/hooks/use-pagination";
 
 export default function AreasPage() {
-  const [page, setPage] = useState(1);
+  const { page, pageSize, setPage } = usePagination(20);
   const [search, setSearch] = useState("");
   const { data, isLoading } = useListAreas(
-    { page, limit: PAGE_SIZE },
+    { page, limit: pageSize },
     { request: { headers: { "x-tenant-id": "ALL" } } }
   );
   const { data: tenantsData, isLoading: tenantsLoading } = useListTenants(
@@ -54,7 +55,7 @@ export default function AreasPage() {
     return uniqueNames.map(name => ({ label: name as string, value: name as string })).sort((a, b) => a.label.localeCompare(b.label));
   }, [allAreasData]);
 
-  const totalPages = data?.meta ? Math.ceil(data.meta.total / PAGE_SIZE) : 1;
+  const totalPages = data?.meta ? Math.ceil(data.meta.total / pageSize) : 1;
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const createArea = useCreateArea({ request: { headers: { "x-tenant-id": "ALL" } } });
@@ -133,63 +134,62 @@ export default function AreasPage() {
 
   return (
     <div className="page-container animate-in-up">
-      <div className="page-header">
-        <div>
-          <h1 className="text-h2">Geographic Areas</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {data?.meta?.total?.toLocaleString() ?? "—"} service regions managing clinics and patient assignments.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !filteredAreas.length}>
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Area
-              </Button>
-            </DialogTrigger>
-            <DialogContent aria-describedby={undefined} className="max-w-sm">
-              <DialogHeader><DialogTitle>Create New Area</DialogTitle></DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label>Tenant / Hospital <span className="text-destructive">*</span></Label>
-                  <SearchableSelect
-                    options={tenantOptions}
-                    value={newAreaTenantId}
-                    onValueChange={setNewAreaTenantId}
-                    placeholder="Select a tenant..."
-                    searchPlaceholder="Search tenants..."
-                    isLoading={tenantsLoading}
-                  />
+      <PageHeader
+        title="Geographic Areas"
+        description={`${data?.meta?.total?.toLocaleString() ?? "—"} service regions managing clinics and patient assignments.`}
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || !filteredAreas.length}>
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Area
+                </Button>
+              </DialogTrigger>
+              <DialogContent aria-describedby={undefined} className="max-w-sm">
+                <DialogHeader><DialogTitle>Create New Area</DialogTitle></DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label>Tenant / Hospital <span className="text-destructive">*</span></Label>
+                    <SearchableSelect
+                      options={tenantOptions}
+                      value={newAreaTenantId}
+                      onValueChange={setNewAreaTenantId}
+                      placeholder="Select a tenant..."
+                      searchPlaceholder="Search tenants..."
+                      isLoading={tenantsLoading}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Area Name <span className="text-destructive">*</span></Label>
+                    <SearchableSelect
+                      options={masterAreaOptions}
+                      value={newAreaName}
+                      onValueChange={setNewAreaName}
+                      placeholder="Select or type an area..."
+                      searchPlaceholder="Search or create areas..."
+                      isLoading={allAreasLoading}
+                      creatable
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Description</Label>
+                    <Input value={newAreaDescription} onChange={(e) => setNewAreaDescription(e.target.value)} placeholder="Brief description" />
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label>Area Name <span className="text-destructive">*</span></Label>
-                  <SearchableSelect
-                    options={masterAreaOptions}
-                    value={newAreaName}
-                    onValueChange={setNewAreaName}
-                    placeholder="Select an area..."
-                    searchPlaceholder="Search master areas..."
-                    isLoading={allAreasLoading}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Description</Label>
-                  <Input value={newAreaDescription} onChange={(e) => setNewAreaDescription(e.target.value)} placeholder="Brief description" />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-                <Button onClick={handleCreateArea} disabled={createArea.isPending || !newAreaName.trim() || !newAreaTenantId}>Create</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+                  <Button onClick={handleCreateArea} disabled={createArea.isPending || !newAreaName.trim() || !newAreaTenantId}>Create</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
+        }
+      />
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent aria-describedby={undefined} className="max-w-sm">
@@ -212,9 +212,10 @@ export default function AreasPage() {
                 options={masterAreaOptions}
                 value={editName}
                 onValueChange={setEditName}
-                placeholder="Select an area..."
-                searchPlaceholder="Search master areas..."
+                placeholder="Select or type an area..."
+                searchPlaceholder="Search or create areas..."
                 isLoading={allAreasLoading}
+                creatable
               />
             </div>
             <div className="grid gap-2">
@@ -233,36 +234,54 @@ export default function AreasPage() {
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Search areas..." className="pl-9 bg-card" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+            <Input placeholder="Search areas..." className="pl-10 bg-card" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
           </div>
           {search && <Badge variant="secondary">{filteredAreas.length} shown</Badge>}
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <Skeleton key={i} className="h-40 rounded-2xl bg-muted/40" />
+            ))}
           </div>
         ) : filteredAreas.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-            <Map className="w-12 h-12 mb-3 opacity-20" />
-            <p className="font-medium">{search ? "No areas match your search" : "No areas found"}</p>
+          <div className="glass-card rounded-3xl border border-border/50">
+            <EmptyState
+              icon={Map}
+              title="No geographic areas"
+              description={search ? "No areas match your search." : "Define your first service region to start assigning clinics."}
+              action={
+                !search ? (
+                  <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-6" onClick={() => setIsCreateOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Area
+                  </Button>
+                ) : undefined
+              }
+            />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredAreas.map((area) => (
-              <Card key={area.id} data-testid={`card-area-${area.id}`} className="group hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredAreas.map((area, index) => (
+              <Card 
+                key={area.id} 
+                data-testid={`card-area-${area.id}`} 
+                className="group hover:shadow-lg hover:-translate-y-1 transition-all duration-300 glass-card rounded-2xl border border-border/60 hover:border-primary/30 animate-in-up"
+                style={{ animationDelay: `${index * 40}ms` }}
+              >
                 <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Map className="w-4.5 h-4.5 text-primary" />
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:scale-110 transition-transform duration-300">
+                      <Map className="w-5 h-5 text-primary" />
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(area)}>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 bg-background border border-border shadow-sm hover:bg-primary hover:text-primary-foreground" onClick={() => openEdit(area)}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive">
+                          <Button size="icon" variant="ghost" className="h-8 w-8 bg-background border border-border shadow-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10">
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </AlertDialogTrigger>
@@ -279,15 +298,17 @@ export default function AreasPage() {
                       </AlertDialog>
                     </div>
                   </div>
-                  <h3 className="font-semibold text-sm leading-tight">{area.name}</h3>
+                  <h3 className="font-bold text-base leading-tight text-foreground group-hover:text-primary transition-colors">{area.name}</h3>
                   {area.description && (
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{area.description}</p>
+                    <p className="text-sm font-medium text-muted-foreground mt-2 line-clamp-2">{area.description}</p>
                   )}
                 </CardContent>
-                <CardFooter className="px-4 pb-4 pt-0">
-                  <p className="text-xs text-muted-foreground">
-                    Created {new Date(area.createdAt).toLocaleDateString("en-GB")}
-                  </p>
+                <CardFooter className="px-4 pb-4 pt-0 mt-auto">
+                  <div className="flex items-center w-full pt-4 border-t border-border/50">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Created {new Date(area.createdAt).toLocaleDateString("en-GB")}
+                    </p>
+                  </div>
                 </CardFooter>
               </Card>
             ))}
@@ -298,10 +319,10 @@ export default function AreasPage() {
           <div className="flex items-center justify-between pt-2">
             <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+              <Button variant="outline" size="sm" onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1}>
                 <ChevronLeft className="w-4 h-4" />Prev
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+              <Button variant="outline" size="sm" onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages}>
                 Next<ChevronRight className="w-4 h-4" />
               </Button>
             </div>

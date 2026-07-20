@@ -19,29 +19,24 @@ interface StatCardProps {
 
 const variantStyles = {
   default: {
-    card: "bg-card border-border",
-    icon: "bg-muted text-muted-foreground",
-    value: "text-foreground",
+    card: "bg-card border-border/60",
+    icon: "bg-muted-foreground/80 text-white",
   },
   primary: {
-    card: "bg-primary/5 border-primary/20",
-    icon: "bg-primary/10 text-primary",
-    value: "text-primary",
+    card: "bg-card border-border/60",
+    icon: "bg-primary text-primary-foreground",
   },
   success: {
-    card: "bg-emerald-500/5 border-emerald-500/20",
-    icon: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-    value: "text-emerald-700 dark:text-emerald-400",
+    card: "bg-card border-border/60",
+    icon: "bg-success text-success-foreground",
   },
   warning: {
-    card: "bg-amber-500/5 border-amber-500/20",
-    icon: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-    value: "text-amber-700 dark:text-amber-400",
+    card: "bg-card border-border/60",
+    icon: "bg-warning text-warning-foreground",
   },
   destructive: {
-    card: "bg-destructive/5 border-destructive/20",
-    icon: "bg-destructive/10 text-destructive",
-    value: "text-destructive",
+    card: "bg-card border-border/60",
+    icon: "bg-destructive text-destructive-foreground",
   },
 };
 
@@ -60,28 +55,26 @@ function StatCardInner({
   return (
     <div
       className={cn(
-        "rounded-xl border p-5 flex flex-col gap-3 transition-all duration-200",
+        "rounded-2xl border shadow-sm p-5 flex flex-col gap-3 transition-all duration-200",
         href
-          ? "cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:ring-2 hover:ring-primary/20 group"
-          : "hover:shadow-md hover:-translate-y-0.5",
+          ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5 group"
+          : "hover:shadow-md",
         styles.card,
         className
       )}
     >
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <div className="flex items-center gap-1.5">
-          <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", styles.icon)}>
-            <Icon className="w-4.5 h-4.5" />
-          </div>
-          {href && (
-            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-          )}
+        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", styles.icon)}>
+          <Icon className="w-6 h-6" />
         </div>
+        {href && (
+          <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        )}
       </div>
 
       <div>
-        <p className={cn("text-2xl font-bold tracking-tight", styles.value)}>
+        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        <p className="text-3xl font-bold tracking-tight text-foreground mt-1">
           {value}
         </p>
         {subtitle && (

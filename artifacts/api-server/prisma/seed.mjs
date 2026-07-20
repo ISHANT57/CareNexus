@@ -52,8 +52,6 @@ async function main() {
     where: { email: "admin@northgate.nhs.uk" },
     update: {},
     create: {
-      tenantId: tenant.id,
-      roleId: roles["SUPER_ADMIN"].id,
       firstName: "System",
       lastName: "Administrator",
       email: "admin@northgate.nhs.uk",
@@ -62,6 +60,11 @@ async function main() {
       emailVerified: true,
     },
   });
+  await prisma.userTenantAssignment.upsert({
+    where: { userId_tenantId: { userId: adminUser.id, tenantId: tenant.id } },
+    update: {},
+    create: { userId: adminUser.id, tenantId: tenant.id, roleId: roles["SUPER_ADMIN"].id },
+  });
   console.log("✅ Admin user:", adminUser.email);
 
   // Doctor user
@@ -69,8 +72,6 @@ async function main() {
     where: { email: "dr.smith@northgate.nhs.uk" },
     update: {},
     create: {
-      tenantId: tenant.id,
-      roleId: roles["DOCTOR"].id,
       firstName: "James",
       lastName: "Smith",
       email: "dr.smith@northgate.nhs.uk",
@@ -78,6 +79,11 @@ async function main() {
       status: "ACTIVE",
       emailVerified: true,
     },
+  });
+  await prisma.userTenantAssignment.upsert({
+    where: { userId_tenantId: { userId: doctorUser.id, tenantId: tenant.id } },
+    update: {},
+    create: { userId: doctorUser.id, tenantId: tenant.id, roleId: roles["DOCTOR"].id },
   });
   console.log("✅ Doctor user:", doctorUser.email);
 

@@ -2718,6 +2718,11 @@ export const UpdateConsultationResponse = zod.object({
 })
 
 
+export const DeleteConsultationParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
 /**
  * @summary Upload a file
  */

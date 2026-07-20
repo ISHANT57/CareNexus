@@ -50,9 +50,14 @@ export interface AuthUser {
   lastName: string;
   /** @nullable */
   avatarUrl?: string | null;
-  role: string;
-  tenantId: string;
-  tenantName?: string;
+  role?: string;
+  tenantId?: string;
+  tenantAssignments: {
+    tenantId: string;
+    tenantName: string;
+    role: string;
+    status: string;
+  }[];
 }
 
 export interface AuthResponse {
@@ -204,6 +209,13 @@ export interface User {
   lastLoginAt?: string | null;
   createdAt: string;
   role?: Role;
+  tenantAssignments?: {
+    tenantId: string;
+    roleId: string;
+    status: string;
+    role?: Role;
+    tenant?: Tenant;
+  }[];
 }
 
 export interface UserInput {

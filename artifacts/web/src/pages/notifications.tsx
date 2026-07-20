@@ -32,7 +32,7 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="p-8 space-y-6 flex-1 overflow-y-auto max-w-4xl mx-auto w-full">
+    <div className="p-8 space-y-6 flex-1 overflow-y-auto w-full">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>

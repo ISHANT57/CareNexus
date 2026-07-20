@@ -350,7 +350,7 @@ export default function OnboardingPage() {
             </CardHeader>
             <CardContent className="pt-6 min-h-[300px]">
               {step === 1 && (
-                <div className="space-y-5">
+                <div className="space-y-6">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold">Tenant/Hospital Name *</label>
                     <Input
@@ -373,7 +373,7 @@ export default function OnboardingPage() {
               )}
 
               {step === 2 && (
-                <div className="space-y-5">
+                <div className="space-y-6">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold">Area/Region Name *</label>
                     <Input
@@ -396,7 +396,7 @@ export default function OnboardingPage() {
               )}
 
               {step === 3 && (
-                <div className="space-y-5">
+                <div className="space-y-6">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold">Clinic Name *</label>
                     <Input
@@ -447,7 +447,7 @@ export default function OnboardingPage() {
               )}
 
               {step === 4 && (
-                <div className="space-y-5">
+                <div className="space-y-6">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold">Initial Care Program Name *</label>
                     <Input
@@ -470,7 +470,7 @@ export default function OnboardingPage() {
               )}
 
               {step === 5 && (
-                <div className="space-y-5">
+                <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-semibold">Admin First Name *</label>

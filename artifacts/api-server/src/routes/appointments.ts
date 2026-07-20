@@ -60,10 +60,11 @@ router.post("/", authorizePermission("appointments", "write"), validateBody(Appo
   try {
     const { patientId, doctorId, clinicId, appointmentDate, durationMinutes, notes } = req.body;
 
-    const patient = await prisma.patient.findFirst({ where: { id: patientId, tenantId: req.tenantId!, deletedAt: null } });
+    const patientRoleScope = await getRoleScope(req, "patient");
+    const patient = await prisma.patient.findFirst({ where: { id: patientId, tenantId: req.tenantId!, deletedAt: null, ...patientRoleScope } });
     if (!patient) throw Errors.notFound("Patient");
 
-    const doctor = await prisma.user.findFirst({ where: { id: doctorId, tenantId: req.tenantId!, deletedAt: null } });
+    const doctor = await prisma.user.findFirst({ where: { id: doctorId, tenantAssignments: { some: { tenantId: req.tenantId! } }, deletedAt: null } });
     if (!doctor) throw Errors.notFound("Doctor");
 
     const clinic = await prisma.clinic.findFirst({ where: { id: clinicId, tenantId: req.tenantId!, deletedAt: null } });

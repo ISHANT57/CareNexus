@@ -1,7 +1,6 @@
 import * as React from "react";
 import { Check, ChevronsUpDown, Loader2, Search, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   Popover,
   PopoverContent,
@@ -89,19 +88,6 @@ export function SearchableSelect({
     [options, value]
   );
 
-  const parentRef = React.useRef<HTMLDivElement>(null);
-
-  // Setup virtualization
-  const rowVirtualizer = useVirtualizer({
-    count: filteredOptions.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: React.useCallback(
-      (index) => (filteredOptions[index]?.description ? 52 : 38),
-      [filteredOptions]
-    ),
-    overscan: 5,
-  });
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -169,66 +155,40 @@ export function SearchableSelect({
         </div>
 
         {/* Scrollable Container */}
-        <div
-          ref={parentRef}
-          className="max-h-64 overflow-y-auto relative"
-          style={{ contain: "minimal" }}
-        >
+        <div className="max-h-64 overflow-y-auto relative">
           {filteredOptions.length === 0 && !(creatable && inputValue) ? (
             <div className="py-6 text-center text-sm text-muted-foreground">
               {emptyMessage}
             </div>
           ) : (
-            <div
-              style={{
-                height: `${rowVirtualizer.getTotalSize()}px`,
-                width: "100%",
-                position: "relative",
-              }}
-            >
-              {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-                const option = filteredOptions[virtualItem.index];
-                if (!option) return null;
-
-                return (
-                  <div
-                    key={option.value}
-                    data-index={virtualItem.index}
-                    ref={rowVirtualizer.measureElement}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      transform: `translateY(${virtualItem.start}px)`,
-                    }}
-                    onClick={() => {
-                      onValueChange(option.value === value ? "" : option.value);
-                      setOpen(false);
-                    }}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-2 cursor-pointer text-sm hover:bg-muted/60 transition-colors",
-                      option.value === value && "bg-muted"
-                    )}
-                  >
-                    <Check
-                      className={cn(
-                        "h-4 w-4 shrink-0",
-                        value === option.value ? "opacity-100 text-primary" : "opacity-0"
-                      )}
-                    />
-                    <div className="flex flex-col min-w-0">
-                      <span className="truncate">{option.label}</span>
-                      {option.description && (
-                        <span className="text-xs text-muted-foreground truncate">
-                          {option.description}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            filteredOptions.map((option) => (
+              <div
+                key={option.value}
+                onClick={() => {
+                  onValueChange(option.value === value ? "" : option.value);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 cursor-pointer text-sm hover:bg-muted/60 transition-colors",
+                  option.value === value && "bg-muted"
+                )}
+              >
+                <Check
+                  className={cn(
+                    "h-4 w-4 shrink-0",
+                    value === option.value ? "opacity-100 text-primary" : "opacity-0"
+                  )}
+                />
+                <div className="flex flex-col min-w-0">
+                  <span className="truncate">{option.label}</span>
+                  {option.description && (
+                    <span className="text-xs text-muted-foreground truncate">
+                      {option.description}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
           )}
 
           {/* Creatable option */}

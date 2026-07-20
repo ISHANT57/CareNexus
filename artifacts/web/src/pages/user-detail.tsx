@@ -54,7 +54,7 @@ export default function UserDetailPage() {
         firstName: user.firstName ?? "",
         lastName: user.lastName ?? "",
         mobile: user.mobile ?? "",
-        roleId: user.role?.id ?? "",
+        roleId: user.tenantAssignments?.[0]?.role?.id ?? "",
       });
     }
   }, [user, form]);
@@ -73,7 +73,7 @@ export default function UserDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="p-8 space-y-6 max-w-3xl mx-auto">
+      <div className="p-8 space-y-6">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -86,7 +86,7 @@ export default function UserDetailPage() {
 
   return (
     <div className="p-8 flex-1 overflow-y-auto">
-      <div className="max-w-3xl mx-auto">
+      <div>
         <div className="mb-6">
           <Link href="/users">
             <Button variant="ghost" size="sm" className="mb-4 -ml-3 text-muted-foreground">

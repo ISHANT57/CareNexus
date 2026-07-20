@@ -7,6 +7,7 @@ import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js"
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 import { createAuditLog } from "../lib/audit.js";
+import { getRoleScope } from "../middlewares/roleScope.js";
 
 const router = Router();
 router.use(authenticate, requireTenant);
@@ -32,9 +33,11 @@ router.get("/", authorizePermission("programs", "read"), async (req, res, next) 
     const reqTenantId = req.query["tenantId"] as string | undefined;
     const areaId = req.query["areaId"] as string | undefined;
     const clinicId = req.query["clinicId"] as string | undefined;
+    const roleScope = await getRoleScope(req, "program");
     const where = {
       deletedAt: null,
       ...(req.tenantId ? { tenantId: req.tenantId } : reqTenantId ? { tenantId: reqTenantId } : {}),
+      ...roleScope,
       ...(areaId ? { areaId } : {}),
       ...(clinicId ? { clinicId } : {}),
       ...(q ? { name: { contains: q, mode: "insensitive" as const } } : {}),
@@ -68,6 +71,19 @@ router.post("/", authorizePermission("programs", "write"), validateBody(ProgramS
     if (!targetTenantId) throw Errors.badRequest("Tenant ID is required");
 
     const activationCode = data.activationCode ?? `${data.name.toUpperCase().replace(/\s+/g, "_").slice(0, 20)}_${Date.now()}`;
+
+    // Validate hierarchy and tenant ownership
+    if (data.areaId) {
+      const area = await prisma.area.findFirst({ where: { id: data.areaId, tenantId: targetTenantId, deletedAt: null } });
+      if (!area) throw Errors.validation("Area does not belong to this tenant");
+    }
+    if (data.clinicId) {
+      const clinicWhere: any = { id: data.clinicId, tenantId: targetTenantId, deletedAt: null };
+      if (data.areaId) clinicWhere.areaId = data.areaId;
+      const clinic = await prisma.clinic.findFirst({ where: clinicWhere });
+      if (!clinic) throw Errors.validation("Clinic does not belong to this tenant/area");
+    }
+
     const program = await prisma.program.create({ data: { ...data, activationCode, tenantId: targetTenantId, areaId: data.areaId, clinicId: data.clinicId } });
     await createAuditLog({ req, entityType: "Program", entityId: program.id, action: "CREATE", after: data });
     res.status(201).json(program);
@@ -79,6 +95,20 @@ router.patch("/:id", authorizePermission("programs", "write"), validateBody(Prog
     const program = await prisma.program.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
     if (!program) throw Errors.notFound("Program");
     assertTenantMatch(req, program.tenantId);
+
+    const targetTenantId = program.tenantId;
+    if (req.body.areaId) {
+      const area = await prisma.area.findFirst({ where: { id: req.body.areaId, tenantId: targetTenantId, deletedAt: null } });
+      if (!area) throw Errors.validation("Area does not belong to this tenant");
+    }
+    if (req.body.clinicId) {
+      const areaId = req.body.areaId ?? program.areaId;
+      const clinicWhere: any = { id: req.body.clinicId, tenantId: targetTenantId, deletedAt: null };
+      if (areaId) clinicWhere.areaId = areaId;
+      const clinic = await prisma.clinic.findFirst({ where: clinicWhere });
+      if (!clinic) throw Errors.validation("Clinic does not belong to this tenant/area");
+    }
+
     const updated = await prisma.program.update({ where: { id: program.id }, data: req.body });
     await createAuditLog({ req, entityType: "Program", entityId: program.id, action: "UPDATE", before: program, after: req.body });
     res.json(updated);

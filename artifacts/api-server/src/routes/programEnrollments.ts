@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middlewares/auth.js";
 import { CLINICAL_ROLES , authorizePermission } from "../middlewares/rbac.js";
 import { requireTenant, assertTenantMatch } from "../middlewares/tenantScope.js";
+import { getRoleScope } from "../middlewares/roleScope.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 import { createAuditLog } from "../lib/audit.js";
@@ -28,7 +29,8 @@ router.get("/", authorizePermission("programs", "read"), async (req, res, next) 
     const programId = req.query["programId"] as string | undefined;
     const status = req.query["status"] as any | undefined;
 
-    const where: any = { tenantId: req.tenantId!, deletedAt: null };
+    const roleScope = await getRoleScope(req, "patient");
+    const where: any = { tenantId: req.tenantId!, deletedAt: null, patient: roleScope };
     if (patientId) where.patientId = patientId;
     if (programId) where.programId = programId;
     if (status) where.status = status;
@@ -51,8 +53,9 @@ router.post("/", authorizePermission("programs", "write"), validateBody(Enrollme
   try {
     const { patientId, programId, notes } = req.body;
 
-    // Verify patient belongs to tenant
-    const patient = await prisma.patient.findFirst({ where: { id: patientId, tenantId: req.tenantId!, deletedAt: null } });
+    // Verify patient belongs to tenant and fits scope
+    const patientRoleScope = await getRoleScope(req, "patient");
+    const patient = await prisma.patient.findFirst({ where: { id: patientId, tenantId: req.tenantId!, deletedAt: null, ...patientRoleScope } });
     if (!patient) throw Errors.notFound("Patient");
 
     // Verify program belongs to tenant
@@ -87,9 +90,9 @@ router.post("/", authorizePermission("programs", "write"), validateBody(Enrollme
 
 router.patch("/:id", authorizePermission("programs", "write"), validateBody(UpdateEnrollmentSchema), async (req, res, next) => {
   try {
-    const enrollment = await prisma.programEnrollment.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const roleScope = await getRoleScope(req, "patient");
+    const enrollment = await prisma.programEnrollment.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, patient: roleScope } });
     if (!enrollment) throw Errors.notFound("ProgramEnrollment");
-    assertTenantMatch(req, enrollment.tenantId);
 
     const updated = await prisma.programEnrollment.update({
       where: { id: enrollment.id },
@@ -103,9 +106,9 @@ router.patch("/:id", authorizePermission("programs", "write"), validateBody(Upda
 
 router.post("/:id/complete", authorizePermission("programs", "write"), async (req, res, next) => {
   try {
-    const enrollment = await prisma.programEnrollment.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const roleScope = await getRoleScope(req, "patient");
+    const enrollment = await prisma.programEnrollment.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, patient: roleScope } });
     if (!enrollment) throw Errors.notFound("ProgramEnrollment");
-    assertTenantMatch(req, enrollment.tenantId);
 
     const updated = await prisma.programEnrollment.update({
       where: { id: enrollment.id },
@@ -119,9 +122,9 @@ router.post("/:id/complete", authorizePermission("programs", "write"), async (re
 
 router.post("/:id/cancel", authorizePermission("programs", "write"), async (req, res, next) => {
   try {
-    const enrollment = await prisma.programEnrollment.findFirst({ where: { id: req.params["id"] as string, deletedAt: null } });
+    const roleScope = await getRoleScope(req, "patient");
+    const enrollment = await prisma.programEnrollment.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, patient: roleScope } });
     if (!enrollment) throw Errors.notFound("ProgramEnrollment");
-    assertTenantMatch(req, enrollment.tenantId);
 
     const updated = await prisma.programEnrollment.update({
       where: { id: enrollment.id },

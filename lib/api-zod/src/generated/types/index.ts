@@ -132,6 +132,7 @@ export * from './programList';
 export * from './programUpdate';
 export * from './refreshInput';
 export * from './registerInput';
+export * from './requestEmailChangeInput';
 export * from './riskFactor';
 export * from './role';
 export * from './roleInput';

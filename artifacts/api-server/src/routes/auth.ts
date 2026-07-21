@@ -9,6 +9,7 @@ import { authenticate } from "../middlewares/auth.js";
 import { validateBody } from "../middlewares/validate.js";
 import { Errors, AppError } from "../lib/errors.js";
 import { EmailService } from "../services/EmailService.js";
+import { createAuditLog } from "../lib/audit.js";
 
 const router = Router();
 
@@ -64,6 +65,10 @@ const RefreshSchema = z.object({
 const ChangePasswordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(8).max(100),
+});
+
+const RequestEmailChangeSchema = z.object({
+  newEmail: z.string().email(),
 });
 
 // ── POST /api/auth/login ──────────────────────────────────────────────────────
@@ -239,10 +244,91 @@ router.get("/me", authenticate, async (req, res, next) => {
       tenant: user.tenant,
       clinics: user.clinicAssignments.map((a) => a.clinic),
       lastLoginAt: user.lastLoginAt,
+      emailVerified: user.emailVerified,
+      pendingEmail: user.pendingEmail,
+      pendingEmailRequestedAt: user.pendingEmailRequestedAt,
     });
   } catch (err) {
     next(err);
   }
+});
+
+// ── POST /api/auth/me/email-change (self-service — admin approval required) ──
+router.post("/me/email-change", authenticate, validateBody(RequestEmailChangeSchema), async (req, res, next) => {
+  try {
+    const { newEmail } = req.body as z.infer<typeof RequestEmailChangeSchema>;
+    const userId = req.user!.userId;
+
+    const me = await prisma.user.findUnique({ where: { id: userId } });
+    if (!me || me.deletedAt) throw Errors.notFound("User");
+
+    if (newEmail.toLowerCase() === me.email.toLowerCase()) {
+      throw Errors.badRequest("New email must be different from your current email");
+    }
+
+    // Guard against colliding with another account's current or already-requested email.
+    const clash = await prisma.user.findFirst({
+      where: {
+        id: { not: userId },
+        deletedAt: null,
+        OR: [
+          { email: { equals: newEmail, mode: "insensitive" } },
+          { pendingEmail: { equals: newEmail, mode: "insensitive" } },
+        ],
+      },
+    });
+    if (clash) throw Errors.conflict("That email is already in use or pending approval for another account");
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { pendingEmail: newEmail, pendingEmailRequestedAt: new Date() },
+      select: { id: true, email: true, pendingEmail: true, pendingEmailRequestedAt: true },
+    });
+
+    await createAuditLog({
+      req, entityType: "User", entityId: userId, action: "UPDATE",
+      after: { pendingEmail: newEmail },
+    });
+
+    res.json({
+      message: "Email change requested. An area admin or super admin must approve it before it takes effect.",
+      ...updated,
+    });
+  } catch (err) { next(err); }
+});
+
+// ── DELETE /api/auth/me/email-change (cancel own pending request) ────────────
+router.delete("/me/email-change", authenticate, async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    await prisma.user.update({
+      where: { id: userId },
+      data: { pendingEmail: null, pendingEmailRequestedAt: null },
+    });
+    res.status(204).send();
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/auth/change-password ────────────────────────────────────────────
+router.post("/change-password", authenticate, validateBody(ChangePasswordSchema), async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body as z.infer<typeof ChangePasswordSchema>;
+    const userId = req.user!.userId;
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.deletedAt) throw Errors.notFound("User");
+
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) throw Errors.unauthorized("Current password is incorrect");
+
+    const newHash = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({ where: { id: userId }, data: { password: newHash } });
+
+    // Revoke other sessions so a stolen refresh token can't outlive a password change.
+    await prisma.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
+
+    res.json({ message: "Password changed successfully" });
+  } catch (err) { next(err); }
 });
 
 // ── POST /api/auth/register (bootstrap first super-admin + tenant) ────────────

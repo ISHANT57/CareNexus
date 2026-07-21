@@ -16,6 +16,11 @@ const ROLE_HIERARCHY: Record<string, string[]> = {
   CLINIC_ADMIN: ["DOCTOR", "OPERATOR", "STAFF"],
 };
 
+// Email-identity changes are more sensitive than routine user-record edits,
+// so approval is restricted to admins regardless of what a role's granular
+// `users:write` permission grant otherwise allows.
+const EMAIL_APPROVAL_ROLES = ["SUPER_ADMIN", "AREA_ADMIN"];
+
 const router = Router();
 router.use(authenticate, requireTenant);
 
@@ -35,7 +40,7 @@ const UpdateUserSchema = CreateUserSchema.omit({ password: true, email: true }).
   emailVerified: z.boolean().optional(),
 });
 
-const safeUser = { id: true, email: true, firstName: true, lastName: true, mobile: true, avatarUrl: true, status: true, lastLoginAt: true, emailVerified: true, createdAt: true };
+const safeUser = { id: true, email: true, firstName: true, lastName: true, mobile: true, avatarUrl: true, status: true, lastLoginAt: true, emailVerified: true, createdAt: true, pendingEmail: true, pendingEmailRequestedAt: true };
 
 router.get("/", authorizePermission("users", "read"), async (req, res, next) => {
   try {
@@ -172,6 +177,78 @@ router.patch("/:id", authorizePermission("users", "write"), validateBody(UpdateU
 
     await createAuditLog({ req, entityType: "User", entityId: user.id, action: "UPDATE", before: { roleId: user.roleId }, after: rest });
     res.json(updated);
+  } catch (err) { next(err); }
+});
+
+// ── Email-change approval (self-service request lives in /api/auth/me/email-change) ──
+router.post("/:id/email-change/approve", authorizePermission("users", "write"), async (req, res, next) => {
+  try {
+    const approverRole = req.user?.role ?? "";
+    if (!EMAIL_APPROVAL_ROLES.includes(approverRole)) {
+      throw Errors.forbidden("Only a Super Admin or Area Admin can approve email changes");
+    }
+
+    const userScope = await getRoleScope(req, "user");
+    const user = await prisma.user.findFirst({
+      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...userScope },
+    });
+    if (!user) throw Errors.notFound("User");
+    assertTenantMatch(req, user.tenantId);
+
+    if (!user.pendingEmail) throw Errors.badRequest("This user has no pending email change");
+
+    // Re-check uniqueness — the target address may have been taken since the request was made.
+    const clash = await prisma.user.findFirst({
+      where: { id: { not: user.id }, deletedAt: null, email: { equals: user.pendingEmail, mode: "insensitive" } },
+    });
+    if (clash) throw Errors.conflict("That email is now in use by another account — ask the user to request a different one");
+
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        email: user.pendingEmail,
+        pendingEmail: null,
+        pendingEmailRequestedAt: null,
+        emailVerified: true,
+        verificationToken: null,
+      },
+      select: { ...safeUser, role: { select: { id: true, name: true } } },
+    });
+
+    await createAuditLog({
+      req, entityType: "User", entityId: user.id, action: "UPDATE",
+      before: { email: user.email }, after: { email: user.pendingEmail },
+    });
+    res.json(updated);
+  } catch (err) { next(err); }
+});
+
+router.post("/:id/email-change/reject", authorizePermission("users", "write"), async (req, res, next) => {
+  try {
+    const approverRole = req.user?.role ?? "";
+    if (!EMAIL_APPROVAL_ROLES.includes(approverRole)) {
+      throw Errors.forbidden("Only a Super Admin or Area Admin can reject email changes");
+    }
+
+    const userScope = await getRoleScope(req, "user");
+    const user = await prisma.user.findFirst({
+      where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null, ...userScope },
+    });
+    if (!user) throw Errors.notFound("User");
+    assertTenantMatch(req, user.tenantId);
+
+    if (!user.pendingEmail) throw Errors.badRequest("This user has no pending email change");
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { pendingEmail: null, pendingEmailRequestedAt: null },
+    });
+
+    await createAuditLog({
+      req, entityType: "User", entityId: user.id, action: "UPDATE",
+      before: { pendingEmail: user.pendingEmail }, after: { pendingEmail: null },
+    });
+    res.status(204).send();
   } catch (err) { next(err); }
 });
 

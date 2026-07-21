@@ -116,6 +116,7 @@ import type {
   ProgramUpdate,
   RefreshInput,
   RegisterInput,
+  RequestEmailChangeInput,
   Role,
   RoleInput,
   RoleList,
@@ -632,6 +633,135 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Err
 
 
 
+
+export const getRequestEmailChangeUrl = () => {
+
+
+
+
+  return `/api/auth/me/email-change`
+}
+
+export const requestEmailChange = async (requestEmailChangeInput: RequestEmailChangeInput, options?: RequestInit): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getRequestEmailChangeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      requestEmailChangeInput,)
+  }
+);}
+
+
+
+
+export const getRequestEmailChangeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestEmailChange>>, TError,{data: BodyType<RequestEmailChangeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestEmailChange>>, TError,{data: BodyType<RequestEmailChangeInput>}, TContext> => {
+
+const mutationKey = ['requestEmailChange'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestEmailChange>>, {data: BodyType<RequestEmailChangeInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestEmailChange(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestEmailChangeMutationResult = NonNullable<Awaited<ReturnType<typeof requestEmailChange>>>
+    export type RequestEmailChangeMutationBody = BodyType<RequestEmailChangeInput>
+    export type RequestEmailChangeMutationError = ErrorType<unknown>
+
+    export const useRequestEmailChange = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestEmailChange>>, TError,{data: BodyType<RequestEmailChangeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestEmailChange>>,
+        TError,
+        {data: BodyType<RequestEmailChangeInput>},
+        TContext
+      > => {
+      return useMutation(getRequestEmailChangeMutationOptions(options));
+    }
+
+export const getCancelEmailChangeUrl = () => {
+
+
+
+
+  return `/api/auth/me/email-change`
+}
+
+export const cancelEmailChange = async ( options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getCancelEmailChangeUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getCancelEmailChangeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelEmailChange>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelEmailChange>>, TError,void, TContext> => {
+
+const mutationKey = ['cancelEmailChange'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelEmailChange>>, void> = () => {
+
+
+          return  cancelEmailChange(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelEmailChangeMutationResult = NonNullable<Awaited<ReturnType<typeof cancelEmailChange>>>
+
+    export type CancelEmailChangeMutationError = ErrorType<unknown>
+
+    export const useCancelEmailChange = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelEmailChange>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelEmailChange>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCancelEmailChangeMutationOptions(options));
+    }
 
 export const getChangePasswordUrl = () => {
 
@@ -2548,6 +2678,134 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getDeleteUserMutationOptions(options));
+    }
+
+export const getApproveUserEmailChangeUrl = (id: string,) => {
+
+
+
+
+  return `/api/users/${id}/email-change/approve`
+}
+
+export const approveUserEmailChange = async (id: string, options?: RequestInit): Promise<User> => {
+
+  return customFetch<User>(getApproveUserEmailChangeUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getApproveUserEmailChangeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveUserEmailChange>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveUserEmailChange>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['approveUserEmailChange'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveUserEmailChange>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  approveUserEmailChange(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApproveUserEmailChangeMutationResult = NonNullable<Awaited<ReturnType<typeof approveUserEmailChange>>>
+
+    export type ApproveUserEmailChangeMutationError = ErrorType<unknown>
+
+    export const useApproveUserEmailChange = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveUserEmailChange>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof approveUserEmailChange>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getApproveUserEmailChangeMutationOptions(options));
+    }
+
+export const getRejectUserEmailChangeUrl = (id: string,) => {
+
+
+
+
+  return `/api/users/${id}/email-change/reject`
+}
+
+export const rejectUserEmailChange = async (id: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRejectUserEmailChangeUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRejectUserEmailChangeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectUserEmailChange>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof rejectUserEmailChange>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['rejectUserEmailChange'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejectUserEmailChange>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  rejectUserEmailChange(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RejectUserEmailChangeMutationResult = NonNullable<Awaited<ReturnType<typeof rejectUserEmailChange>>>
+
+    export type RejectUserEmailChangeMutationError = ErrorType<unknown>
+
+    export const useRejectUserEmailChange = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectUserEmailChange>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof rejectUserEmailChange>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getRejectUserEmailChangeMutationOptions(options));
     }
 
 export const getAssignUserClinicUrl = (id: string,) => {

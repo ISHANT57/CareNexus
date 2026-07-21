@@ -20,6 +20,10 @@ export interface User {
   /** @nullable */
   lastLoginAt?: string | null;
   emailVerified?: boolean;
+  /** @nullable */
+  pendingEmail?: string | null;
+  /** @nullable */
+  pendingEmailRequestedAt?: string | null;
   createdAt: string;
   role?: Role;
 }

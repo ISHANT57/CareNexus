@@ -51,6 +51,10 @@ export interface ChangePasswordInput {
   newPassword: string;
 }
 
+export interface RequestEmailChangeInput {
+  newEmail: string;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -61,6 +65,11 @@ export interface AuthUser {
   role: string;
   tenantId: string;
   tenantName?: string;
+  emailVerified?: boolean;
+  /** @nullable */
+  pendingEmail?: string | null;
+  /** @nullable */
+  pendingEmailRequestedAt?: string | null;
 }
 
 export interface AuthResponse {
@@ -211,6 +220,10 @@ export interface User {
   /** @nullable */
   lastLoginAt?: string | null;
   emailVerified?: boolean;
+  /** @nullable */
+  pendingEmail?: string | null;
+  /** @nullable */
+  pendingEmailRequestedAt?: string | null;
   createdAt: string;
   role?: Role;
 }

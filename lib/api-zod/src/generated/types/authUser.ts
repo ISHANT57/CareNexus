@@ -16,4 +16,9 @@ export interface AuthUser {
   role: string;
   tenantId: string;
   tenantName?: string;
+  emailVerified?: boolean;
+  /** @nullable */
+  pendingEmail?: string | null;
+  /** @nullable */
+  pendingEmailRequestedAt?: string | null;
 }

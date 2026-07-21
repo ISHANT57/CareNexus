@@ -32,6 +32,8 @@ model Tenant {
   smsComs                 SmsCommunication[]
   users                   User[]
   user_tenant_assignments user_tenant_assignments[]
+  verificationStatus      VerificationStatus        @default(APPROVED)
+  verification_requests   verification_requests[]
 
   @@map("tenants")
 }
@@ -119,42 +121,46 @@ model RolePermission {
 }
 
 model User {
-  id                      String                    @id @default(uuid())
-  firstName               String
-  lastName                String
-  email                   String                    @unique
-  password                String
-  mobile                  String?
-  avatarUrl               String?
-  status                  UserStatus                @default(ACTIVE)
-  lastLoginAt             DateTime?
-  resetToken              String?
-  resetTokenExpiresAt     DateTime?
-  emailVerified           Boolean                   @default(false)
-  verificationToken       String?
-  tenantId                String
-  roleId                  String
-  createdAt               DateTime                  @default(now())
-  updatedAt               DateTime                  @updatedAt
-  deletedAt               DateTime?
-  createdBy               String?
-  updatedBy               String?
-  tenant                  Tenant                    @relation(fields: [tenantId], references: [id])
-  role                    Role                      @relation(fields: [roleId], references: [id])
-  appointments            Appointment[]
-  auditLogs               AuditLog[]
-  createdTasks            CareTask[]                @relation("TaskCreator")
-  assignedTasks           CareTask[]                @relation("TaskAssignee")
-  consultations           Consultation[]
-  doctorAssignments       DoctorPatientAssignment[]
-  uploadedFiles           FileUpload[]
-  notifications           Notification[]
-  journeyEvents           PatientJourneyEvent[]
-  recordedOutcomes        PatientOutcome[]          @relation("OutcomeDoctor")
-  refreshTokens           RefreshToken[]
-  clinicAssignments       UserClinicAssignment[]
-  programAssignments      UserProgramAssignment[]
-  user_tenant_assignments user_tenant_assignments[]
+  id                                                              String                    @id @default(uuid())
+  firstName                                                       String
+  lastName                                                        String
+  email                                                           String                    @unique
+  password                                                        String
+  mobile                                                          String?
+  avatarUrl                                                       String?
+  status                                                          UserStatus                @default(ACTIVE)
+  lastLoginAt                                                     DateTime?
+  resetToken                                                      String?
+  resetTokenExpiresAt                                             DateTime?
+  emailVerified                                                   Boolean                   @default(false)
+  verificationToken                                               String?
+  pendingEmail                                                    String?
+  pendingEmailRequestedAt                                         DateTime?
+  tenantId                                                        String
+  roleId                                                          String
+  createdAt                                                       DateTime                  @default(now())
+  updatedAt                                                       DateTime                  @updatedAt
+  deletedAt                                                       DateTime?
+  createdBy                                                       String?
+  updatedBy                                                       String?
+  tenant                                                          Tenant                    @relation(fields: [tenantId], references: [id])
+  role                                                            Role                      @relation(fields: [roleId], references: [id])
+  appointments                                                    Appointment[]
+  auditLogs                                                       AuditLog[]
+  createdTasks                                                    CareTask[]                @relation("TaskCreator")
+  assignedTasks                                                   CareTask[]                @relation("TaskAssignee")
+  consultations                                                   Consultation[]
+  doctorAssignments                                               DoctorPatientAssignment[]
+  uploadedFiles                                                   FileUpload[]
+  notifications                                                   Notification[]
+  journeyEvents                                                   PatientJourneyEvent[]
+  recordedOutcomes                                                PatientOutcome[]          @relation("OutcomeDoctor")
+  refreshTokens                                                   RefreshToken[]
+  clinicAssignments                                               UserClinicAssignment[]
+  programAssignments                                              UserProgramAssignment[]
+  user_tenant_assignments                                         user_tenant_assignments[]
+  verification_requests_verification_requests_reviewedByIdTousers verification_requests[]   @relation("verification_requests_reviewedByIdTousers")
+  verification_requests_verification_requests_userIdTousers       verification_requests[]   @relation("verification_requests_userIdTousers")
 
   @@index([email])
   @@map("users")
@@ -448,20 +454,24 @@ model AuditLog {
 }
 
 model Notification {
-  id        String           @id @default(uuid())
-  tenantId  String
-  userId    String
-  title     String
-  message   String
-  type      NotificationType @default(INFO)
-  isRead    Boolean          @default(false)
-  readAt    DateTime?
-  createdAt DateTime         @default(now())
-  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String                 @id @default(uuid())
+  tenantId              String
+  userId                String
+  title                 String
+  message               String
+  type                  NotificationType       @default(INFO)
+  isRead                Boolean                @default(false)
+  readAt                DateTime?
+  createdAt             DateTime               @default(now())
+  category              String                 @default("GENERAL")
+  verificationRequestId String?
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verification_requests verification_requests? @relation(fields: [verificationRequestId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, userId])
   @@index([isRead])
+  @@index([verificationRequestId])
   @@map("notifications")
 }
 
@@ -801,4 +811,98 @@ enum TaskPriority {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+// ─────────────────────────────────────────
+// TRANSCRIPTION (recovered — table existed in DB but was undeclared here)
+// ─────────────────────────────────────────
+
+model transcription_sessions {
+  id                String                   @id
+  tenantId          String
+  patientId         String
+  appointmentId     String?
+  doctorId          String
+  clinicId          String?
+  captureMode       TranscriptionCaptureMode @default(UPLOAD)
+  status            TranscriptionStatus      @default(CREATED)
+  language          String?
+  audioKey          String?
+  audioMimeType     String?
+  audioDurationMs   Int?
+  asrProvider       String?
+  transcriptJson    Json?
+  soapJson          Json?
+  prescriptionsJson Json?
+  draftJson         Json?
+  consultationId    String?
+  consentAgreed     Boolean                  @default(false)
+  consentLanguage   String?
+  failureReason     String?
+  createdBy         String?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  @@index([doctorId])
+  @@index([patientId])
+  @@index([status])
+  @@index([tenantId])
+}
+
+enum TranscriptionCaptureMode {
+  UPLOAD
+  LIVE
+}
+
+enum TranscriptionStatus {
+  CREATED
+  AUDIO_UPLOADED
+  TRANSCRIBING
+  GENERATING_NOTE
+  DRAFT
+  SAVED
+  TRANSCRIPTION_FAILED
+  NOTE_FAILED
+}
+
+// ─────────────────────────────────────────
+// VERIFICATION REQUESTS — tenant/user onboarding approval
+// (recovered — table existed in DB but was undeclared here)
+// ─────────────────────────────────────────
+
+model verification_requests {
+  id                                                              String                  @id
+  subjectType                                                     VerificationSubjectType
+  status                                                          VerificationStatus      @default(PENDING)
+  tenantId                                                        String?
+  userId                                                          String?
+  applicantName                                                   String
+  applicantEmail                                                  String
+  applicantRole                                                   String?
+  organizationName                                                String
+  requestedAt                                                     DateTime                @default(now())
+  reviewedById                                                    String?
+  reviewedAt                                                      DateTime?
+  rejectionReason                                                 String?
+  createdAt                                                       DateTime                @default(now())
+  updatedAt                                                       DateTime                @updatedAt
+  notifications                                                   Notification[]
+  verification_requests_verification_requests_reviewedByIdTousers User?                   @relation("verification_requests_reviewedByIdTousers", fields: [reviewedById], references: [id])
+  tenant                                                          Tenant?                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  verification_requests_verification_requests_userIdTousers       User?                   @relation("verification_requests_userIdTousers", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([subjectType, status])
+  @@index([tenantId])
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum VerificationSubjectType {
+  TENANT
+  USER
 }

@@ -145,6 +145,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/AuthUser"
 
+  /auth/me/email-change:
+    post:
+      operationId: requestEmailChange
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestEmailChangeInput"
+      responses:
+        "200":
+          description: Email change requested, pending admin approval
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+    delete:
+      operationId: cancelEmailChange
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Pending request cancelled
+
   /auth/change-password:
     post:
       operationId: changePassword
@@ -767,6 +795,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OkResponse"
+
+  /users/{id}/email-change/approve:
+    post:
+      operationId: approveUserEmailChange
+      tags: [users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Email change approved and applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}/email-change/reject:
+    post:
+      operationId: rejectUserEmailChange
+      tags: [users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Email change request rejected
 
   /users/{id}/clinics:
     post:
@@ -2545,6 +2609,13 @@ components:
         newPassword:
           type: string
 
+    RequestEmailChangeInput:
+      type: object
+      required: [newEmail]
+      properties:
+        newEmail:
+          type: string
+
     AuthResponse:
       type: object
       required: [accessToken, refreshToken, user]
@@ -2576,6 +2647,12 @@ components:
           type: string
         tenantName:
           type: string
+        emailVerified:
+          type: boolean
+        pendingEmail:
+          type: ["string", "null"]
+        pendingEmailRequestedAt:
+          type: ["string", "null"]
 
     # ── Tenant ──────────────────────────────────────────────────────────────
     Tenant:
@@ -2825,6 +2902,10 @@ components:
           type: ["string", "null"]
         emailVerified:
           type: boolean
+        pendingEmail:
+          type: ["string", "null"]
+        pendingEmailRequestedAt:
+          type: ["string", "null"]
         createdAt:
           type: string
         role:

@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { useListUsers, useGetMe, useListRoles, useUpdateUser, getListUsersQueryKey } from "@workspace/api-client-react";
+import { useListUsers, useGetMe, useListRoles, useUpdateUser, useApproveUserEmailChange, useRejectUserEmailChange, getListUsersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Plus, UserCircle, Download, X, Mail, Phone, MoreVertical, Clock, CalendarDays, BadgeCheck, MailCheck, MailX, ExternalLink, Loader2 } from "lucide-react";
+import { Search, Plus, UserCircle, Download, X, Mail, Phone, MoreVertical, Clock, CalendarDays, BadgeCheck, MailCheck, MailX, ExternalLink, Loader2, Check, Ban } from "lucide-react";
 import { cn, exportToCSV } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { GradientAvatar, Pagination } from "@/lib/ui-helpers";
@@ -37,9 +37,12 @@ export default function UsersPage() {
   const [page, setPage] = useState(1);
   const { data: me } = useGetMe();
   const isSuperAdmin = me?.role === "SUPER_ADMIN";
+  const canApproveEmailChange = isSuperAdmin || me?.role === "AREA_ADMIN";
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const updateUser = useUpdateUser();
+  const approveEmailChange = useApproveUserEmailChange();
+  const rejectEmailChange = useRejectUserEmailChange();
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
   const handleVerifyEmail = async (userId: string, verified: boolean) => {
@@ -48,6 +51,20 @@ export default function UsersPage() {
       await updateUser.mutateAsync({ id: userId, data: { emailVerified: verified } });
       queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
       toast({ title: verified ? "Email verified" : "Email verification revoked" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Action failed", description: err.message });
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
+  const handleEmailChangeDecision = async (userId: string, decision: "approve" | "reject") => {
+    setVerifyingId(userId);
+    try {
+      if (decision === "approve") await approveEmailChange.mutateAsync({ id: userId });
+      else await rejectEmailChange.mutateAsync({ id: userId });
+      queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
+      toast({ title: decision === "approve" ? "Email change approved" : "Email change rejected" });
     } catch (err: any) {
       toast({ variant: "destructive", title: "Action failed", description: err.message });
     } finally {
@@ -100,7 +117,7 @@ export default function UsersPage() {
   return (
     <div>
       <div className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+        <div className="px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1">People & Access</p>
@@ -235,6 +252,17 @@ export default function UsersPage() {
                             )}
                           </>
                         )}
+                        {canApproveEmailChange && (user as any).pendingEmail && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleEmailChangeDecision(user.id, "approve")}>
+                              <Check className="w-4 h-4 text-emerald-600" /> Approve new email
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => handleEmailChangeDecision(user.id, "reject")}>
+                              <Ban className="w-4 h-4 text-destructive" /> Reject new email
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
 
@@ -300,6 +328,12 @@ export default function UsersPage() {
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Phone className="w-3.5 h-3.5 shrink-0" /><span>{user.mobile || "No phone on file"}</span>
                       </div>
+                      {(user as any).pendingEmail && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-warning">
+                          <Clock className="w-3 h-3 shrink-0" />
+                          <span className="truncate">Pending: {(user as any).pendingEmail}</span>
+                        </div>
+                      )}
                       {isSuperAdmin && (user as any).tenant?.name && (
                         <div className="text-[11px] text-muted-foreground/70 pt-0.5">{(user as any).tenant.name}</div>
                       )}

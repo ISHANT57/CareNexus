@@ -3,82 +3,59 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+// Owner account: bypasses every permission/tenant-scope check in the app
+// (SUPER_ADMIN role short-circuits authorizePermission() and getRoleScope()
+// — see src/middlewares/rbac.ts and roleScope.ts). This script only needs
+// to get the account itself into the right state.
+const EMAIL = process.env.SUPERADMIN_EMAIL;
+const PASSWORD = process.env.SUPERADMIN_PASSWORD;
+
 async function main() {
-  try {
-    // 1. Find or create tenant
-    let tenant = await prisma.tenant.findFirst();
-    if (!tenant) {
-      tenant = await prisma.tenant.create({
-        data: {
-          name: "Default Tenant",
-          domain: "default.example.com",
-        },
-      });
-      console.log(`Created default tenant: ${tenant.id}`);
-    } else {
-      console.log(`Found tenant: ${tenant.id} (${tenant.name})`);
-    }
-
-    // 2. Find or create superadmin role
-    let role = await prisma.role.findFirst({
-      where: { name: "Super Admin" },
-    });
-    
-    if (!role) {
-      // Let's see if we have ANY role to use, or just create one
-      role = await prisma.role.findFirst({
-        where: { name: { contains: "Admin", mode: "insensitive" } }
-      });
-      
-      if (!role) {
-        role = await prisma.role.create({
-          data: {
-            name: "Super Admin",
-            description: "System super administrator",
-            isSystem: true,
-            tenantId: tenant.id,
-          },
-        });
-        console.log(`Created Super Admin role: ${role.id}`);
-      } else {
-        console.log(`Found existing Admin role: ${role.id} (${role.name})`);
-      }
-    } else {
-      console.log(`Found Super Admin role: ${role.id}`);
-    }
-
-    // 3. Create or update user
-    const email = "ishantbhoyar59@gmail.com";
-    const passwordHash = await bcrypt.hash("ishant@123", 10);
-
-    const user = await prisma.user.upsert({
-      where: { email },
-      update: {
-        password: passwordHash,
-        roleId: role.id,
-        tenantId: tenant.id,
-        firstName: "Ishant",
-        lastName: "Superadmin",
-        status: "ACTIVE",
-      },
-      create: {
-        email,
-        password: passwordHash,
-        roleId: role.id,
-        tenantId: tenant.id,
-        firstName: "Ishant",
-        lastName: "Superadmin",
-        status: "ACTIVE",
-        emailVerified: true,
-      },
-    });
-
-    console.log(`✅ Successfully created/updated superadmin user: ${user.email}`);
-  } catch (error) {
-    console.error("Error creating superadmin:", error);
-  } finally {
-    await prisma.$disconnect();
+  if (!EMAIL || !PASSWORD) {
+    throw new Error("Set SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD env vars before running this script.");
   }
+  // The system SUPER_ADMIN role is global (tenantId: null) — match it
+  // exactly. A fuzzy "contains Admin" fallback here would risk silently
+  // assigning AREA_ADMIN/CLINIC_ADMIN instead, which is the opposite of
+  // what an owner account needs.
+  const role = await prisma.role.findFirst({ where: { name: "SUPER_ADMIN", tenantId: null } });
+  if (!role) throw new Error("System role SUPER_ADMIN not found — run the base seed first.");
+
+  // User.tenantId is a required column, but SUPER_ADMIN's access is not
+  // restricted by it (roleScope.ts returns {} for SUPER_ADMIN and the
+  // tenant switcher lets it view any tenant). Any existing tenant works
+  // as the "home" row value.
+  const tenant = await prisma.tenant.findFirst();
+  if (!tenant) throw new Error("No tenant found — run the base seed first.");
+
+  const passwordHash = await bcrypt.hash(PASSWORD, 12);
+
+  const user = await prisma.user.upsert({
+    where: { email: EMAIL },
+    update: {
+      password: passwordHash,
+      roleId: role.id,
+      tenantId: tenant.id,
+      status: "ACTIVE",
+      emailVerified: true,
+      deletedAt: null,
+    },
+    create: {
+      email: EMAIL,
+      password: passwordHash,
+      roleId: role.id,
+      tenantId: tenant.id,
+      firstName: "Ishant",
+      lastName: "Bhoyar",
+      status: "ACTIVE",
+      emailVerified: true,
+    },
+  });
+
+  console.log(`✅ SUPER_ADMIN ready: ${user.email} (role: ${role.name}, home tenant: ${tenant.name})`);
+  console.log(`   Full unrestricted access — bypasses all authorizePermission() and role-scope checks.`);
 }
 
-main();
+main()
+  .catch((e) => { console.error(e); process.exit(1); })
+  .finally(() => prisma.$disconnect());

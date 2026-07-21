@@ -49,7 +49,7 @@ router.get("/", authorizePermission("appointments", "read"), async (req, res, ne
         skip,
         take,
         orderBy: { appointmentDate: "asc" },
-        include: { patient: true, doctor: true, clinic: true },
+        include: { patient: true, doctor: { select: { id: true, firstName: true, lastName: true, email: true, mobile: true, avatarUrl: true } }, clinic: true },
       }),
     ]);
     res.json({ data: appointments, meta: paginationMeta(total, page, limit) });
@@ -81,7 +81,7 @@ router.post("/", authorizePermission("appointments", "write"), validateBody(Appo
         notes, 
         status: "SCHEDULED" 
       },
-      include: { patient: true, doctor: true, clinic: true }
+      include: { patient: true, doctor: { select: { id: true, firstName: true, lastName: true, email: true, mobile: true, avatarUrl: true } }, clinic: true }
     });
     
     await createAuditLog({ req, entityType: "Appointment", entityId: appointment.id, action: "CREATE", after: req.body });
@@ -95,7 +95,7 @@ router.get("/:id", authorizePermission("appointments", "read"), async (req, res,
     const roleScope = await getRoleScope(req, "appointment");
     const appointment = await prisma.appointment.findFirst({
       where: { id: req.params["id"] as string, deletedAt: null, tenantId: req.tenantId!, ...roleScope },
-      include: { patient: true, doctor: true, clinic: true },
+      include: { patient: true, doctor: { select: { id: true, firstName: true, lastName: true, email: true, mobile: true, avatarUrl: true } }, clinic: true },
     });
     if (!appointment) throw Errors.notFound("Appointment");
     assertTenantMatch(req, appointment.tenantId);
@@ -122,7 +122,7 @@ router.patch("/:id", authorizePermission("appointments", "write"), validateBody(
         appointmentDate: req.body.appointmentDate ? new Date(req.body.appointmentDate) : undefined,
         durationMinutes: req.body.durationMinutes !== undefined ? req.body.durationMinutes : undefined
       },
-      include: { patient: true, doctor: true, clinic: true }
+      include: { patient: true, doctor: { select: { id: true, firstName: true, lastName: true, email: true, mobile: true, avatarUrl: true } }, clinic: true }
     });
     
     await createAuditLog({ req, entityType: "Appointment", entityId: appointment.id, action: "UPDATE", before: appointment, after: updated });
@@ -143,7 +143,7 @@ router.post("/:id/complete", authorizePermission("appointments", "write"), async
     const updated = await prisma.appointment.update({
       where: { id: appointment.id },
       data: { status: "COMPLETED" },
-      include: { patient: true, doctor: true, clinic: true }
+      include: { patient: true, doctor: { select: { id: true, firstName: true, lastName: true, email: true, mobile: true, avatarUrl: true } }, clinic: true }
     });
     
     await createAuditLog({ req, entityType: "Appointment", entityId: appointment.id, action: "UPDATE", before: appointment, after: updated });
@@ -175,7 +175,7 @@ router.post("/:id/cancel", authorizePermission("appointments", "write"), async (
     const updated = await prisma.appointment.update({
       where: { id: appointment.id },
       data: { status: "CANCELLED" },
-      include: { patient: true, doctor: true, clinic: true }
+      include: { patient: true, doctor: { select: { id: true, firstName: true, lastName: true, email: true, mobile: true, avatarUrl: true } }, clinic: true }
     });
     
     await createAuditLog({ req, entityType: "Appointment", entityId: appointment.id, action: "UPDATE", before: appointment, after: updated });
@@ -196,7 +196,7 @@ router.post("/:id/no-show", authorizePermission("appointments", "write"), async 
     const updated = await prisma.appointment.update({
       where: { id: appointment.id },
       data: { status: "NO_SHOW" },
-      include: { patient: true, doctor: true, clinic: true }
+      include: { patient: true, doctor: { select: { id: true, firstName: true, lastName: true, email: true, mobile: true, avatarUrl: true } }, clinic: true }
     });
     
     await createAuditLog({ req, entityType: "Appointment", entityId: appointment.id, action: "UPDATE", before: appointment, after: updated });

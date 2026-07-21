@@ -58,7 +58,7 @@ router.get("/", authorizePermission("consultations", "read"), async (req, res, n
         skip,
         take,
         orderBy: { consultationDate: "desc" },
-        include: { patient: true, doctor: true, clinic: true, appointment: true },
+        include: { patient: true, doctor: { select: { id: true, firstName: true, lastName: true, email: true, mobile: true, avatarUrl: true } }, clinic: true, appointment: true },
       }),
     ]);
     res.json({ data: consultations, meta: paginationMeta(total, page, limit) });
@@ -77,6 +77,16 @@ router.post("/", authorizePermission("consultations", "write"), validateBody(Con
 
     if (!patient) throw Errors.notFound("Patient");
     if (!appointment) throw Errors.notFound("Appointment");
+
+    if (appointment.patientId !== patientId) {
+      throw Errors.badRequest("Appointment does not match patient");
+    }
+    if (appointment.doctorId !== doctorId) {
+      throw Errors.badRequest("Appointment does not match doctor");
+    }
+    if (appointment.clinicId !== clinicId) {
+      throw Errors.badRequest("Appointment does not match clinic");
+    }
 
     // Check if consultation already exists for this appointment
     const existing = await prisma.consultation.findFirst({ where: { appointmentId, tenantId: req.tenantId! } });
@@ -100,7 +110,7 @@ router.post("/", authorizePermission("consultations", "write"), validateBody(Con
         followUpInstructions,
         consultationDate: consultationDate ? new Date(consultationDate) : undefined
       },
-      include: { patient: true, doctor: true, clinic: true, appointment: true }
+      include: { patient: true, doctor: { select: { id: true, firstName: true, lastName: true, email: true, mobile: true, avatarUrl: true } }, clinic: true, appointment: true }
     });
 
     // Automatically create a journey event
@@ -124,7 +134,7 @@ router.get("/:id", authorizePermission("consultations", "read"), async (req, res
     const roleScope = await getRoleScope(req, "consultation");
     const consultation = await prisma.consultation.findFirst({
       where: { id: req.params["id"] as string, deletedAt: null, tenantId: req.tenantId!, ...roleScope },
-      include: { patient: true, doctor: true, clinic: true, appointment: true },
+      include: { patient: true, doctor: { select: { id: true, firstName: true, lastName: true, email: true, mobile: true, avatarUrl: true } }, clinic: true, appointment: true },
     });
     if (!consultation) throw Errors.notFound("Consultation");
     assertTenantMatch(req, consultation.tenantId);
@@ -153,7 +163,7 @@ router.patch("/:id", authorizePermission("consultations", "write"), validateBody
         medications: req.body.medications !== undefined ? req.body.medications : undefined,
         followUpInstructions: req.body.followUpInstructions !== undefined ? req.body.followUpInstructions : undefined,
       },
-      include: { patient: true, doctor: true, clinic: true, appointment: true }
+      include: { patient: true, doctor: { select: { id: true, firstName: true, lastName: true, email: true, mobile: true, avatarUrl: true } }, clinic: true, appointment: true }
     });
     
     await createAuditLog({ req, entityType: "Consultation", entityId: consultation.id, action: "UPDATE", before: consultation, after: updated });

@@ -245,7 +245,7 @@ export default function PatientDetailPage() {
     { patientId: id },
     { query: { enabled: !isNew && !!id, queryKey: enrollmentsKey } }
   );
-  const { data: programsData } = useListPrograms({ limit: 100 }, { query: { enabled: isEnrollDialogOpen, queryKey: ["programs", "list"] } });
+  const { data: programsData } = useListPrograms({ limit: 100 }, { query: { enabled: isEnrollDialogOpen || isOutcomeDialogOpen, queryKey: ["programs", "list"] } });
   const appointmentsKey = getListAppointmentsQueryKey({ patientId: id });
   const { data: appointmentsData, isLoading: isAppointmentsLoading } = useListAppointments(
     { patientId: id },

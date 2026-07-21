@@ -9,6 +9,7 @@ import { validateBody } from "../middlewares/validate.js";
 import { Errors, paginate, paginationMeta } from "../types/index.js";
 
 const router = Router();
+router.use(authenticate, requireTenant);
 
 const SendSmsSchema = z.object({
   patientIds: z.array(z.string().uuid()).min(1),

@@ -56,6 +56,9 @@ router.post("/", authenticate, requireTenant, authorizePermission("files", "writ
     const patientId = req.body.patientId as string;
     if (!patientId) throw Errors.validation("patientId is required");
 
+    const patient = await prisma.patient.findFirst({ where: { id: patientId, tenantId: req.tenantId!, deletedAt: null } });
+    if (!patient) throw Errors.notFound("Patient");
+
     const originalFilename = req.file.originalname;
 
     // Save to disk via storage abstraction

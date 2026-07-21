@@ -201,7 +201,7 @@
 
 @layer utilities {
   .page-container {
-    @apply flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8;
+    @apply flex-1 w-full px-4 sm:px-6 lg:px-8 py-8;
   }
   .page-header {
     @apply flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 mb-6 border-b border-border/60;

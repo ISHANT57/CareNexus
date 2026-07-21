@@ -268,7 +268,7 @@ export default function ProgramsPage() {
   return (
     <div>
       <div className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+        <div className="px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-1">Care Pathways</p>

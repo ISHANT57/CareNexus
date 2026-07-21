@@ -98,10 +98,8 @@ router.patch("/:id", authorizePermission("clinics", "write"), validateBody(Clini
 
     let updateData = req.body;
     if (updateData.areaId && updateData.areaId !== clinic.areaId) {
-      const area = await prisma.area.findUnique({ where: { id: updateData.areaId } });
-      if (!area || area.deletedAt) throw Errors.notFound("Area");
-      // ensure clinic is moved to the new area's tenant
-      updateData.tenantId = area.tenantId;
+      const area = await prisma.area.findFirst({ where: { id: updateData.areaId, tenantId: clinic.tenantId, deletedAt: null } });
+      if (!area) throw Errors.validation("Area does not belong to this tenant");
     }
 
     const updated = await prisma.clinic.update({ where: { id: clinic.id }, data: updateData });

@@ -96,6 +96,19 @@ router.patch("/:id", authorizePermission("programs", "write"), validateBody(Prog
     const program = await prisma.program.findFirst({ where: { id: req.params["id"] as string, tenantId: req.tenantId!, deletedAt: null } });
     if (!program) throw Errors.notFound("Program");
     assertTenantMatch(req, program.tenantId);
+
+    const data = req.body as Partial<z.infer<typeof ProgramSchema>>;
+    if (data.areaId) {
+      const area = await prisma.area.findFirst({ where: { id: data.areaId, tenantId: program.tenantId, deletedAt: null } });
+      if (!area) throw Errors.validation("Selected area does not belong to this tenant");
+    }
+    if (data.clinicId) {
+      const clinic = await prisma.clinic.findFirst({
+        where: { id: data.clinicId, tenantId: program.tenantId, deletedAt: null, ...(data.areaId ? { areaId: data.areaId } : {}) },
+      });
+      if (!clinic) throw Errors.validation("Selected clinic does not belong to this tenant/area");
+    }
+
     const updated = await prisma.program.update({ where: { id: program.id }, data: req.body });
     await createAuditLog({ req, entityType: "Program", entityId: program.id, action: "UPDATE", before: program, after: req.body });
     res.json(updated);

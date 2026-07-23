@@ -17,7 +17,9 @@ services:
     # cron/no cold starts.
     plan: free
     rootDir: artifacts/api-server
-    buildCommand: "corepack enable && pnpm install && npx prisma generate && pnpm run build"
+    # `corepack enable` fails on Render's build image (EROFS: /usr/bin is read-only,
+    # corepack can't place its shim there) — install pnpm directly via npm instead.
+    buildCommand: "npm install -g pnpm@11 && pnpm install && npx prisma generate && pnpm run build"
     startCommand: "node dist/index.mjs"
     healthCheckPath: /api/healthz
     envVars:

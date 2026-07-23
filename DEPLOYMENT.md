@@ -39,8 +39,9 @@ Keep them for `JWT_SECRET` and `JWT_REFRESH_SECRET`.
    | `CORS_ORIGIN` | your Vercel URL (fill in after Step 4, e.g. `https://caremesh.vercel.app`) |
 
    (`NODE_ENV=production`, `PORT=10000`, `LOG_LEVEL=info` are already in the blueprint. The app listens on `process.env.PORT`, which Render injects.)
-3. **Plan:** the blueprint sets `plan: starter`. **Do not use `free`** — it sleeps on idle, which stops the `SyncWorker` and the nightly `RiskScheduler` cron and makes the first request cold.
+3. **Plan:** the blueprint sets `plan: free`. Free spins down after ~15 min idle, which pauses the `SyncWorker` and the nightly `RiskScheduler` cron and makes the first request after idle slow/cold (~30-60s). Mitigated by [`.github/workflows/keep-alive.yml`](.github/workflows/keep-alive.yml) — a scheduled ping every 10 min — but that's a workaround, not a guarantee (GitHub's scheduler can lag). Bump to `starter` ($7/mo) for a real always-on guarantee.
 4. Deploy. When live, health check is `GET /api/healthz`. **Copy the service URL**, e.g. `https://caremesh-api.onrender.com`.
+5. Update the URL in two places so it matches your real service: `RENDER_API_URL` in [`.github/workflows/keep-alive.yml`](.github/workflows/keep-alive.yml), and the rewrite destination in Step 3 below.
 
 ## 3. Point the frontend proxy at your Render URL
 Edit [`artifacts/web/vercel.json`](artifacts/web/vercel.json) — replace the placeholder host in the `/api/:path*` rewrite with your real Render URL:
@@ -78,6 +79,9 @@ Commit & push. (This proxy keeps the SPA **same-origin**, so cookie auth + CSRF 
 
 **Frontend (Vercel):** none required (same-origin proxy). The MySQL "sync" warning in API logs is a **legacy/optional secondary DB** — safe to ignore unless you wire it up.
 
+## Known limitation on the free plan: uploaded files
+Patient file uploads are written to local disk (`artifacts/api-server/uploads/`, see `src/lib/storage.ts`), not cloud storage. Render's filesystem is **ephemeral** — uploaded files are lost on every redeploy and possibly on free-plan spin-down/restart. Fine for demoing; before real clinical use, swap `storage.ts`'s local provider for S3/GCS/Azure Blob (it's already designed to be swappable).
+
 ## Ongoing operations
 - **Schema changes:** this project uses `prisma db push` (no migration files). After changing `schema.prisma`, run once against prod: `DATABASE_URL=<neon> npx prisma db push` (from `artifacts/api-server`). It is **not** run automatically on deploy, so production data isn't touched unexpectedly.
 - **Redeploys:** push to the connected branch → Render rebuilds the API, Vercel rebuilds the SPA automatically.
@@ -86,7 +90,8 @@ Commit & push. (This proxy keeps the SPA **same-origin**, so cookie auth + CSRF 
 ## Troubleshooting
 | Symptom | Cause / Fix |
 |---|---|
-| First request slow / cron didn't run | Render on `free` (sleeps). Move to `starter`. |
+| First request slow / cron didn't run | Expected on `free` if it fully spun down (keep-alive ping missed a window, or GitHub Actions was delayed). Move to `starter` to eliminate entirely. |
+| GitHub Action isn't pinging | Actions on a repo are disabled by default in some settings, and scheduled workflows pause automatically after 60 days with no repo activity — open the Actions tab and re-enable/run it manually (`workflow_dispatch`) if so. |
 | Login works but session drops | Cookie/CORS. Ensure you're using the **Vercel domain** (same-origin proxy), not the Render URL directly; set `CORS_ORIGIN` to the Vercel URL. |
 | `404` on refresh of `/patients` etc. | SPA fallback rewrite missing — confirm `vercel.json` is at `artifacts/web/` and Root Directory is `artifacts/web`. |
 | API 500 at boot | `DATABASE_URL` unset/incorrect or Neon asleep. Check Render logs. |

@@ -9,10 +9,13 @@ services:
     type: web
     runtime: node
     region: frankfurt          # EU region — closer to UK/EU data-residency needs for healthcare data
-    # IMPORTANT: the API runs always-on background jobs (SyncWorker + nightly RiskScheduler cron).
-    # The Render "free" plan spins down on idle, which stops those jobs and makes the first
-    # request after idle slow/cold. Use "starter" (or higher) so the service never sleeps.
-    plan: starter
+    # NOTE: the API runs always-on background jobs (SyncWorker + nightly RiskScheduler cron).
+    # "free" spins down after ~15 min idle, which pauses those jobs and makes the first
+    # request after idle slow/cold (~30-60s). Mitigated with a keep-alive ping from
+    # .github/workflows/keep-alive.yml (hits /api/healthz every 10 min) — not bulletproof,
+    # but keeps the service warm for normal use. Bump to "starter" for a guaranteed always-on
+    # cron/no cold starts.
+    plan: free
     rootDir: artifacts/api-server
     buildCommand: "corepack enable && pnpm install && npx prisma generate && pnpm run build"
     startCommand: "node dist/index.mjs"

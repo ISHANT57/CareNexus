@@ -17,9 +17,11 @@ services:
     # cron/no cold starts.
     plan: free
     rootDir: artifacts/api-server
-    # `corepack enable` fails on Render's build image (EROFS: /usr/bin is read-only,
-    # corepack can't place its shim there) — install pnpm directly via npm instead.
-    buildCommand: "npm install -g pnpm@11 && pnpm install && npx prisma generate && pnpm run build"
+    # Render's build image has BOTH /usr/bin and /usr/lib/node_modules mounted
+    # read-only, so no global install works here — neither `corepack enable`
+    # nor `npm install -g pnpm`. Run pnpm via `npx` instead: it caches the
+    # package in a writable temp dir rather than a system path.
+    buildCommand: "npx --yes pnpm@11 install && npx --yes pnpm@11 exec prisma generate && npx --yes pnpm@11 run build"
     startCommand: "node dist/index.mjs"
     healthCheckPath: /api/healthz
     envVars:

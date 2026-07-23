@@ -5,12 +5,10 @@
   "installCommand": "pnpm install --frozen-lockfile=false",
   "rewrites": [
     {
-      "//": "Proxy API calls to the Render backend. Replace the host with YOUR Render URL. Keeps the SPA same-origin so cookie auth + CSRF work with no CORS.",
       "source": "/api/:path*",
       "destination": "https://caremesh-api.onrender.com/api/:path*"
     },
     {
-      "//": "SPA fallback: every non-file, non-API route serves index.html (wouter handles routing).",
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

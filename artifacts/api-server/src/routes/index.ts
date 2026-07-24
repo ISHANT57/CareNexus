@@ -25,6 +25,13 @@ import { riskScoresRouter } from "./riskScores.js";
 
 const router: IRouter = Router();
 
+// Liveness probe for the platform health check (Render etc.) — deliberately
+// has no DB dependency, so a transient DB blip doesn't get a healthy process
+// killed. For dependency-aware checks see /health/postgres, /health/mysql.
+router.get("/healthz", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
 router.use("/health", healthRouter);
 router.use("/auth", authRouter);
 router.use("/tenants", tenantsRouter);

@@ -39,9 +39,9 @@ Keep them for `JWT_SECRET` and `JWT_REFRESH_SECRET`.
    | `CORS_ORIGIN` | your Vercel URL (fill in after Step 4, e.g. `https://caremesh.vercel.app`) |
 
    (`NODE_ENV=production`, `PORT=10000`, `LOG_LEVEL=info` are already in the blueprint. The app listens on `process.env.PORT`, which Render injects.)
-3. **Plan:** the blueprint sets `plan: free`. Free spins down after ~15 min idle, which pauses the `SyncWorker` and the nightly `RiskScheduler` cron and makes the first request after idle slow/cold (~30-60s). Mitigated by [`.github/workflows/keep-alive.yml`](.github/workflows/keep-alive.yml) — a scheduled ping every 10 min — but that's a workaround, not a guarantee (GitHub's scheduler can lag). Bump to `starter` ($7/mo) for a real always-on guarantee.
+3. **Plan:** the blueprint sets `plan: free`. Free spins down after ~15 min idle, which pauses the `SyncWorker` and the nightly `RiskScheduler` cron and makes the first request after idle slow/cold (~30-60s). Bump to `starter` ($7/mo) for a real always-on guarantee. (An earlier version of this guide suggested an external keep-alive ping via GitHub Actions — removed; Render's own dashboard flags that pattern as working against the free tier's intent.)
 4. Deploy. When live, health check is `GET /api/healthz`. **Copy the service URL**, e.g. `https://caremesh-api.onrender.com`.
-5. Update the URL in two places so it matches your real service: `RENDER_API_URL` in [`.github/workflows/keep-alive.yml`](.github/workflows/keep-alive.yml), and the rewrite destination in Step 3 below.
+5. Update the rewrite destination in Step 3 below to match your real Render URL.
 
 ## 3. Point the frontend proxy at your Render URL
 Edit [`artifacts/web/vercel.json`](artifacts/web/vercel.json) — replace the placeholder host in the `/api/:path*` rewrite with your real Render URL:
@@ -90,8 +90,7 @@ Patient file uploads are written to local disk (`artifacts/api-server/uploads/`,
 ## Troubleshooting
 | Symptom | Cause / Fix |
 |---|---|
-| First request slow / cron didn't run | Expected on `free` if it fully spun down (keep-alive ping missed a window, or GitHub Actions was delayed). Move to `starter` to eliminate entirely. |
-| GitHub Action isn't pinging | Actions on a repo are disabled by default in some settings, and scheduled workflows pause automatically after 60 days with no repo activity — open the Actions tab and re-enable/run it manually (`workflow_dispatch`) if so. |
+| First request slow / cron didn't run | Expected on `free` after ~15 min idle (spun down). Move to `starter` to eliminate entirely. |
 | Login works but session drops | Cookie/CORS. Ensure you're using the **Vercel domain** (same-origin proxy), not the Render URL directly; set `CORS_ORIGIN` to the Vercel URL. |
 | `404` on refresh of `/patients` etc. | SPA fallback rewrite missing — confirm `vercel.json` is at `artifacts/web/` and Root Directory is `artifacts/web`. |
 | API 500 at boot | `DATABASE_URL` unset/incorrect or Neon asleep. Check Render logs. |
